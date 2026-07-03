@@ -47,3 +47,58 @@
 使用 `ima-skill` 访问知识库，将 PDF 保存到 `downloads/`，并即时更新 `manifests/`。
 
 根据 `manifests/downloaded.jsonl` 跳过已完成文件，根据 `manifests/failed.jsonl` 识别需要重试或确认的失败项。
+
+### 批量索引和下载
+
+`scripts/sync-kb-pdfs.cjs` 用于先索引目录，再按 `media_id` 下载 PDF。
+
+索引结果写入：
+
+`manifests/index.jsonl`
+
+下载成功立即写入：
+
+`manifests/downloaded.jsonl`
+
+下载失败立即写入：
+
+`manifests/failed.jsonl`
+
+下载时会对每个文件重新调用 `get_media_info`，使用返回的 `url_info.url` 和 `headers` 获取 PDF，因此临时 URL 过期后可以直接重跑。
+
+示例：同步「环球研报直通车」中 2026 年 7 月目录，保存到 `downloads/2026/7月/...`：
+
+```bash
+node scripts/sync-kb-pdfs.cjs sync \
+  --kb "环球研报直通车" \
+  --source-path "2026年国际顶级投行研报/7月" \
+  --strip-source-prefix "2026年国际顶级投行研报" \
+  --local-prefix "2026"
+```
+
+只索引不下载：
+
+```bash
+node scripts/sync-kb-pdfs.cjs index \
+  --kb "环球研报直通车" \
+  --source-path "2026年国际顶级投行研报/7月" \
+  --strip-source-prefix "2026年国际顶级投行研报" \
+  --local-prefix "2026"
+```
+
+只下载已索引但未完成的文件：
+
+```bash
+node scripts/sync-kb-pdfs.cjs download \
+  --kb "环球研报直通车" \
+  --source-path "环球研报直通车 / 2026年国际顶级投行研报 / 7月"
+```
+
+测试少量下载时可以加 `--limit`：
+
+```bash
+node scripts/sync-kb-pdfs.cjs download \
+  --kb "环球研报直通车" \
+  --source-path "环球研报直通车 / 2026年国际顶级投行研报 / 7月" \
+  --limit 3
+```
