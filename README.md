@@ -34,10 +34,6 @@
 
 记录下载失败的文件。
 
-`tasks/`
-
-同步任务说明。
-
 ## 更新 ima-skill
 
 将新版 ima Skill 放入 `ima-skill/`，保持目录名不变。
@@ -46,19 +42,8 @@
 
 不要修改 `downloads/` 或 `manifests/` 中的同步状态文件。
 
-## 执行任务
+## 同步
 
-根据需要打开 `tasks/` 下的任务文件：
+使用 `ima-skill` 访问知识库，将 PDF 保存到 `downloads/`，并即时更新 `manifests/`。
 
-- `tasks/sync-day.md`
-- `tasks/sync-month.md`
-- `tasks/sync-year.md`
-- `tasks/resume.md`
-
-执行同步时使用 `ima-skill` 访问知识库，将 PDF 保存到 `downloads/`，并即时更新 `manifests/`。
-
-## 恢复同步
-
-使用 `tasks/resume.md`。
-
-恢复时根据 `manifests/downloaded.jsonl` 跳过已完成文件，根据 `manifests/failed.jsonl` 识别需要重试或确认的失败项。
+根据 `manifests/downloaded.jsonl` 跳过已完成文件，根据 `manifests/failed.jsonl` 识别需要重试或确认的失败项。
