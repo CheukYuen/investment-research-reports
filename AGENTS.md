@@ -82,6 +82,12 @@ AI Infrastructure 主题筛选必须先索引，再运行：
 
 遇到 IMA “资料获取次数已达上限”等上限错误，必须立即停止下载。
 
-不要提交 `.env`。
+`manifests/ai-ranked-queue-YYYYMMDD.jsonl` 是当天筛选结果，必须保留并提交。
 
-不要提交 `manifests/*.bak-*` queue 备份文件。
+`manifests/ai-p0p1-analysis-YYYYMMDD.html` 是当天 P0/P1 分析页面，必须保留并提交。
+
+`manifests/ai-ranked-queue.jsonl` 是最新/滚动 queue，可被后续同步覆盖。
+
+`manifests/ai-p0p1-analysis.html` 是最新/滚动 P0/P1 总览，可被后续同步覆盖。
+
+不要提交 `.env`。
