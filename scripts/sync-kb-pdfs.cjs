@@ -12,18 +12,29 @@ const MANIFESTS_DIR = path.join(ROOT, 'manifests');
 const INDEX_PATH = path.join(MANIFESTS_DIR, 'index.jsonl');
 const DOWNLOADED_PATH = path.join(MANIFESTS_DIR, 'downloaded.jsonl');
 const FAILED_PATH = path.join(MANIFESTS_DIR, 'failed.jsonl');
+const DEFAULT_QUEUE_PATH = path.join(MANIFESTS_DIR, 'ai-ranked-queue.jsonl');
 const PDF_MEDIA_TYPE = 1;
 const FOLDER_MEDIA_TYPE = 99;
+const PRIORITY_ORDER = new Map([
+  ['P0', 0],
+  ['P1', 1],
+  ['P2', 2],
+  ['P3', 3],
+]);
 
 function usage() {
   console.log(`Usage:
   node scripts/sync-kb-pdfs.cjs index --kb <name> [--source-path <path>] [--strip-source-prefix <path>] [--local-prefix <path>]
   node scripts/sync-kb-pdfs.cjs download --kb <name> [--source-path <path>] [--limit <n>]
   node scripts/sync-kb-pdfs.cjs sync --kb <name> [--source-path <path>] [--strip-source-prefix <path>] [--local-prefix <path>] [--limit <n>]
+  node scripts/sync-kb-pdfs.cjs rank-ai [--months <month1,month2>] [--queue <path>] [--batch-size <n>]
+  node scripts/sync-kb-pdfs.cjs download-queue --kb <name> [--queue <path>] [--priorities <P0,P1>] [--daily-budget <n>]
 
 Examples:
   node scripts/sync-kb-pdfs.cjs sync --kb "环球研报直通车" --source-path "2026年国际顶级投行研报/7月" --strip-source-prefix "2026年国际顶级投行研报" --local-prefix "2026"
-  node scripts/sync-kb-pdfs.cjs download --kb "环球研报直通车" --source-path "环球研报直通车 / 2026年国际顶级投行研报 / 7月"`);
+  node scripts/sync-kb-pdfs.cjs download --kb "环球研报直通车" --source-path "环球研报直通车 / 2026年国际顶级投行研报 / 7月"
+  node scripts/sync-kb-pdfs.cjs rank-ai --months "2026/6月,2026/7月" --queue manifests/ai-ranked-queue.jsonl
+  node scripts/sync-kb-pdfs.cjs download-queue --kb "环球研报直通车" --queue manifests/ai-ranked-queue.jsonl --priorities P0,P1 --daily-budget 28`);
 }
 
 function parseArgs(argv) {
@@ -75,6 +86,13 @@ function appendJsonl(filePath, record) {
   fs.appendFileSync(filePath, `${JSON.stringify(record)}\n`, 'utf8');
 }
 
+function writeJsonlAtomic(filePath, records) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const tempPath = `${filePath}.part`;
+  fs.writeFileSync(tempPath, records.map((record) => JSON.stringify(record)).join('\n') + '\n', 'utf8');
+  fs.renameSync(tempPath, filePath);
+}
+
 function readJsonl(filePath) {
   if (!fs.existsSync(filePath)) return [];
   const lines = fs.readFileSync(filePath, 'utf8').split(/\r?\n/).filter(Boolean);
@@ -89,34 +107,314 @@ function readJsonl(filePath) {
   return records;
 }
 
+function resolveRootPath(input, defaultPath) {
+  const value = input || defaultPath;
+  return path.isAbsolute(value) ? value : path.join(ROOT, value);
+}
+
+function parseEnvValue(value) {
+  let parsed = value.trim();
+  if (
+    (parsed.startsWith('"') && parsed.endsWith('"')) ||
+    (parsed.startsWith("'") && parsed.endsWith("'"))
+  ) {
+    parsed = parsed.slice(1, -1);
+  }
+  return parsed.replace(/\\n/g, '\n');
+}
+
+function loadDotEnv() {
+  const envPath = path.join(ROOT, '.env');
+  if (!fs.existsSync(envPath)) return;
+  const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const normalized = trimmed.startsWith('export ') ? trimmed.slice('export '.length).trim() : trimmed;
+    const equalsIndex = normalized.indexOf('=');
+    if (equalsIndex <= 0) continue;
+    const key = normalized.slice(0, equalsIndex).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key) || process.env[key] != null) continue;
+    process.env[key] = parseEnvValue(normalized.slice(equalsIndex + 1));
+  }
+}
+
+function parsePositiveInteger(input, name, defaultValue) {
+  if (input == null || input === true || input === '') return defaultValue;
+  const parsed = Number(input);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`${name} must be a positive integer`);
+  }
+  return parsed;
+}
+
+function parseNonNegativeInteger(input, name, defaultValue) {
+  if (input == null || input === true || input === '') return defaultValue;
+  const parsed = Number(input);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${name} must be a non-negative integer`);
+  }
+  return parsed;
+}
+
+function parseCommaList(input, defaultValue) {
+  const source = input == null || input === true || input === '' ? defaultValue : input;
+  return String(source)
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function parsePriorities(input) {
+  const priorities = parseCommaList(input, 'P0,P1').map((priority) => priority.toUpperCase());
+  for (const priority of priorities) {
+    if (!PRIORITY_ORDER.has(priority)) {
+      throw new Error(`Invalid priority: ${priority}`);
+    }
+  }
+  return new Set(priorities);
+}
+
+function parseMonths(input) {
+  return parseCommaList(input, '2026/6月,2026/7月');
+}
+
+function recordMatchesMonths(record, months) {
+  return months.some((month) => (record.local_relative_path || '').startsWith(`${month}/`));
+}
+
+function uniqueByMediaId(records) {
+  const seen = new Set();
+  const deduped = [];
+  for (const record of records) {
+    if (!record.media_id || seen.has(record.media_id)) continue;
+    seen.add(record.media_id);
+    deduped.push(record);
+  }
+  return deduped;
+}
+
+function dateRank(record) {
+  const match = (record.local_relative_path || '').match(/^(\d{4})\/(\d+)月\/(\d+(?:\.\d+)?)\//);
+  if (!match) return 0;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3].replace('.', ''));
+  return year * 10000 + month * 100 + day;
+}
+
+function isQuotaError(err) {
+  const message = err && err.message ? err.message : String(err || '');
+  return /资料获取次数已达上限|请明天再尝试|请求频控|频控|quota|rate limit/i.test(message);
+}
+
+function isRetriableImaError(message) {
+  return /请求频率超限|请求频控|频控|HTTP 429|rate limit/i.test(String(message || ''));
+}
+
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
 function imaApi(apiPath, body) {
-  const result = spawnSync(process.execPath, [IMA_API, apiPath, JSON.stringify(body)], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    maxBuffer: 64 * 1024 * 1024,
-  });
+  let lastError;
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    const result = spawnSync(process.execPath, [IMA_API, apiPath, JSON.stringify(body)], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    });
 
-  if (result.status !== 0) {
-    let msg = result.stderr || result.stdout || `ima_api exited with status ${result.status}`;
+    if (result.status !== 0) {
+      let msg = result.stderr || result.stdout || `ima_api exited with status ${result.status}`;
+      try {
+        const parsed = JSON.parse(result.stderr || '{}');
+        msg = parsed.msg || msg;
+      } catch {}
+      lastError = new Error(msg.trim());
+      if (attempt < 4 && isRetriableImaError(lastError.message)) {
+        sleepSync(1500 * attempt);
+        continue;
+      }
+      throw lastError;
+    }
+
+    let response;
     try {
-      const parsed = JSON.parse(result.stderr || '{}');
-      msg = parsed.msg || msg;
-    } catch {}
-    throw new Error(msg.trim());
-  }
+      response = JSON.parse(result.stdout);
+    } catch (err) {
+      throw new Error(`ima_api returned invalid JSON: ${err.message}`);
+    }
 
-  let response;
+    if (response.code !== 0) {
+      lastError = new Error(response.msg || `IMA API business error: ${response.code}`);
+      if (attempt < 4 && isRetriableImaError(lastError.message)) {
+        sleepSync(1500 * attempt);
+        continue;
+      }
+      throw lastError;
+    }
+
+    return response;
+  }
+  throw lastError;
+}
+
+function deepSeekConfig() {
+  loadDotEnv();
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    throw new Error('DEEPSEEK_API_KEY is required. Put it in .env or export it in the environment.');
+  }
+  return {
+    apiKey,
+    baseUrl: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
+    model: process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash',
+    requestTimeoutMs: parsePositiveInteger(
+      process.env.DEEPSEEK_REQUEST_TIMEOUT_MS,
+      'DEEPSEEK_REQUEST_TIMEOUT_MS',
+      120000
+    ),
+    maxTokens: parsePositiveInteger(process.env.DEEPSEEK_MAX_TOKENS, 'DEEPSEEK_MAX_TOKENS', 12000),
+  };
+}
+
+function chatCompletionsUrl(baseUrl) {
+  return `${String(baseUrl).replace(/\/+$/, '')}/chat/completions`;
+}
+
+function extractJsonObject(text) {
+  const raw = String(text || '').trim();
   try {
-    response = JSON.parse(result.stdout);
-  } catch (err) {
-    throw new Error(`ima_api returned invalid JSON: ${err.message}`);
+    return JSON.parse(raw);
+  } catch {}
+
+  const unfenced = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  try {
+    return JSON.parse(unfenced);
+  } catch {}
+
+  const start = unfenced.indexOf('{');
+  const end = unfenced.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    return JSON.parse(unfenced.slice(start, end + 1));
+  }
+  throw new Error('LLM returned invalid JSON');
+}
+
+async function callDeepSeekJson(config, messages) {
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), config.requestTimeoutMs);
+    try {
+      const response = await fetch(chatCompletionsUrl(config.baseUrl), {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages,
+          temperature: 0,
+          max_tokens: config.maxTokens,
+          response_format: { type: 'json_object' },
+          thinking: { type: 'disabled' },
+        }),
+      });
+
+      const bodyText = await response.text();
+      if (!response.ok) {
+        throw new Error(`DeepSeek API error HTTP ${response.status}: ${bodyText.slice(0, 500)}`);
+      }
+
+      const payload = JSON.parse(bodyText);
+      const content = payload.choices && payload.choices[0] && payload.choices[0].message
+        ? payload.choices[0].message.content
+        : '';
+      return extractJsonObject(content);
+    } catch (err) {
+      lastError = err;
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 750 * attempt));
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  throw lastError;
+}
+
+function rankingSystemPrompt() {
+  return `你是买方科技研究助理，只根据研报 PDF 标题和路径判断其与 AI Infrastructure 投资主题的相关性。
+
+输出必须是严格 JSON object，格式：
+{"results":[{"priority":"P0|P1|P2|P3","score":0-100,"topics":["..."],"reasons":["..."]}]}
+
+results 必须与输入数组等长、同顺序。不要输出 markdown，不要解释 JSON 以外内容。
+
+优先级定义：
+P0 = 核心 AI Infrastructure：AIDC/AI 数据中心 capex、云或 hyperscaler 数据中心资本开支、AI 服务器、GPU、ASIC、HBM、存储、先进封装、CoWoS、光互联、数据中心网络、电力、冷却、液冷、AI 半导体上游、人形机器人或具身智能核心硬件。明确 AIDC capex / AI 数据中心资本开支必须 P0。
+P1 = 强相关上游或投资线索：半导体设备/材料、晶圆厂扩产、ABF、PCB、MLCC、AI PC、明确指向 AI 基建/数据中心/云 capex 的 IT 支出、机器人或 AI 产能相关工业自动化。
+P2 = 泛 AI 或间接主题：AI 应用、企业 AI 渗透率、互联网或云应用、AI 生产率、科技硬件但基建指向不强。
+P3 = 弱相关或无关：宏观、地产、医疗、消费、银行、普通汽车销量、普通互联网估值等。
+
+score 代表下载优先级，P0 通常 85-100，P1 通常 65-84，P2 通常 35-64，P3 通常 0-34。
+topics 使用英文短标签，如 aidc_capex, ai_server, semiconductor_upstream, optical_interconnect, hbm_memory, advanced_packaging, data_center_power, humanoid_robotics, ai_pc, ai_application, unrelated。`;
+}
+
+async function classifyBatchWithDeepSeek(config, batch) {
+  const inputs = batch.map((record) => ({
+    title: record.title,
+    source_path: record.source_path,
+    local_relative_path: record.local_relative_path,
+  }));
+
+  const parsed = await callDeepSeekJson(config, [
+    { role: 'system', content: rankingSystemPrompt() },
+    {
+      role: 'user',
+      content: `请分类以下研报，返回 results 与输入同顺序、同长度：\n${JSON.stringify(inputs, null, 2)}`,
+    },
+  ]);
+
+  if (!parsed || !Array.isArray(parsed.results)) {
+    throw new Error('LLM JSON must contain a results array');
+  }
+  if (parsed.results.length !== batch.length) {
+    throw new Error(`LLM returned ${parsed.results.length} results for ${batch.length} inputs`);
   }
 
-  if (response.code !== 0) {
-    throw new Error(response.msg || `IMA API business error: ${response.code}`);
-  }
+  return parsed.results.map((result, index) => normalizeRanking(result, batch[index]));
+}
 
-  return response;
+function normalizeStringArray(value, fallback) {
+  if (Array.isArray(value)) return value.map((item) => String(item)).filter(Boolean);
+  if (typeof value === 'string' && value.trim()) return [value.trim()];
+  return fallback;
+}
+
+function normalizeRanking(result, record) {
+  const priority = String(result.priority || '').toUpperCase();
+  if (!PRIORITY_ORDER.has(priority)) {
+    throw new Error(`LLM returned invalid priority for ${record.title}: ${result.priority}`);
+  }
+  const score = Number(result.score);
+  if (!Number.isFinite(score)) {
+    throw new Error(`LLM returned invalid score for ${record.title}: ${result.score}`);
+  }
+  return {
+    priority,
+    score: Math.max(0, Math.min(100, Math.round(score))),
+    topics: normalizeStringArray(result.topics, []),
+    reasons: normalizeStringArray(result.reasons || result.reason, []),
+  };
+}
+
+function shouldLogProgress(opts) {
+  return opts.quiet !== true && opts.quiet !== 'true';
 }
 
 function findKnowledgeBaseId(name) {
@@ -364,9 +662,151 @@ async function runDownload(opts) {
   return stats;
 }
 
+async function runRankAi(opts) {
+  const months = parseMonths(opts.months);
+  const queuePath = resolveRootPath(opts.queue, DEFAULT_QUEUE_PATH);
+  const batchSize = parsePositiveInteger(opts['batch-size'], '--batch-size', 40);
+  const config = deepSeekConfig();
+
+  const records = uniqueByMediaId(
+    readJsonl(INDEX_PATH)
+      .filter((record) => sourceMatches(record, opts['source-path']))
+      .filter((record) => recordMatchesMonths(record, months))
+  );
+
+  if (records.length === 0) {
+    throw new Error(`No indexed PDFs matched months: ${months.join(', ')}`);
+  }
+
+  const rankedAt = new Date().toISOString();
+  const queue = [];
+  const totalBatches = Math.ceil(records.length / batchSize);
+  const logProgress = shouldLogProgress(opts);
+  for (let index = 0; index < records.length; index += batchSize) {
+    const batch = records.slice(index, index + batchSize);
+    const batchNumber = Math.floor(index / batchSize) + 1;
+    if (logProgress) {
+      process.stderr.write(`[rank-ai] classifying batch ${batchNumber}/${totalBatches} (${batch.length} records)\n`);
+    }
+    const rankings = await classifyBatchWithDeepSeek(config, batch);
+    for (let batchIndex = 0; batchIndex < batch.length; batchIndex += 1) {
+      queue.push({
+        ...batch[batchIndex],
+        priority: rankings[batchIndex].priority,
+        rank: 0,
+        score: rankings[batchIndex].score,
+        topics: rankings[batchIndex].topics,
+        reasons: rankings[batchIndex].reasons,
+        llm_provider: 'deepseek',
+        llm_model: config.model,
+        ranked_at: rankedAt,
+      });
+    }
+    if (logProgress) {
+      process.stderr.write(`[rank-ai] completed batch ${batchNumber}/${totalBatches}\n`);
+    }
+  }
+
+  queue.sort((a, b) => {
+    const priorityDelta = PRIORITY_ORDER.get(a.priority) - PRIORITY_ORDER.get(b.priority);
+    if (priorityDelta !== 0) return priorityDelta;
+    if (b.score !== a.score) return b.score - a.score;
+    const dateDelta = dateRank(b) - dateRank(a);
+    if (dateDelta !== 0) return dateDelta;
+    return String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hans-CN');
+  });
+  queue.forEach((record, index) => {
+    record.rank = index + 1;
+  });
+
+  writeJsonlAtomic(queuePath, queue);
+
+  const byPriority = {};
+  for (const record of queue) {
+    byPriority[record.priority] = (byPriority[record.priority] || 0) + 1;
+  }
+
+  return {
+    months,
+    queue: path.relative(ROOT, queuePath),
+    candidates: records.length,
+    written: queue.length,
+    by_priority: byPriority,
+    llm_provider: 'deepseek',
+    llm_model: config.model,
+  };
+}
+
+async function runDownloadQueue(opts) {
+  const knowledgeBaseName = opts.kb;
+  if (!knowledgeBaseName) throw new Error('--kb is required');
+
+  const queuePath = resolveRootPath(opts.queue, DEFAULT_QUEUE_PATH);
+  const priorities = parsePriorities(opts.priorities);
+  const dailyBudget = parseNonNegativeInteger(opts['daily-budget'], '--daily-budget', 28);
+  const state = loadDownloadState();
+  const queue = readJsonl(queuePath)
+    .filter((record) => record.knowledge_base === knowledgeBaseName)
+    .filter((record) => priorities.has(String(record.priority || '').toUpperCase()))
+    .filter((record) => !state.mediaIds.has(record.media_id))
+    .filter((record) => !state.savedPaths.has(record.saved_path))
+    .sort((a, b) => Number(a.rank || Infinity) - Number(b.rank || Infinity));
+
+  const stats = {
+    candidates: queue.length,
+    attempted: 0,
+    budget_used: 0,
+    downloaded: 0,
+    failed: 0,
+    skipped_file_exists: 0,
+    stopped_budget: false,
+    stopped_quota: false,
+    quota_error: null,
+  };
+
+  for (const record of queue) {
+    const willConsumeBudget = !fs.existsSync(record.saved_path);
+    if (willConsumeBudget && stats.budget_used >= dailyBudget) {
+      stats.stopped_budget = true;
+      break;
+    }
+
+    stats.attempted += 1;
+    try {
+      const result = await downloadOne(record);
+      if (willConsumeBudget) stats.budget_used += 1;
+      if (result.status === 'downloaded') stats.downloaded += 1;
+      if (result.status === 'skipped_file_exists') stats.skipped_file_exists += 1;
+    } catch (err) {
+      if (willConsumeBudget) stats.budget_used += 1;
+      stats.failed += 1;
+      appendJsonl(FAILED_PATH, {
+        failed_at: new Date().toISOString(),
+        knowledge_base: record.knowledge_base,
+        source_path: record.source_path,
+        title: record.title,
+        media_id: record.media_id,
+        media_type: record.media_type,
+        saved_path: record.saved_path,
+        priority: record.priority,
+        rank: record.rank,
+        error: err && err.message ? err.message : String(err),
+      });
+
+      if (isQuotaError(err)) {
+        stats.stopped_quota = true;
+        stats.quota_error = err && err.message ? err.message : String(err);
+        break;
+      }
+    }
+  }
+
+  return stats;
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2));
-  if (!['index', 'download', 'sync'].includes(opts.command)) {
+  if (!['index', 'download', 'sync', 'rank-ai', 'download-queue'].includes(opts.command)) {
     usage();
     process.exit(opts.command ? 1 : 0);
   }
@@ -378,6 +818,16 @@ async function main() {
 
   if (opts.command === 'download') {
     console.log(JSON.stringify({ command: 'download', ...(await runDownload(opts)) }));
+    return;
+  }
+
+  if (opts.command === 'rank-ai') {
+    console.log(JSON.stringify({ command: 'rank-ai', ...(await runRankAi(opts)) }));
+    return;
+  }
+
+  if (opts.command === 'download-queue') {
+    console.log(JSON.stringify({ command: 'download-queue', ...(await runDownloadQueue(opts)) }));
     return;
   }
 
