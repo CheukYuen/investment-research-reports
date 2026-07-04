@@ -70,6 +70,10 @@ AI Infrastructure 主题筛选必须先索引，再运行：
 
 再按 queue 下载。
 
+所有研报同步默认都必须先筛选 P0/P1，再按 queue 下载。
+
+除非用户明确要求全量同步，不直接全量下载。
+
 未经用户明确要求，不运行：
 
 `scripts/sync-kb-pdfs.cjs download-queue`
