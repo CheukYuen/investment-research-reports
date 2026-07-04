@@ -27,7 +27,7 @@ function usage() {
   node scripts/sync-kb-pdfs.cjs index --kb <name> [--source-path <path>] [--strip-source-prefix <path>] [--local-prefix <path>]
   node scripts/sync-kb-pdfs.cjs download --kb <name> [--source-path <path>] [--limit <n>]
   node scripts/sync-kb-pdfs.cjs sync --kb <name> [--source-path <path>] [--strip-source-prefix <path>] [--local-prefix <path>] [--limit <n>]
-  node scripts/sync-kb-pdfs.cjs rank-ai [--months <month1,month2>] [--queue <path>] [--batch-size <n>]
+  node scripts/sync-kb-pdfs.cjs rank-ai [--months <month1,month2>] [--queue <path>] [--batch-size <n>] [--rerank-batch-size <n>]
   node scripts/sync-kb-pdfs.cjs download-queue --kb <name> [--queue <path>] [--priorities <P0,P1>] [--daily-budget <n>]
 
 Examples:
@@ -260,16 +260,17 @@ function imaApi(apiPath, body) {
   throw lastError;
 }
 
-function deepSeekConfig() {
+function deepSeekConfig(overrides = {}) {
   loadDotEnv();
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     throw new Error('DEEPSEEK_API_KEY is required. Put it in .env or export it in the environment.');
   }
+  const modelEnv = overrides.modelEnv || 'DEEPSEEK_MODEL';
   return {
     apiKey,
     baseUrl: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
-    model: process.env.DEEPSEEK_MODEL || 'deepseek-v4-flash',
+    model: overrides.model || process.env[modelEnv] || overrides.defaultModel || 'deepseek-v4-flash',
     requestTimeoutMs: parsePositiveInteger(
       process.env.DEEPSEEK_REQUEST_TIMEOUT_MS,
       'DEEPSEEK_REQUEST_TIMEOUT_MS',
@@ -348,12 +349,14 @@ async function callDeepSeekJson(config, messages) {
 }
 
 function rankingSystemPrompt() {
-  return `你是买方科技研究助理，只根据研报 PDF 标题和路径判断其与 AI Infrastructure 投资主题的相关性。
+  return `你是买方科技研究助理，只根据研报 PDF 标题和路径做 AI Infrastructure 主题的第一轮广义召回。
 
 输出必须是严格 JSON object，格式：
 {"results":[{"priority":"P0|P1|P2|P3","score":0-100,"topics":["..."],"reasons":["..."]}]}
 
 results 必须与输入数组等长、同顺序。不要输出 markdown，不要解释 JSON 以外内容。
+
+第一轮目标是提高召回率，宁可把可能相关的候选放入 P0/P1，后续会有第二轮严格复核。理由仍必须基于标题或路径中的词语，不要只用公司名、ticker 或行业常识作为决定性证据。
 
 优先级定义：
 P0 = 核心 AI Infrastructure：AIDC/AI 数据中心 capex、云或 hyperscaler 数据中心资本开支、AI 服务器、GPU、ASIC、HBM、存储、先进封装、CoWoS、光互联、数据中心网络、电力、冷却、液冷、AI 半导体上游、人形机器人或具身智能核心硬件。明确 AIDC capex / AI 数据中心资本开支必须 P0。
@@ -363,6 +366,24 @@ P3 = 弱相关或无关：宏观、地产、医疗、消费、银行、普通汽
 
 score 代表下载优先级，P0 通常 85-100，P1 通常 65-84，P2 通常 35-64，P3 通常 0-34。
 topics 使用英文短标签，如 aidc_capex, ai_server, semiconductor_upstream, optical_interconnect, hbm_memory, advanced_packaging, data_center_power, humanoid_robotics, ai_pc, ai_application, unrelated。`;
+}
+
+function rerankingSystemPrompt() {
+  return `你是严谨的买方科技研究审稿人，负责对第一轮召回出的 AI Infrastructure 候选研报做第二轮严格复核和重排。
+
+你仍然只能使用标题和路径，不读取 PDF 正文。不要针对任何单一公司写特殊规则；请用统一的证据标准判断。
+
+输出必须是严格 JSON object，格式：
+{"results":[{"corrected_priority":"P0|P1|P2|P3","final_score":0-100,"topics":["..."],"reasons":["..."],"evidence_keywords":["..."],"evidence_level":"explicit|indirect|weak|none","downgrade_reasons":["..."]}]}
+
+results 必须与输入数组等长、同顺序。不要输出 markdown，不要解释 JSON 以外内容。
+
+复核原则：
+1. 证据优先：P0 必须能从标题或路径看到 AI 基建技术支出、算力硬件、半导体上游、光互联、数据中心网络、电力/冷却、AI PC、人形机器人/具身智能核心硬件等明确信号。
+2. 区分“基础设施载体”和“技术资本开支”：只说明数据中心、房地产、信托、租赁、收购、评级、目标价、估值、买入卖出等金融或资产观点时，不应给很高分；如果同时出现 AI capex、GPU、服务器、芯片、光模块、液冷、电力容量、hyperscaler 扩建等标题证据，可以保留较高优先级。
+3. 避免常识幻觉：不要仅凭公司名、ticker、所属行业、你知道这家公司做什么，就把报告提升到 P0。理由必须指出标题或路径中的证据词；证据弱时要主动降权。
+4. 排序校准：P0 通常 85-100；P1 通常 65-84；P2 通常 35-64；P3 通常 0-34。证据强度不足时，即使第一轮是 P0，也可降为 P1/P2/P3。
+5. AIDC capex、AI 数据中心资本开支、云/超大规模数据中心 capex、AI 服务器、GPU/ASIC、HBM、先进封装/CoWoS、光互联、数据中心网络、电力/冷却、AI 半导体上游、人形机器人/具身智能核心硬件是高优先级方向；但必须由标题或路径支持。`;
 }
 
 async function classifyBatchWithDeepSeek(config, batch) {
@@ -390,6 +411,35 @@ async function classifyBatchWithDeepSeek(config, batch) {
   return parsed.results.map((result, index) => normalizeRanking(result, batch[index]));
 }
 
+async function rerankBatchWithDeepSeek(config, batch) {
+  const inputs = batch.map((record) => ({
+    title: record.title,
+    source_path: record.source_path,
+    local_relative_path: record.local_relative_path,
+    recall_priority: record.priority,
+    recall_score: record.score,
+    recall_topics: record.topics,
+    recall_reasons: record.reasons,
+  }));
+
+  const parsed = await callDeepSeekJson(config, [
+    { role: 'system', content: rerankingSystemPrompt() },
+    {
+      role: 'user',
+      content: `请严格复核以下第一轮候选，返回 results 与输入同顺序、同长度：\n${JSON.stringify(inputs, null, 2)}`,
+    },
+  ]);
+
+  if (!parsed || !Array.isArray(parsed.results)) {
+    throw new Error('Rerank LLM JSON must contain a results array');
+  }
+  if (parsed.results.length !== batch.length) {
+    throw new Error(`Rerank LLM returned ${parsed.results.length} results for ${batch.length} inputs`);
+  }
+
+  return parsed.results.map((result, index) => normalizeReranking(result, batch[index]));
+}
+
 function normalizeStringArray(value, fallback) {
   if (Array.isArray(value)) return value.map((item) => String(item)).filter(Boolean);
   if (typeof value === 'string' && value.trim()) return [value.trim()];
@@ -410,6 +460,27 @@ function normalizeRanking(result, record) {
     score: Math.max(0, Math.min(100, Math.round(score))),
     topics: normalizeStringArray(result.topics, []),
     reasons: normalizeStringArray(result.reasons || result.reason, []),
+  };
+}
+
+function normalizeReranking(result, record) {
+  const priority = String(result.corrected_priority || result.priority || '').toUpperCase();
+  if (!PRIORITY_ORDER.has(priority)) {
+    throw new Error(`Rerank LLM returned invalid priority for ${record.title}: ${result.corrected_priority || result.priority}`);
+  }
+  const score = Number(result.final_score ?? result.score);
+  if (!Number.isFinite(score)) {
+    throw new Error(`Rerank LLM returned invalid score for ${record.title}: ${result.final_score ?? result.score}`);
+  }
+  const evidenceLevel = String(result.evidence_level || '').toLowerCase();
+  return {
+    priority,
+    score: Math.max(0, Math.min(100, Math.round(score))),
+    topics: normalizeStringArray(result.topics, record.topics || []),
+    reasons: normalizeStringArray(result.reasons || result.reason, record.reasons || []),
+    evidence_keywords: normalizeStringArray(result.evidence_keywords || result.evidence, []),
+    evidence_level: ['explicit', 'indirect', 'weak', 'none'].includes(evidenceLevel) ? evidenceLevel : '',
+    downgrade_reasons: normalizeStringArray(result.downgrade_reasons || result.penalty_applied, []),
   };
 }
 
@@ -666,7 +737,12 @@ async function runRankAi(opts) {
   const months = parseMonths(opts.months);
   const queuePath = resolveRootPath(opts.queue, DEFAULT_QUEUE_PATH);
   const batchSize = parsePositiveInteger(opts['batch-size'], '--batch-size', 40);
-  const config = deepSeekConfig();
+  const rerankBatchSize = parsePositiveInteger(opts['rerank-batch-size'], '--rerank-batch-size', batchSize);
+  const config = deepSeekConfig({ defaultModel: 'deepseek-v4-flash' });
+  const rerankConfig = deepSeekConfig({
+    modelEnv: 'DEEPSEEK_RERANK_MODEL',
+    defaultModel: 'deepseek-v4-pro',
+  });
 
   const records = uniqueByMediaId(
     readJsonl(INDEX_PATH)
@@ -679,7 +755,7 @@ async function runRankAi(opts) {
   }
 
   const rankedAt = new Date().toISOString();
-  const queue = [];
+  const recallQueue = [];
   const totalBatches = Math.ceil(records.length / batchSize);
   const logProgress = shouldLogProgress(opts);
   for (let index = 0; index < records.length; index += batchSize) {
@@ -690,7 +766,7 @@ async function runRankAi(opts) {
     }
     const rankings = await classifyBatchWithDeepSeek(config, batch);
     for (let batchIndex = 0; batchIndex < batch.length; batchIndex += 1) {
-      queue.push({
+      recallQueue.push({
         ...batch[batchIndex],
         priority: rankings[batchIndex].priority,
         rank: 0,
@@ -700,6 +776,11 @@ async function runRankAi(opts) {
         llm_provider: 'deepseek',
         llm_model: config.model,
         ranked_at: rankedAt,
+        recall_priority: rankings[batchIndex].priority,
+        recall_score: rankings[batchIndex].score,
+        recall_topics: rankings[batchIndex].topics,
+        recall_reasons: rankings[batchIndex].reasons,
+        recall_llm_model: config.model,
       });
     }
     if (logProgress) {
@@ -707,6 +788,35 @@ async function runRankAi(opts) {
     }
   }
 
+  const rerankCandidates = recallQueue.filter((record) => record.priority === 'P0' || record.priority === 'P1');
+  const totalRerankBatches = Math.ceil(rerankCandidates.length / rerankBatchSize);
+  for (let index = 0; index < rerankCandidates.length; index += rerankBatchSize) {
+    const batch = rerankCandidates.slice(index, index + rerankBatchSize);
+    const batchNumber = Math.floor(index / rerankBatchSize) + 1;
+    if (logProgress) {
+      process.stderr.write(`[rank-ai] reranking batch ${batchNumber}/${totalRerankBatches} (${batch.length} records)\n`);
+    }
+    const rerankings = await rerankBatchWithDeepSeek(rerankConfig, batch);
+    for (let batchIndex = 0; batchIndex < batch.length; batchIndex += 1) {
+      const record = batch[batchIndex];
+      const reranking = rerankings[batchIndex];
+      record.priority = reranking.priority;
+      record.score = reranking.score;
+      record.topics = reranking.topics;
+      record.reasons = reranking.reasons;
+      record.evidence_keywords = reranking.evidence_keywords;
+      record.evidence_level = reranking.evidence_level;
+      record.downgrade_reasons = reranking.downgrade_reasons;
+      record.rerank_changed = record.priority !== record.recall_priority || record.score !== record.recall_score;
+      record.rerank_llm_model = rerankConfig.model;
+      record.llm_model = `${config.model}+${rerankConfig.model}`;
+    }
+    if (logProgress) {
+      process.stderr.write(`[rank-ai] completed rerank batch ${batchNumber}/${totalRerankBatches}\n`);
+    }
+  }
+
+  const queue = recallQueue;
   queue.sort((a, b) => {
     const priorityDelta = PRIORITY_ORDER.get(a.priority) - PRIORITY_ORDER.get(b.priority);
     if (priorityDelta !== 0) return priorityDelta;
@@ -733,7 +843,10 @@ async function runRankAi(opts) {
     written: queue.length,
     by_priority: byPriority,
     llm_provider: 'deepseek',
-    llm_model: config.model,
+    llm_model: `${config.model}+${rerankConfig.model}`,
+    recall_llm_model: config.model,
+    rerank_llm_model: rerankConfig.model,
+    rerank_candidates: rerankCandidates.length,
   };
 }
 

@@ -199,6 +199,7 @@ function renderHtml(records, meta) {
   const byPriority = countBy(records, (record) => record.priority);
   const byBucket = countBy(records, (record) => record.manual_bucket);
   const byMonth = countBy(records, (record) => record.month);
+  const changedCount = records.filter((record) => record.rerank_changed).length;
   const byTopic = countBy(
     records.flatMap((record) => (record.topics || []).map((topic) => ({ topic }))),
     (record) => record.topic,
@@ -526,13 +527,14 @@ function renderHtml(records, meta) {
 <body>
   <header>
     <h1>AI Infrastructure P0/P1 Analysis</h1>
-    <div class="subhead">来源：${htmlEscape(meta.queuePath)}。仅使用 PDF 标题和路径的 DeepSeek 排序结果，不下载正文。生成时间：${htmlEscape(generatedAt)}</div>
+    <div class="subhead">来源：${htmlEscape(meta.queuePath)}。仅使用 PDF 标题和路径排序；若 queue 包含二轮复核字段，将展示证据与降权理由。生成时间：${htmlEscape(generatedAt)}</div>
   </header>
   <main>
     <div class="metrics">
       <div class="metric"><div class="label">P0/P1</div><div class="value">${records.length}</div></div>
       <div class="metric"><div class="label">P0</div><div class="value">${byPriority.find(([key]) => key === 'P0')?.[1] || 0}</div></div>
       <div class="metric"><div class="label">P1</div><div class="value">${byPriority.find(([key]) => key === 'P1')?.[1] || 0}</div></div>
+      <div class="metric"><div class="label">二轮调整</div><div class="value">${changedCount}</div></div>
       <div class="metric"><div class="label">已在本地</div><div class="value">${records.filter((record) => record.downloaded).length}</div></div>
     </div>
 
@@ -586,7 +588,7 @@ function renderHtml(records, meta) {
         <section class="panel" style="margin-top:18px">
           <div class="panel-head">
             <h2 class="panel-title">手动下载优先 Top 20</h2>
-            <div class="small">综合 priority、score、AI 基建核心 topic 派生排序</div>
+            <div class="small">综合二轮 priority、score、AI 基建核心 topic 派生排序</div>
           </div>
           <div class="top-list">
             ${top20.map(renderItem).join('\n')}
@@ -659,6 +661,8 @@ function renderHtml(records, meta) {
         record.manual_bucket,
         ...(record.topics || []),
         ...(record.reasons || []),
+        ...(record.evidence_keywords || []),
+        ...(record.downgrade_reasons || []),
       ].join(' ').toLowerCase();
     }
     function filtered() {
@@ -678,13 +682,16 @@ function renderHtml(records, meta) {
       els.rows.innerHTML = rows.map((record) => {
         const tags = (record.topics || []).map((topic) => '<span class="tag">' + escapeHtml(topic) + '</span>').join('');
         const link = record.download_href ? '<a href="' + escapeHtml(record.download_href) + '">打开本地 PDF</a>' : '';
+        const evidence = (record.evidence_keywords || []).map((keyword) => '<span class="tag">' + escapeHtml(keyword) + '</span>').join('');
+        const downgrade = (record.downgrade_reasons || []).join('；');
+        const recall = record.recall_priority ? 'Recall ' + record.recall_priority + ' / ' + record.recall_score : '';
         return '<tr>' +
           '<td><strong>' + record.manual_rank + '</strong><div class="small">' + escapeHtml(record.manual_tier) + '</div></td>' +
           '<td><span class="badge ' + record.priority.toLowerCase() + '">' + escapeHtml(record.priority) + '</span></td>' +
-          '<td>' + escapeHtml(record.score) + '<div class="small">LLM #' + escapeHtml(record.rank) + '</div></td>' +
+          '<td>' + escapeHtml(record.score) + '<div class="small">LLM #' + escapeHtml(record.rank) + '</div><div class="small">' + escapeHtml(recall) + '</div></td>' +
           '<td><strong>' + escapeHtml(record.title) + '</strong><div class="small">' + escapeHtml(record.day) + '</div></td>' +
-          '<td><div class="tags">' + tags + '</div><div class="small">' + escapeHtml(record.manual_bucket) + '</div></td>' +
-          '<td><div>' + escapeHtml((record.reasons || []).join('；')) + '</div><div class="path">IMA: ' + escapeHtml(record.source_path) + '</div><div class="path">Local: ' + escapeHtml(record.local_relative_path) + '</div><div class="small">' + link + '</div></td>' +
+          '<td><div class="tags">' + tags + '</div><div class="small">' + escapeHtml(record.manual_bucket) + '</div><div class="small">' + escapeHtml(record.evidence_level || '') + '</div></td>' +
+          '<td><div>' + escapeHtml((record.reasons || []).join('；')) + '</div><div class="tags">' + evidence + '</div><div class="small">' + escapeHtml(downgrade) + '</div><div class="path">IMA: ' + escapeHtml(record.source_path) + '</div><div class="path">Local: ' + escapeHtml(record.local_relative_path) + '</div><div class="small">' + link + '</div></td>' +
           '</tr>';
       }).join('');
     }
@@ -732,6 +739,13 @@ function renderItem(record) {
   const tags = (record.topics || []).slice(0, 8).map((topic) => `<span class="tag">${htmlEscape(topic)}</span>`).join('');
   const localLink = record.download_href ? `<a href="${htmlEscape(record.download_href)}">打开本地 PDF</a>` : '';
   const downloaded = record.downloaded ? '<span class="badge downloaded">本地已有</span>' : '';
+  const recallMeta = record.recall_priority ? `<span>recall ${htmlEscape(record.recall_priority)} / ${htmlEscape(record.recall_score)}</span>` : '';
+  const evidence = record.evidence_keywords && record.evidence_keywords.length
+    ? `<div class="path">Evidence: ${htmlEscape(record.evidence_keywords.join(' / '))}</div>`
+    : '';
+  const review = record.downgrade_reasons && record.downgrade_reasons.length
+    ? `<div class="path">Review: ${htmlEscape(record.downgrade_reasons.join('；'))}</div>`
+    : '';
   return `<article class="item">
     <div class="rankbox">
       <div class="rank">#${record.manual_rank}</div>
@@ -744,10 +758,13 @@ function renderItem(record) {
         ${downloaded}
         <span>${htmlEscape(record.manual_bucket)}</span>
         <span>score ${htmlEscape(record.score)}</span>
+        ${recallMeta}
       </div>
       <h3 class="title">${htmlEscape(record.title)}</h3>
       <div class="tags">${tags}</div>
       <p class="reason">${htmlEscape((record.reasons || []).join('；'))}</p>
+      ${evidence}
+      ${review}
       <div class="path">IMA: ${htmlEscape(record.source_path)}</div>
       <div class="path">Local: ${htmlEscape(record.local_relative_path)}</div>
       <div class="small">${localLink}</div>
@@ -782,8 +799,18 @@ function main() {
         score: record.score,
         topics: record.topics || [],
         reasons: record.reasons || [],
+        evidence_keywords: record.evidence_keywords || [],
+        evidence_level: record.evidence_level || '',
+        downgrade_reasons: record.downgrade_reasons || [],
+        rerank_changed: Boolean(record.rerank_changed),
+        recall_priority: record.recall_priority || '',
+        recall_score: record.recall_score ?? '',
+        recall_topics: record.recall_topics || [],
+        recall_reasons: record.recall_reasons || [],
         llm_provider: record.llm_provider,
         llm_model: record.llm_model,
+        recall_llm_model: record.recall_llm_model,
+        rerank_llm_model: record.rerank_llm_model,
         ranked_at: record.ranked_at,
         month: monthFromPath(record.local_relative_path),
         day: dayFromPath(record.local_relative_path),
@@ -806,7 +833,7 @@ function main() {
 
   const html = renderHtml(records, {
     queuePath: path.relative(ROOT, queuePath),
-  });
+  }).replace(/[ \t]+$/gm, '');
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, html, 'utf8');
   console.log(JSON.stringify({
