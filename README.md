@@ -102,3 +102,106 @@ node scripts/sync-kb-pdfs.cjs download \
   --source-path "环球研报直通车 / 2026年国际顶级投行研报 / 7月" \
   --limit 3
 ```
+
+## AI Infrastructure 每日队列
+
+AI Infrastructure 主题不需要下载全量 PDF。每日流程是先补索引，再用 DeepSeek 对标题和路径排序，最后只按 queue 下载高优先级文件。
+
+DeepSeek 配置从 `.env` 读取：
+
+```bash
+DEEPSEEK_API_KEY=...
+DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_RERANK_MODEL=deepseek-v4-pro
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+```
+
+`.env` 不提交。
+
+### 每日流程
+
+先索引目标月份目录，例如 2026 年 6 月和 7 月：
+
+```bash
+node scripts/sync-kb-pdfs.cjs index \
+  --kb "环球研报直通车" \
+  --source-path "2026年国际顶级投行研报/6月" \
+  --strip-source-prefix "2026年国际顶级投行研报" \
+  --local-prefix "2026"
+
+node scripts/sync-kb-pdfs.cjs index \
+  --kb "环球研报直通车" \
+  --source-path "2026年国际顶级投行研报/7月" \
+  --strip-source-prefix "2026年国际顶级投行研报" \
+  --local-prefix "2026"
+```
+
+生成 AI queue：
+
+```bash
+node scripts/sync-kb-pdfs.cjs rank-ai \
+  --months "2026/6月,2026/7月" \
+  --queue manifests/ai-ranked-queue.jsonl
+```
+
+`rank-ai` 只调用 DeepSeek，不调用 IMA，不下载 PDF，不消耗 IMA 资料获取额度。
+
+生成 P0/P1 查看页：
+
+```bash
+node scripts/render-ai-p0p1-html.cjs \
+  --queue manifests/ai-ranked-queue.jsonl \
+  --out manifests/ai-p0p1-analysis.html
+```
+
+HTML 只做可视化，不调用 DeepSeek，不调用 IMA。
+
+按 queue 下载 PDF：
+
+```bash
+node scripts/sync-kb-pdfs.cjs download-queue \
+  --kb "环球研报直通车" \
+  --queue manifests/ai-ranked-queue.jsonl \
+  --priorities P0,P1 \
+  --daily-budget 28
+```
+
+`download-queue` 会对每个文件重新调用 `get_media_info` 并下载 PDF，会消耗 IMA 资料获取额度。遇到“资料获取次数已达上限”等上限错误会立即停止，不继续刷失败记录。
+
+未经用户明确要求，不要运行 `download-queue`。
+
+### 每日检查
+
+关注这些输出和文件：
+
+`manifests/ai-ranked-queue.jsonl`
+
+DeepSeek 排序后的最终下载队列。
+
+`manifests/ai-p0p1-analysis.html`
+
+人工查看 P0/P1 的 HTML 页面。
+
+`manifests/downloaded.jsonl`
+
+成功下载记录。
+
+`manifests/failed.jsonl`
+
+下载失败记录。
+
+命令输出中的 `by_priority`、`downloaded`、`budget_used`、`stopped_quota` 也需要检查。
+
+### 备份和提交
+
+重新生成 queue 前可以备份旧文件：
+
+```bash
+cp manifests/ai-ranked-queue.jsonl manifests/ai-ranked-queue.jsonl.bak-$(date +%Y%m%d-%H%M%S)
+```
+
+`manifests/*.bak-*` 备份文件不提交。
+
+如果当天 queue 和 HTML 是正式结果，可以提交 `manifests/ai-ranked-queue.jsonl` 和 `manifests/ai-p0p1-analysis.html`。
+
+PDF 是否提交需要单独确认，避免无意提交大量文件。

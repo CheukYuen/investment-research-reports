@@ -174,10 +174,82 @@ function monthFromPath(localPath) {
   return match ? match[1] : 'unknown';
 }
 
-function dayFromPath(localPath) {
-  const match = String(localPath || '').match(/^(\d{4})\/(\d+)月\/([^/]+)\//);
-  if (!match) return '';
-  return `${match[1]}-${match[2].padStart(2, '0')}-${match[3]}`;
+function parseDayFromFolder(monthNumber, dayFolder) {
+  const value = String(dayFolder || '');
+  const dotted = value.match(/^(\d{1,2})\.(\d{1,2})/);
+  if (dotted) return Number(dotted[2]);
+
+  const compact = value.match(/^(\d{2})(\d{2})$/);
+  if (compact && Number(compact[1]) === Number(monthNumber)) return Number(compact[2]);
+
+  const plain = value.match(/^(\d{1,2})$/);
+  if (plain) return Number(plain[1]);
+
+  return null;
+}
+
+function pathInfo(record) {
+  const localRelativePath = String(record.local_relative_path || '');
+  const localParts = localRelativePath.split('/').filter(Boolean);
+  const fileName = localParts.at(-1) || record.title || '';
+  const localDirectory = localParts.length > 1 ? localParts.slice(0, -1).join('/') : '';
+  const match = localRelativePath.match(/^(\d{4})\/(\d+)月\/([^/]+)\//);
+  const sourceParts = String(record.source_path || '').split(' / ');
+  const sourceFileName = sourceParts.at(-1) || fileName;
+  const sourceDirectory = sourceParts.length > 1 ? sourceParts.slice(0, -1).join(' / ') : '';
+
+  if (!match) {
+    return {
+      month: monthFromPath(localRelativePath),
+      day_label: '',
+      day_sort_key: '',
+      day_folder: '',
+      ima_directory: sourceDirectory,
+      ima_file: sourceFileName,
+      local_directory: localDirectory,
+      local_file: fileName,
+    };
+  }
+
+  const [, year, month, dayFolder] = match;
+  const day = parseDayFromFolder(month, dayFolder);
+  const monthPadded = month.padStart(2, '0');
+  const daySortKey = day == null ? `${year}-${monthPadded}-00-${dayFolder}` : `${year}-${monthPadded}-${String(day).padStart(2, '0')}`;
+  const dayLabel = `${year}/${month}月/${dayFolder}`;
+
+  return {
+    month: `${year}/${month}月`,
+    day_label: dayLabel,
+    day_sort_key: daySortKey,
+    day_folder: dayFolder,
+    ima_directory: sourceDirectory,
+    ima_file: sourceFileName,
+    local_directory: localDirectory,
+    local_file: fileName,
+  };
+}
+
+function groupByDay(records) {
+  const groups = new Map();
+  for (const record of records) {
+    const key = record.day_label || 'unknown';
+    if (!groups.has(key)) {
+      groups.set(key, {
+        label: key,
+        sort_key: record.day_sort_key || '',
+        records: [],
+      });
+    }
+    groups.get(key).records.push(record);
+  }
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      p0: group.records.filter((record) => record.priority === 'P0').length,
+      p1: group.records.filter((record) => record.priority === 'P1').length,
+      downloaded: group.records.filter((record) => record.downloaded).length,
+    }))
+    .sort((a, b) => String(b.sort_key).localeCompare(String(a.sort_key)) || String(a.label).localeCompare(String(b.label), 'zh-Hans-CN'));
 }
 
 function htmlEscape(value) {
@@ -199,6 +271,8 @@ function renderHtml(records, meta) {
   const byPriority = countBy(records, (record) => record.priority);
   const byBucket = countBy(records, (record) => record.manual_bucket);
   const byMonth = countBy(records, (record) => record.month);
+  const byDay = groupByDay(records);
+  const latestDay = byDay[0];
   const changedCount = records.filter((record) => record.rerank_changed).length;
   const byTopic = countBy(
     records.flatMap((record) => (record.topics || []).map((topic) => ({ topic }))),
@@ -211,7 +285,7 @@ function renderHtml(records, meta) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI Infrastructure P0/P1 Analysis</title>
+  <title>AI Infrastructure Daily P0/P1 Queue</title>
   <style>
     :root {
       color-scheme: light;
@@ -406,6 +480,42 @@ function renderHtml(records, meta) {
       gap: 10px;
       padding: 0 18px 18px;
     }
+    .daily-groups {
+      display: grid;
+      gap: 14px;
+      padding: 16px 18px 18px;
+    }
+    .day-group {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+      overflow: hidden;
+    }
+    .day-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #f3f6f9;
+    }
+    .day-title {
+      margin: 0 0 4px;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+    .day-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .day-items {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
     .item {
       display: grid;
       grid-template-columns: 76px minmax(0, 1fr);
@@ -526,7 +636,7 @@ function renderHtml(records, meta) {
 </head>
 <body>
   <header>
-    <h1>AI Infrastructure P0/P1 Analysis</h1>
+    <h1>AI Infrastructure Daily P0/P1 Queue</h1>
     <div class="subhead">来源：${htmlEscape(meta.queuePath)}。仅使用 PDF 标题和路径排序；若 queue 包含二轮复核字段，将展示证据与降权理由。生成时间：${htmlEscape(generatedAt)}</div>
   </header>
   <main>
@@ -536,6 +646,9 @@ function renderHtml(records, meta) {
       <div class="metric"><div class="label">P1</div><div class="value">${byPriority.find(([key]) => key === 'P1')?.[1] || 0}</div></div>
       <div class="metric"><div class="label">二轮调整</div><div class="value">${changedCount}</div></div>
       <div class="metric"><div class="label">已在本地</div><div class="value">${records.filter((record) => record.downloaded).length}</div></div>
+      <div class="metric"><div class="label">日期目录</div><div class="value">${byDay.length}</div></div>
+      <div class="metric"><div class="label">最新目录</div><div class="value">${latestDay ? htmlEscape(latestDay.label) : '-'}</div></div>
+      <div class="metric"><div class="label">最新 P0/P1</div><div class="value">${latestDay ? `${latestDay.p0}/${latestDay.p1}` : '-'}</div></div>
     </div>
 
     <div class="layout">
@@ -561,6 +674,10 @@ function renderHtml(records, meta) {
           <select id="month"><option value="">All months</option></select>
         </div>
         <div class="filter-group">
+          <label for="dayFolder">Day / Original Folder</label>
+          <select id="dayFolder"><option value="">All folders</option></select>
+        </div>
+        <div class="filter-group">
           <label>Quick Focus</label>
           <div class="quick">
             <button data-focus="aidc_capex">AIDC</button>
@@ -583,6 +700,14 @@ function renderHtml(records, meta) {
             ${renderBars('Theme', byBucket)}
             ${renderBars('Top Topics', byTopic)}
           </div>
+        </section>
+
+        <section class="panel" style="margin-top:18px">
+          <div class="panel-head">
+            <h2 class="panel-title">每日 P0/P1</h2>
+            <div class="small"><span id="daily-count">${byDay.length}</span> 个日期目录</div>
+          </div>
+          <div id="daily-groups" class="daily-groups"></div>
         </section>
 
         <section class="panel" style="margin-top:18px">
@@ -623,13 +748,16 @@ function renderHtml(records, meta) {
   <script id="records" type="application/json">${embedded}</script>
   <script>
     const records = JSON.parse(document.getElementById('records').textContent);
-    const state = { search: '', priority: '', bucket: '', topic: '', month: '' };
+    const state = { search: '', priority: '', bucket: '', topic: '', month: '', dayFolder: '' };
     const els = {
       search: document.getElementById('search'),
       priority: document.getElementById('priority'),
       bucket: document.getElementById('bucket'),
       topic: document.getElementById('topic'),
       month: document.getElementById('month'),
+      dayFolder: document.getElementById('dayFolder'),
+      dailyGroups: document.getElementById('daily-groups'),
+      dailyCount: document.getElementById('daily-count'),
       rows: document.getElementById('rows'),
       resultCount: document.getElementById('result-count'),
     };
@@ -645,10 +773,24 @@ function renderHtml(records, meta) {
         el.appendChild(option);
       }
     }
+    function dayOptions() {
+      const seen = new Map();
+      for (const record of records) {
+        if (!record.day_label) continue;
+        const existing = seen.get(record.day_label);
+        if (!existing || String(record.day_sort_key).localeCompare(String(existing.sortKey)) > 0) {
+          seen.set(record.day_label, { label: record.day_label, sortKey: record.day_sort_key || '' });
+        }
+      }
+      return [...seen.values()]
+        .sort((a, b) => String(b.sortKey).localeCompare(String(a.sortKey)) || String(a.label).localeCompare(String(b.label), 'zh-Hans-CN'))
+        .map((item) => item.label);
+    }
     fillSelect(els.priority, uniq(records.map((record) => record.priority)));
     fillSelect(els.bucket, uniq(records.map((record) => record.manual_bucket)));
     fillSelect(els.topic, uniq(records.flatMap((record) => record.topics || [])));
     fillSelect(els.month, uniq(records.map((record) => record.month)));
+    fillSelect(els.dayFolder, dayOptions());
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
@@ -657,8 +799,12 @@ function renderHtml(records, meta) {
       return [
         record.title,
         record.source_path,
+        record.ima_directory,
+        record.ima_file,
         record.local_relative_path,
+        record.local_download_path,
         record.manual_bucket,
+        record.day_label,
         ...(record.topics || []),
         ...(record.reasons || []),
         ...(record.evidence_keywords || []),
@@ -672,13 +818,70 @@ function renderHtml(records, meta) {
         if (state.bucket && record.manual_bucket !== state.bucket) return false;
         if (state.topic && !(record.topics || []).includes(state.topic)) return false;
         if (state.month && record.month !== state.month) return false;
+        if (state.dayFolder && record.day_label !== state.dayFolder) return false;
         if (q && !textBlob(record).includes(q)) return false;
         return true;
       });
     }
+    function groupByDay(rows) {
+      const groups = new Map();
+      for (const record of rows) {
+        const key = record.day_label || 'unknown';
+        if (!groups.has(key)) {
+          groups.set(key, { label: key, sortKey: record.day_sort_key || '', rows: [] });
+        }
+        groups.get(key).rows.push(record);
+      }
+      return [...groups.values()]
+        .sort((a, b) => String(b.sortKey).localeCompare(String(a.sortKey)) || String(a.label).localeCompare(String(b.label), 'zh-Hans-CN'));
+    }
+    function renderCard(record) {
+      const tags = (record.topics || []).slice(0, 8).map((topic) => '<span class="tag">' + escapeHtml(topic) + '</span>').join('');
+      const link = record.download_href ? '<a href="' + escapeHtml(record.download_href) + '">打开本地 PDF</a>' : '';
+      const downloaded = record.downloaded ? '<span class="badge downloaded">本地已有</span>' : '';
+      const recall = record.recall_priority ? '<span>recall ' + escapeHtml(record.recall_priority) + ' / ' + escapeHtml(record.recall_score) + '</span>' : '';
+      const evidence = (record.evidence_keywords || []).length ? '<div class="path">Evidence: ' + escapeHtml((record.evidence_keywords || []).join(' / ')) + '</div>' : '';
+      const review = (record.downgrade_reasons || []).length ? '<div class="path">Review: ' + escapeHtml((record.downgrade_reasons || []).join('；')) + '</div>' : '';
+      return '<article class="item">' +
+        '<div class="rankbox"><div class="rank">#' + escapeHtml(record.manual_rank) + '</div><div class="small">LLM #' + escapeHtml(record.rank) + '</div></div>' +
+        '<div>' +
+          '<div class="meta"><span class="badge ' + record.priority.toLowerCase() + '">' + escapeHtml(record.priority) + '</span><span class="badge tier">' + escapeHtml(record.manual_tier) + '</span>' + downloaded + '<span>' + escapeHtml(record.manual_bucket) + '</span><span>score ' + escapeHtml(record.score) + '</span>' + recall + '</div>' +
+          '<h3 class="title">' + escapeHtml(record.title) + '</h3>' +
+          '<div class="tags">' + tags + '</div>' +
+          '<p class="reason">' + escapeHtml((record.reasons || []).join('；')) + '</p>' +
+          evidence + review +
+          '<div class="path">IMA 目录: ' + escapeHtml(record.ima_directory) + '</div>' +
+          '<div class="path">IMA 文件: ' + escapeHtml(record.ima_file) + '</div>' +
+          '<div class="path">本地路径: ' + escapeHtml(record.local_download_path) + '</div>' +
+          '<div class="small">' + link + '</div>' +
+        '</div>' +
+      '</article>';
+    }
+    function renderDailyGroups(rows) {
+      const groups = groupByDay(rows);
+      els.dailyCount.textContent = groups.length;
+      els.dailyGroups.innerHTML = groups.map((group) => {
+        const p0 = group.rows.filter((record) => record.priority === 'P0').length;
+        const p1 = group.rows.filter((record) => record.priority === 'P1').length;
+        const downloaded = group.rows.filter((record) => record.downloaded).length;
+        const sortedRows = [...group.rows].sort((a, b) => {
+          const priorityOrder = { P0: 0, P1: 1 };
+          return (priorityOrder[a.priority] ?? 9) - (priorityOrder[b.priority] ?? 9) ||
+            b.manual_score - a.manual_score ||
+            Number(a.rank || 0) - Number(b.rank || 0) ||
+            String(a.title).localeCompare(String(b.title), 'zh-Hans-CN');
+        });
+        return '<section class="day-group">' +
+          '<div class="day-head"><div><h3 class="day-title">' + escapeHtml(group.label) + '</h3><div class="small">' + escapeHtml(sortedRows[0]?.ima_directory || '') + '</div></div>' +
+          '<div class="day-stats"><span class="badge p0">P0 ' + p0 + '</span><span class="badge p1">P1 ' + p1 + '</span><span class="tag">合计 ' + group.rows.length + '</span><span class="tag">本地 ' + downloaded + '</span></div></div>' +
+          '<div class="day-items">' + sortedRows.map(renderCard).join('') + '</div>' +
+        '</section>';
+      }).join('');
+    }
     function renderRows() {
       const rows = filtered();
       els.resultCount.textContent = rows.length;
+      renderDailyGroups(rows);
       els.rows.innerHTML = rows.map((record) => {
         const tags = (record.topics || []).map((topic) => '<span class="tag">' + escapeHtml(topic) + '</span>').join('');
         const link = record.download_href ? '<a href="' + escapeHtml(record.download_href) + '">打开本地 PDF</a>' : '';
@@ -689,13 +892,13 @@ function renderHtml(records, meta) {
           '<td><strong>' + record.manual_rank + '</strong><div class="small">' + escapeHtml(record.manual_tier) + '</div></td>' +
           '<td><span class="badge ' + record.priority.toLowerCase() + '">' + escapeHtml(record.priority) + '</span></td>' +
           '<td>' + escapeHtml(record.score) + '<div class="small">LLM #' + escapeHtml(record.rank) + '</div><div class="small">' + escapeHtml(recall) + '</div></td>' +
-          '<td><strong>' + escapeHtml(record.title) + '</strong><div class="small">' + escapeHtml(record.day) + '</div></td>' +
+          '<td><strong>' + escapeHtml(record.title) + '</strong><div class="small">' + escapeHtml(record.day_label) + '</div></td>' +
           '<td><div class="tags">' + tags + '</div><div class="small">' + escapeHtml(record.manual_bucket) + '</div><div class="small">' + escapeHtml(record.evidence_level || '') + '</div></td>' +
-          '<td><div>' + escapeHtml((record.reasons || []).join('；')) + '</div><div class="tags">' + evidence + '</div><div class="small">' + escapeHtml(downgrade) + '</div><div class="path">IMA: ' + escapeHtml(record.source_path) + '</div><div class="path">Local: ' + escapeHtml(record.local_relative_path) + '</div><div class="small">' + link + '</div></td>' +
+          '<td><div>' + escapeHtml((record.reasons || []).join('；')) + '</div><div class="tags">' + evidence + '</div><div class="small">' + escapeHtml(downgrade) + '</div><div class="path">IMA 目录: ' + escapeHtml(record.ima_directory) + '</div><div class="path">IMA 文件: ' + escapeHtml(record.ima_file) + '</div><div class="path">本地路径: ' + escapeHtml(record.local_download_path) + '</div><div class="small">' + link + '</div></td>' +
           '</tr>';
       }).join('');
     }
-    for (const key of ['priority', 'bucket', 'topic', 'month']) {
+    for (const key of ['priority', 'bucket', 'topic', 'month', 'dayFolder']) {
       els[key].addEventListener('change', () => {
         state[key] = els[key].value;
         renderRows();
@@ -765,8 +968,9 @@ function renderItem(record) {
       <p class="reason">${htmlEscape((record.reasons || []).join('；'))}</p>
       ${evidence}
       ${review}
-      <div class="path">IMA: ${htmlEscape(record.source_path)}</div>
-      <div class="path">Local: ${htmlEscape(record.local_relative_path)}</div>
+      <div class="path">IMA 目录: ${htmlEscape(record.ima_directory)}</div>
+      <div class="path">IMA 文件: ${htmlEscape(record.ima_file)}</div>
+      <div class="path">本地路径: ${htmlEscape(record.local_download_path)}</div>
       <div class="small">${localLink}</div>
     </div>
   </article>`;
@@ -786,6 +990,7 @@ function main() {
     .map((record) => {
       const bucket = classifyBucket(record);
       const manualScore = deriveManualScore(record);
+      const info = pathInfo(record);
       const savedPath = record.saved_path || path.join(ROOT, 'downloads', record.local_relative_path || '');
       const downloaded = Boolean(savedPath && fs.existsSync(savedPath));
       return {
@@ -812,8 +1017,15 @@ function main() {
         recall_llm_model: record.recall_llm_model,
         rerank_llm_model: record.rerank_llm_model,
         ranked_at: record.ranked_at,
-        month: monthFromPath(record.local_relative_path),
-        day: dayFromPath(record.local_relative_path),
+        month: info.month,
+        day_label: info.day_label,
+        day_sort_key: info.day_sort_key,
+        day_folder: info.day_folder,
+        ima_directory: info.ima_directory,
+        ima_file: info.ima_file,
+        local_directory: info.local_directory,
+        local_file: info.local_file,
+        local_download_path: path.join('downloads', record.local_relative_path || ''),
         manual_bucket: bucket.name,
         manual_score: manualScore,
         manual_tier: deriveTier(record, manualScore),

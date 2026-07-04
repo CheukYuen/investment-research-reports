@@ -63,3 +63,21 @@ ima-skill
 优先使用 ima Skill。
 
 不要自行实现知识库接口。
+
+AI Infrastructure 主题筛选必须先索引，再运行：
+
+`scripts/sync-kb-pdfs.cjs rank-ai`
+
+再按 queue 下载。
+
+未经用户明确要求，不运行：
+
+`scripts/sync-kb-pdfs.cjs download-queue`
+
+下载 queue 默认每日预算为 `--daily-budget 28`。
+
+遇到 IMA “资料获取次数已达上限”等上限错误，必须立即停止下载。
+
+不要提交 `.env`。
+
+不要提交 `manifests/*.bak-*` queue 备份文件。
