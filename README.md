@@ -18,6 +18,10 @@
 
 本 Workspace 使用的 ima Skill。
 
+`docs/data-catalog.md`
+
+说明本项目有哪些数据、manifest 字段、PDF 路径约定，以及其他项目如何引用。
+
 `.claude/skills/ima-skill`
 
 指向 `ima-skill/` 的 symlink。
