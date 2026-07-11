@@ -1,4 +1,4 @@
-# inv-research-hub
+# investment-research-archive
 
 从腾讯 ima 知识库同步并归档 PDF 研报。默认不做全量下载：先按 **AI Infrastructure** 主题筛出 P0/P1，再按每日预算限量下载。
 
@@ -70,6 +70,10 @@ flowchart LR
 
 - 区分「数据中心 / 地产 / 信托 / 估值 / 买卖评级」叙事与「技术资本开支」信号。
 - 仅有前者、标题无 AI 基建技术证据 → 降权；同时出现 GPU、服务器、光模块、液冷、hyperscaler 扩建等证据 → 可保留较高优先级。
+
+### 兜漏复核（可选）
+
+标题看不出内容的漏网（如普通业绩点评标题、正文含 ASIC/预测表），可用 IMA 文件夹问答做**单日粒度**的兜漏复核。2026-07-11 校准实测：51 份中 rank-ai 仅漏 1 份边缘候选，IMA 问答自身漏 2 份且假阳性 9 份——**IMA 只能兜漏，不能替代排序**。Prompt、使用规则与完整对账见 [docs/ima-recall-check.md](docs/ima-recall-check.md)。
 
 ### 默认下载过滤
 

@@ -1,10 +1,10 @@
-# inv-research-hub 数据说明
+# investment-research-archive 数据说明
 
 本文档说明本项目当前沉淀了哪些数据、数据放在哪里、各 JSONL 文件的字段含义，以及其他项目应该如何引用这些数据。
 
 ## 数据范围
 
-`inv-research-hub` 用于同步、归档腾讯 ima 知识库中的 PDF 研报。目前主要数据来自知识库：
+`investment-research-archive` 用于同步、归档腾讯 ima 知识库中的 PDF 研报。目前主要数据来自知识库：
 
 - `环球研报直通车`
 
@@ -227,7 +227,7 @@ function readJsonl(filePath) {
     .map((line) => JSON.parse(line));
 }
 
-const repoRoot = '/Users/leon/Stock/inv-research-hub';
+const repoRoot = '/Users/leon/Stock/investment-research-archive';
 const index = readJsonl(path.join(repoRoot, 'manifests/index.jsonl'));
 
 const records = index.map((record) => ({

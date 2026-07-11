@@ -1,6 +1,6 @@
 # Project
 
-inv-research-hub
+investment-research-archive
 
 # Purpose
 
