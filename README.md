@@ -1,117 +1,97 @@
 # inv-research-hub
 
-用于同步、归档腾讯 ima 知识库中的 PDF 研报。
+从腾讯 ima 知识库同步并归档 PDF 研报。默认不做全量下载：先按 **AI Infrastructure** 主题筛出 P0/P1，再按每日预算限量下载。
 
-这是一个 AI Workspace，不是传统应用程序。所有知识库访问与 PDF 下载都应通过 `ima-skill` 完成，并保持 ima 知识库中的原始目录结构和文件名。
+这是一个 AI Workspace（上游数据源），不是传统应用程序。知识库访问与 PDF 下载通过 `ima-skill` + `scripts/sync-kb-pdfs.cjs` 完成，并保持 ima 中的原始目录结构和文件名。
 
-## 目录
+## 给其他项目 / LLM：30 秒速览
 
-`AGENTS.md`
+| 问题 | 答案 |
+| --- | --- |
+| 这是什么？ | PDF 原文 + JSONL manifest 的上游归档仓 |
+| 不是什么？ | 不做全文抽取、embedding、财务结构化，也不自行实现 IMA SDK |
+| 默认下载谁？ | 仅 AI Infrastructure **P0 + P1**，每日预算约 28 份 |
+| 其他项目怎么读？ | 读 `manifests/` + `downloads/<local_relative_path>` |
+| 字段与接入示例？ | 见 [docs/data-catalog.md](docs/data-catalog.md) |
+| Agent 硬规则？ | 见 [AGENTS.md](AGENTS.md) |
 
-整个仓库唯一的 Agent 配置文件。
+## 核心产物
 
-`CLAUDE.md`
+| 路径 | 用途 |
+| --- | --- |
+| `downloads/` | PDF 原文，保持原始目录与文件名 |
+| `manifests/index.jsonl` | 知识库 PDF 全量索引（发现入口） |
+| `manifests/ai-ranked-queue.jsonl` | 最新 / 滚动排序队列（可被后续同步覆盖） |
+| `manifests/ai-ranked-queue-YYYYMMDD.jsonl` | 当天筛选快照（须保留并提交） |
+| `manifests/downloaded.jsonl` | 下载成功日志 |
+| `manifests/failed.jsonl` | 下载失败日志 |
+| `manifests/ai-p0p1-analysis.html` | 最新 P0/P1 人工查看页（可覆盖） |
+| `manifests/ai-p0p1-analysis-YYYYMMDD.html` | 当天 P0/P1 分析页（须保留并提交） |
 
-指向 `AGENTS.md` 的 symlink。
+HTML 仅供人工复核，不是机器读取的主数据源。跨机器引用 PDF 时用 `local_relative_path`，不要依赖 `saved_path`。
 
-`ima-skill/`
+## 排序与过滤规则
 
-本 Workspace 使用的 ima Skill。
+主路径只服务 **AI Infrastructure** 主题。`rank-ai` 只看标题和路径，不读 PDF 正文，不调用 IMA，不消耗资料获取额度。
 
-`docs/data-catalog.md`
-
-说明本项目有哪些数据、manifest 字段、PDF 路径约定，以及其他项目如何引用。
-
-`.claude/skills/ima-skill`
-
-指向 `ima-skill/` 的 symlink。
-
-`downloads/`
-
-保存下载后的 PDF，按原始目录结构归档。
-
-`manifests/downloaded.jsonl`
-
-记录已成功下载的文件。
-
-`manifests/failed.jsonl`
-
-记录下载失败的文件。
-
-## 更新 ima-skill
-
-将新版 ima Skill 放入 `ima-skill/`，保持目录名不变。
-
-更新后确认 `.claude/skills/ima-skill` 仍指向 `../../ima-skill`。
-
-不要修改 `downloads/` 或 `manifests/` 中的同步状态文件。
-
-## 同步
-
-使用 `ima-skill` 访问知识库，将 PDF 保存到 `downloads/`，并即时更新 `manifests/`。
-
-根据 `manifests/downloaded.jsonl` 跳过已完成文件，根据 `manifests/failed.jsonl` 识别需要重试或确认的失败项。
-
-### 批量索引和下载
-
-`scripts/sync-kb-pdfs.cjs` 用于先索引目录，再按 `media_id` 下载 PDF。
-
-索引结果写入：
-
-`manifests/index.jsonl`
-
-下载成功立即写入：
-
-`manifests/downloaded.jsonl`
-
-下载失败立即写入：
-
-`manifests/failed.jsonl`
-
-下载时会对每个文件重新调用 `get_media_info`，使用返回的 `url_info.url` 和 `headers` 获取 PDF，因此临时 URL 过期后可以直接重跑。
-
-示例：同步「环球研报直通车」中 2026 年 7 月目录，保存到 `downloads/2026/7月/...`：
-
-```bash
-node scripts/sync-kb-pdfs.cjs sync \
-  --kb "环球研报直通车" \
-  --source-path "2026年国际顶级投行研报/7月" \
-  --strip-source-prefix "2026年国际顶级投行研报" \
-  --local-prefix "2026"
+```mermaid
+flowchart LR
+  indexJsonl[index.jsonl] --> recall[Round1_recall_flash]
+  recall --> rerank[Round2_rerank_P0P1_only_pro]
+  rerank --> queue[ai-ranked-queue]
+  queue --> download[download-queue_P0P1_budget28]
 ```
 
-只索引不下载：
+### 两轮流程
 
-```bash
-node scripts/sync-kb-pdfs.cjs index \
-  --kb "环球研报直通车" \
-  --source-path "2026年国际顶级投行研报/7月" \
-  --strip-source-prefix "2026年国际顶级投行研报" \
-  --local-prefix "2026"
-```
+1. **第一轮召回（recall）**  
+   模型：`deepseek-v4-flash`（可用 `DEEPSEEK_MODEL` 覆盖）。  
+   对索引中的候选全量打 `P0`–`P3`，目标是高召回：宁可多放进 P0/P1，留给第二轮收紧。
 
-只下载已索引但未完成的文件：
+2. **第二轮复核（rerank）**  
+   模型：`deepseek-v4-pro`（可用 `DEEPSEEK_RERANK_MODEL` 覆盖）。  
+   **只复核第一轮的 P0/P1**。要求标题或路径中有证据词；禁止仅凭公司名、ticker 或行业常识抬到 P0。证据不足时可降为 P1/P2/P3。
 
-```bash
-node scripts/sync-kb-pdfs.cjs download \
-  --kb "环球研报直通车" \
-  --source-path "环球研报直通车 / 2026年国际顶级投行研报 / 7月"
-```
+3. **最终排序**  
+   `priority`（P0→P3）→ `score` 降序 → 日期新优先 → 标题。写入 queue 后赋 `rank`（从 1 开始）。
 
-测试少量下载时可以加 `--limit`：
+### 优先级定义
 
-```bash
-node scripts/sync-kb-pdfs.cjs download \
-  --kb "环球研报直通车" \
-  --source-path "环球研报直通车 / 2026年国际顶级投行研报 / 7月" \
-  --limit 3
-```
+| 级别 | 含义 | 典型主题 |
+| --- | --- | --- |
+| **P0** | 核心 AI Infrastructure | AIDC / hyperscaler 数据中心 capex、AI 服务器、GPU/ASIC、HBM/存储、先进封装/CoWoS、光互联、数据中心网络、电力/冷却/液冷、AI 半导体上游、人形机器人/具身智能核心硬件。明确 AIDC / AI 数据中心资本开支必须 P0 |
+| **P1** | 强相关上游或投资线索 | 半导体设备/材料、晶圆厂扩产、ABF、PCB、MLCC、AI PC、明确指向 AI 基建/数据中心/云 capex 的 IT 支出、机器人或 AI 产能相关工业自动化 |
+| **P2** | 泛 AI 或间接 | AI 应用、企业 AI 渗透率、互联网/云应用、生产率、科技硬件但基建指向不强 |
+| **P3** | 弱相关或无关 | 宏观、地产、医疗、消费、银行、普通汽车销量、普通互联网估值等 |
 
-## AI Infrastructure 每日队列
+**score 参考带**：P0 通常 85–100，P1 通常 65–84，P2 通常 35–64，P3 通常 0–34。
 
-AI Infrastructure 主题不需要下载全量 PDF。每日流程是先补索引，再用 DeepSeek 对标题和路径排序，最后只按 queue 下载高优先级文件。
+### 证据原则
 
-DeepSeek 配置从 `.env` 读取：
+- 区分「数据中心 / 地产 / 信托 / 估值 / 买卖评级」叙事与「技术资本开支」信号。
+- 仅有前者、标题无 AI 基建技术证据 → 降权；同时出现 GPU、服务器、光模块、液冷、hyperscaler 扩建等证据 → 可保留较高优先级。
+
+### 默认下载过滤
+
+| 规则 | 默认值 |
+| --- | --- |
+| 下载优先级 | `--priorities P0,P1`（P2/P3 不进默认下载） |
+| 每日预算 | `--daily-budget 28` |
+| 全量下载 | 仅当用户明确要求时才做 |
+| `download-queue` | 未经用户明确要求，不要运行 |
+| IMA 额度触顶 | 「资料获取次数已达上限」等错误必须立即停止 |
+
+## 其他项目怎么读
+
+1. **发现有哪些 PDF** → 读 `manifests/index.jsonl`
+2. **只要 AI Infra 高优** → 读 `manifests/ai-ranked-queue.jsonl`（或当日 `*-YYYYMMDD.jsonl`），过滤 `priority === 'P0' || priority === 'P1'`，按 `rank` 排序
+3. **读本地 PDF** → `path.join(repoRoot, 'downloads', record.local_relative_path)`
+
+字段含义、完整示例与约束见 [docs/data-catalog.md](docs/data-catalog.md)。
+
+## 每日流程
+
+DeepSeek 配置从 `.env` 读取（不提交）：
 
 ```bash
 DEEPSEEK_API_KEY=...
@@ -120,19 +100,9 @@ DEEPSEEK_RERANK_MODEL=deepseek-v4-pro
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
 
-`.env` 不提交。
-
-### 每日流程
-
-先索引目标月份目录，例如 2026 年 6 月和 7 月：
+### 1. 索引目标月份
 
 ```bash
-node scripts/sync-kb-pdfs.cjs index \
-  --kb "环球研报直通车" \
-  --source-path "2026年国际顶级投行研报/6月" \
-  --strip-source-prefix "2026年国际顶级投行研报" \
-  --local-prefix "2026"
-
 node scripts/sync-kb-pdfs.cjs index \
   --kb "环球研报直通车" \
   --source-path "2026年国际顶级投行研报/7月" \
@@ -140,7 +110,9 @@ node scripts/sync-kb-pdfs.cjs index \
   --local-prefix "2026"
 ```
 
-生成 AI queue：
+可按需对多个月份各跑一次。索引写入 `manifests/index.jsonl`。
+
+### 2. 生成 AI queue（不耗 IMA 额度）
 
 ```bash
 node scripts/sync-kb-pdfs.cjs rank-ai \
@@ -148,9 +120,13 @@ node scripts/sync-kb-pdfs.cjs rank-ai \
   --queue manifests/ai-ranked-queue.jsonl
 ```
 
-`rank-ai` 只调用 DeepSeek，不调用 IMA，不下载 PDF，不消耗 IMA 资料获取额度。
+正式结果应同时保留日期快照，例如：
 
-生成 P0/P1 查看页：
+```bash
+cp manifests/ai-ranked-queue.jsonl manifests/ai-ranked-queue-$(date +%Y%m%d).jsonl
+```
+
+### 3. 生成 P0/P1 查看页（不调 DeepSeek / IMA）
 
 ```bash
 node scripts/render-ai-p0p1-html.cjs \
@@ -158,9 +134,9 @@ node scripts/render-ai-p0p1-html.cjs \
   --out manifests/ai-p0p1-analysis.html
 ```
 
-HTML 只做可视化，不调用 DeepSeek，不调用 IMA。
+日期快照同理保留 `ai-p0p1-analysis-YYYYMMDD.html`。
 
-按 queue 下载 PDF：
+### 4. 按 queue 下载（耗 IMA 额度）
 
 ```bash
 node scripts/sync-kb-pdfs.cjs download-queue \
@@ -170,42 +146,41 @@ node scripts/sync-kb-pdfs.cjs download-queue \
   --daily-budget 28
 ```
 
-`download-queue` 会对每个文件重新调用 `get_media_info` 并下载 PDF，会消耗 IMA 资料获取额度。遇到“资料获取次数已达上限”等上限错误会立即停止，不继续刷失败记录。
+每个文件下载前会重新调用 `get_media_info`，用返回的临时 URL 与 headers 拉取 PDF。成功立即写 `downloaded.jsonl`，失败写 `failed.jsonl`。已存在的文件跳过。
 
-未经用户明确要求，不要运行 `download-queue`。
+关注输出中的 `by_priority`、`downloaded`、`budget_used`、`stopped_quota`。
 
-### 每日检查
-
-关注这些输出和文件：
-
-`manifests/ai-ranked-queue.jsonl`
-
-DeepSeek 排序后的最终下载队列。
-
-`manifests/ai-p0p1-analysis.html`
-
-人工查看 P0/P1 的 HTML 页面。
-
-`manifests/downloaded.jsonl`
-
-成功下载记录。
-
-`manifests/failed.jsonl`
-
-下载失败记录。
-
-命令输出中的 `by_priority`、`downloaded`、`budget_used`、`stopped_quota` 也需要检查。
-
-### 备份和提交
-
-重新生成 queue 前可以备份旧文件：
+### 备份与提交
 
 ```bash
 cp manifests/ai-ranked-queue.jsonl manifests/ai-ranked-queue.jsonl.bak-$(date +%Y%m%d-%H%M%S)
 ```
 
-`manifests/*.bak-*` 备份文件不提交。
+- 当天正式结果：提交 `ai-ranked-queue-YYYYMMDD.jsonl` 与 `ai-p0p1-analysis-YYYYMMDD.html`
+- 滚动文件可覆盖；`*.bak-*` 不提交
+- PDF 是否提交需单独确认，避免无意提交大量文件
 
-如果当天 queue 和 HTML 是正式结果，可以提交 `manifests/ai-ranked-queue.jsonl` 和 `manifests/ai-p0p1-analysis.html`。
+## 仅明确要求全量时
 
-PDF 是否提交需要单独确认，避免无意提交大量文件。
+```bash
+node scripts/sync-kb-pdfs.cjs sync \
+  --kb "环球研报直通车" \
+  --source-path "2026年国际顶级投行研报/7月" \
+  --strip-source-prefix "2026年国际顶级投行研报" \
+  --local-prefix "2026"
+```
+
+默认路径不要用全量 `sync` / `download`。
+
+## 仓库入口
+
+| 路径 | 说明 |
+| --- | --- |
+| [AGENTS.md](AGENTS.md) | Agent 唯一配置与硬规则 |
+| `CLAUDE.md` | 指向 `AGENTS.md` 的 symlink |
+| `ima-skill/` | ima OpenAPI Skill；`.claude/skills/ima-skill` 为其 symlink |
+| `scripts/sync-kb-pdfs.cjs` | 索引、排序、按 queue 下载 |
+| `scripts/render-ai-p0p1-html.cjs` | P0/P1 HTML 可视化 |
+| [docs/data-catalog.md](docs/data-catalog.md) | 字段、路径约定、跨项目引用 |
+
+同步与下载的完整约束（断点恢复、`media_id`、`get_media_info`、禁止自行批量 curl 等）见 [AGENTS.md](AGENTS.md)。
