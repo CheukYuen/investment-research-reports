@@ -1,4 +1,4 @@
-# investment-research-archive
+# investment-research-reports
 
 从腾讯 ima 知识库同步并归档 PDF 研报。默认不做全量下载：先按 **AI Infrastructure** 主题筛出 P0/P1，再按每日预算限量下载。
 

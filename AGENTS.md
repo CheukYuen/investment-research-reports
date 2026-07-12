@@ -1,6 +1,6 @@
 # Project
 
-investment-research-archive
+investment-research-reports
 
 # Purpose
 
