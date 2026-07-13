@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Infrastructure Daily P0/P1 Queue</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #5e6a75;
+      --line: #d9e0e7;
+      --p0: #b42318;
+      --p1: #8a6116;
+      --blue: #155eef;
+      --green: #067647;
+      --violet: #6941c6;
+      --shadow: 0 10px 30px rgba(21, 28, 38, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+    header {
+      background: #111827;
+      color: #fff;
+      padding: 28px clamp(18px, 4vw, 56px);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 4vw, 42px);
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+    .subhead {
+      max-width: 980px;
+      color: #cdd5df;
+      font-size: 15px;
+    }
+    main {
+      padding: 24px clamp(16px, 4vw, 56px) 52px;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+    .metric .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .metric .value {
+      margin-top: 6px;
+      font-size: 28px;
+      font-weight: 760;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    aside, section.panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    aside {
+      position: sticky;
+      top: 14px;
+      padding: 14px;
+    }
+    .filter-group {
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      margin-top: 12px;
+    }
+    .filter-group:first-child {
+      border-top: 0;
+      padding-top: 0;
+      margin-top: 0;
+    }
+    label {
+      display: block;
+      margin: 0 0 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input, select {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+    .quick {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    button {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      cursor: pointer;
+    }
+    button.active {
+      border-color: #111827;
+      background: #111827;
+      color: #fff;
+    }
+    .panel {
+      overflow: hidden;
+    }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      align-items: center;
+    }
+    .panel-title {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+      padding: 16px 18px 18px;
+    }
+    .summary-block {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfe;
+    }
+    .summary-block h3 {
+      margin: 0 0 10px;
+      font-size: 14px;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(88px, 1fr) 52px;
+      gap: 8px;
+      align-items: center;
+      margin: 7px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .bar {
+      height: 8px;
+      margin-top: 3px;
+      background: #e7ebf0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar span {
+      display: block;
+      height: 100%;
+      background: #2e90fa;
+    }
+    .top-list {
+      display: grid;
+      gap: 10px;
+      padding: 0 18px 18px;
+    }
+    .daily-groups {
+      display: grid;
+      gap: 14px;
+      padding: 16px 18px 18px;
+    }
+    .day-group {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+      overflow: hidden;
+    }
+    .day-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #f3f6f9;
+    }
+    .day-title {
+      margin: 0 0 4px;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+    .day-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .day-items {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+    .item {
+      display: grid;
+      grid-template-columns: 76px minmax(0, 1fr);
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+    .rankbox {
+      text-align: center;
+      border-right: 1px solid var(--line);
+      padding-right: 12px;
+    }
+    .rankbox .rank {
+      font-size: 20px;
+      font-weight: 800;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      min-height: 22px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .badge.p0 { background: var(--p0); }
+    .badge.p1 { background: var(--p1); }
+    .badge.tier { background: var(--green); }
+    .badge.downloaded { background: var(--blue); }
+    .title {
+      margin: 0 0 6px;
+      font-size: 15px;
+      font-weight: 760;
+      overflow-wrap: anywhere;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0;
+    }
+    .tag {
+      border: 1px solid #ccd6e0;
+      border-radius: 999px;
+      padding: 2px 8px;
+      color: #334155;
+      background: #f8fafc;
+      font-size: 12px;
+    }
+    .reason {
+      color: #344054;
+      font-size: 13px;
+      margin: 6px 0 0;
+    }
+    .path {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 8px;
+      overflow-wrap: anywhere;
+    }
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border-top: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f3f6f9;
+      color: #344054;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    td:nth-child(4) {
+      min-width: 320px;
+    }
+    a {
+      color: #155eef;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .hidden { display: none; }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { position: static; }
+      .item { grid-template-columns: 1fr; }
+      .rankbox {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 0 0 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AI Infrastructure Daily P0/P1 Queue</h1>
+    <div class="subhead">来源：manifests/ai-ranked-queue-20260712.jsonl。仅使用 PDF 标题和路径排序；若 queue 包含二轮复核字段，将展示证据与降权理由。生成时间：2026-07-13T05:07:15.147Z</div>
+  </header>
+  <main>
+    <div class="metrics">
+      <div class="metric"><div class="label">P0/P1</div><div class="value">6</div></div>
+      <div class="metric"><div class="label">P0</div><div class="value">3</div></div>
+      <div class="metric"><div class="label">P1</div><div class="value">3</div></div>
+      <div class="metric"><div class="label">二轮调整</div><div class="value">1</div></div>
+      <div class="metric"><div class="label">已在本地</div><div class="value">6</div></div>
+      <div class="metric"><div class="label">日期目录</div><div class="value">1</div></div>
+      <div class="metric"><div class="label">最新目录</div><div class="value">2026/7月/7.12</div></div>
+      <div class="metric"><div class="label">最新 P0/P1</div><div class="value">3/3</div></div>
+    </div>
+
+    <div class="layout">
+      <aside>
+        <div class="filter-group">
+          <label for="search">Search</label>
+          <input id="search" type="search" placeholder="标题、路径、topic、理由">
+        </div>
+        <div class="filter-group">
+          <label for="priority">Priority</label>
+          <select id="priority"><option value="">P0 + P1</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="bucket">Theme</label>
+          <select id="bucket"><option value="">All themes</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="topic">Topic</label>
+          <select id="topic"><option value="">All topics</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="month">Month</label>
+          <select id="month"><option value="">All months</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="dayFolder">Day / Original Folder</label>
+          <select id="dayFolder"><option value="">All folders</option></select>
+        </div>
+        <div class="filter-group">
+          <label>Quick Focus</label>
+          <div class="quick">
+            <button data-focus="aidc_capex">AIDC</button>
+            <button data-focus="optical_interconnect">光互联</button>
+            <button data-focus="hbm_memory">HBM</button>
+            <button data-focus="humanoid_robotics">机器人</button>
+          </div>
+        </div>
+      </aside>
+
+      <div>
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">主题分布</h2>
+            <div class="small">按 P0/P1 记录数统计</div>
+          </div>
+          <div class="summary-grid">
+            <div class="summary-block">
+    <h3>Priority</h3>
+    <div class="bar-row"><div>P0<div class="bar"><span style="width:100%"></span></div></div><strong>3</strong></div>
+<div class="bar-row"><div>P1<div class="bar"><span style="width:100%"></span></div></div><strong>3</strong></div>
+  </div>
+            <div class="summary-block">
+    <h3>Month</h3>
+    <div class="bar-row"><div>2026/7月<div class="bar"><span style="width:100%"></span></div></div><strong>6</strong></div>
+  </div>
+            <div class="summary-block">
+    <h3>Theme</h3>
+    <div class="bar-row"><div>AI Server / GPU / ASIC / HBM<div class="bar"><span style="width:100%"></span></div></div><strong>3</strong></div>
+<div class="bar-row"><div>AIDC / Cloud Capex<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>Humanoid / Embodied AI<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>Semi Upstream / Packaging / Equipment<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+  </div>
+            <div class="summary-block">
+    <h3>Top Topics</h3>
+    <div class="bar-row"><div>semiconductor_upstream<div class="bar"><span style="width:100%"></span></div></div><strong>3</strong></div>
+<div class="bar-row"><div>hbm_memory<div class="bar"><span style="width:67%"></span></div></div><strong>2</strong></div>
+<div class="bar-row"><div>humanoid_robotics<div class="bar"><span style="width:67%"></span></div></div><strong>2</strong></div>
+<div class="bar-row"><div>ai_compute<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>ai_infrastructure<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>ai_server<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>optical_interconnect<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>pcb<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>semiconductor_equipment<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+  </div>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-top:18px">
+          <div class="panel-head">
+            <h2 class="panel-title">每日 P0/P1</h2>
+            <div class="small"><span id="daily-count">1</span> 个日期目录</div>
+          </div>
+          <div id="daily-groups" class="daily-groups"></div>
+        </section>
+
+        <section class="panel" style="margin-top:18px">
+          <div class="panel-head">
+            <h2 class="panel-title">手动下载优先 Top 20</h2>
+            <div class="small">综合二轮 priority、score、AI 基建核心 topic 派生排序</div>
+          </div>
+          <div class="top-list">
+            <article class="item">
+    <div class="rankbox">
+      <div class="rank">#1</div>
+      <div class="small">LLM #2</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>AI Server / GPU / ASIC / HBM</span>
+        <span>score 90</span>
+        <span>recall P0 / 90</span>
+      </div>
+      <h3 class="title">高盛-泰国科技考察行：鹏鼎控股（002938.SZ） AI与光模块PCB扩产中；智能工厂与可再生能源保障可持续性-260711.pdf</h3>
+      <div class="tags"><span class="tag">ai_server</span><span class="tag">optical_interconnect</span><span class="tag">pcb</span></div>
+      <p class="reason">标题明确提及AI与光模块PCB扩产，属于AI基础设施核心硬件</p>
+      <div class="path">Evidence: AI / 光模块 / PCB / 扩产</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12</div>
+      <div class="path">IMA 文件: 高盛-泰国科技考察行：鹏鼎控股（002938.SZ） AI与光模块PCB扩产中；智能工厂与可再生能源保障可持续性-260711.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.12/高盛-泰国科技考察行：鹏鼎控股（002938.SZ） AI与光模块PCB扩产中；智能工厂与可再生能源保障可持续性-260711.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.12/%E9%AB%98%E7%9B%9B-%E6%B3%B0%E5%9B%BD%E7%A7%91%E6%8A%80%E8%80%83%E5%AF%9F%E8%A1%8C%EF%BC%9A%E9%B9%8F%E9%BC%8E%E6%8E%A7%E8%82%A1%EF%BC%88002938.SZ%EF%BC%89%20AI%E4%B8%8E%E5%85%89%E6%A8%A1%E5%9D%97PCB%E6%89%A9%E4%BA%A7%E4%B8%AD%EF%BC%9B%E6%99%BA%E8%83%BD%E5%B7%A5%E5%8E%82%E4%B8%8E%E5%8F%AF%E5%86%8D%E7%94%9F%E8%83%BD%E6%BA%90%E4%BF%9D%E9%9A%9C%E5%8F%AF%E6%8C%81%E7%BB%AD%E6%80%A7-260711.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#2</div>
+      <div class="small">LLM #1</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>AIDC / Cloud Capex</span>
+        <span>score 95</span>
+        <span>recall P0 / 95</span>
+      </div>
+      <h3 class="title">花旗-人工智能：花旗推理前沿：模型、机器人与内部算力释放-260710.pdf</h3>
+      <div class="tags"><span class="tag">ai_infrastructure</span><span class="tag">humanoid_robotics</span><span class="tag">ai_compute</span></div>
+      <p class="reason">标题明确为人工智能，涉及模型、机器人与内部算力释放，属于核心AI基础设施</p>
+      <div class="path">Evidence: 人工智能 / 模型 / 机器人 / 内部算力释放</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12</div>
+      <div class="path">IMA 文件: 花旗-人工智能：花旗推理前沿：模型、机器人与内部算力释放-260710.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.12/花旗-人工智能：花旗推理前沿：模型、机器人与内部算力释放-260710.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.12/%E8%8A%B1%E6%97%97-%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%EF%BC%9A%E8%8A%B1%E6%97%97%E6%8E%A8%E7%90%86%E5%89%8D%E6%B2%BF%EF%BC%9A%E6%A8%A1%E5%9E%8B%E3%80%81%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%8E%E5%86%85%E9%83%A8%E7%AE%97%E5%8A%9B%E9%87%8A%E6%94%BE-260710.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#3</div>
+      <div class="small">LLM #3</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>Humanoid / Embodied AI</span>
+        <span>score 85</span>
+        <span>recall P0 / 85</span>
+      </div>
+      <h3 class="title">伯恩斯坦-日本汽车及零部件行业：日本车企对人形机器人的兴趣再度升温-260710.pdf</h3>
+      <div class="tags"><span class="tag">humanoid_robotics</span></div>
+      <p class="reason">标题明确涉及人形机器人，属于AI基础设施核心硬件</p>
+      <div class="path">Evidence: 人形机器人</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12</div>
+      <div class="path">IMA 文件: 伯恩斯坦-日本汽车及零部件行业：日本车企对人形机器人的兴趣再度升温-260710.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.12/伯恩斯坦-日本汽车及零部件行业：日本车企对人形机器人的兴趣再度升温-260710.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.12/%E4%BC%AF%E6%81%A9%E6%96%AF%E5%9D%A6-%E6%97%A5%E6%9C%AC%E6%B1%BD%E8%BD%A6%E5%8F%8A%E9%9B%B6%E9%83%A8%E4%BB%B6%E8%A1%8C%E4%B8%9A%EF%BC%9A%E6%97%A5%E6%9C%AC%E8%BD%A6%E4%BC%81%E5%AF%B9%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%9A%84%E5%85%B4%E8%B6%A3%E5%86%8D%E5%BA%A6%E5%8D%87%E6%B8%A9-260710.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#4</div>
+      <div class="small">LLM #5</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p1">P1</span>
+        <span class="badge tier">Watchlist</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>AI Server / GPU / ASIC / HBM</span>
+        <span>score 70</span>
+        <span>recall P1 / 70</span>
+      </div>
+      <h3 class="title">高盛-亚太科技：半导体~存储板块：南亚科技2026年二季度业绩映射：ASP强劲上涨，行业前景乐观-260710.pdf</h3>
+      <div class="tags"><span class="tag">hbm_memory</span><span class="tag">semiconductor_upstream</span></div>
+      <p class="reason">标题涉及半导体存储板块，ASP强劲上涨，但未明确指向AI基础设施</p>
+      <div class="path">Evidence: 半导体 / 存储 / ASP / 南亚科技</div>
+      <div class="path">Review: 标题未出现HBM、AI等关键词，存储板块与AI关联需进一步证据</div>
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12</div>
+      <div class="path">IMA 文件: 高盛-亚太科技：半导体~存储板块：南亚科技2026年二季度业绩映射：ASP强劲上涨，行业前景乐观-260710.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.12/高盛-亚太科技：半导体~存储板块：南亚科技2026年二季度业绩映射：ASP强劲上涨，行业前景乐观-260710.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.12/%E9%AB%98%E7%9B%9B-%E4%BA%9A%E5%A4%AA%E7%A7%91%E6%8A%80%EF%BC%9A%E5%8D%8A%E5%AF%BC%E4%BD%93~%E5%AD%98%E5%82%A8%E6%9D%BF%E5%9D%97%EF%BC%9A%E5%8D%97%E4%BA%9A%E7%A7%91%E6%8A%802026%E5%B9%B4%E4%BA%8C%E5%AD%A3%E5%BA%A6%E4%B8%9A%E7%BB%A9%E6%98%A0%E5%B0%84%EF%BC%9AASP%E5%BC%BA%E5%8A%B2%E4%B8%8A%E6%B6%A8%EF%BC%8C%E8%A1%8C%E4%B8%9A%E5%89%8D%E6%99%AF%E4%B9%90%E8%A7%82-260710.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#5</div>
+      <div class="small">LLM #6</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p1">P1</span>
+        <span class="badge tier">Watchlist</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>AI Server / GPU / ASIC / HBM</span>
+        <span>score 70</span>
+        <span>recall P0 / 88</span>
+      </div>
+      <h3 class="title">美银-全球存储周报：三星股价回调、强势指标显现、长鑫存储（CXMT）IPO、南亚科技（Nanya Tech）业绩拐点-260711.pdf</h3>
+      <div class="tags"><span class="tag">hbm_memory</span><span class="tag">semiconductor_upstream</span></div>
+      <p class="reason">标题涉及全球存储周报，包含存储相关，但未明确提及HBM或AI基础设施，证据间接</p>
+      <div class="path">Evidence: 存储 / 三星 / 长鑫存储 / 南亚科技</div>
+      <div class="path">Review: 标题未出现HBM、AI等关键词，仅凭存储周报不足以支撑P0</div>
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12</div>
+      <div class="path">IMA 文件: 美银-全球存储周报：三星股价回调、强势指标显现、长鑫存储（CXMT）IPO、南亚科技（Nanya Tech）业绩拐点-260711.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.12/美银-全球存储周报：三星股价回调、强势指标显现、长鑫存储（CXMT）IPO、南亚科技（Nanya Tech）业绩拐点-260711.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.12/%E7%BE%8E%E9%93%B6-%E5%85%A8%E7%90%83%E5%AD%98%E5%82%A8%E5%91%A8%E6%8A%A5%EF%BC%9A%E4%B8%89%E6%98%9F%E8%82%A1%E4%BB%B7%E5%9B%9E%E8%B0%83%E3%80%81%E5%BC%BA%E5%8A%BF%E6%8C%87%E6%A0%87%E6%98%BE%E7%8E%B0%E3%80%81%E9%95%BF%E9%91%AB%E5%AD%98%E5%82%A8%EF%BC%88CXMT%EF%BC%89IPO%E3%80%81%E5%8D%97%E4%BA%9A%E7%A7%91%E6%8A%80%EF%BC%88Nanya%20Tech%EF%BC%89%E4%B8%9A%E7%BB%A9%E6%8B%90%E7%82%B9-260711.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#6</div>
+      <div class="small">LLM #4</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p1">P1</span>
+        <span class="badge tier">Watchlist</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>Semi Upstream / Packaging / Equipment</span>
+        <span>score 75</span>
+        <span>recall P1 / 75</span>
+      </div>
+      <h3 class="title">高盛-沪硅产业（688126.SH）：300mm大硅片新产能支撑存储与逻辑客户扩产；光子SOI需求强劲-260711.pdf</h3>
+      <div class="tags"><span class="tag">semiconductor_upstream</span><span class="tag">semiconductor_equipment</span></div>
+      <p class="reason">标题涉及300mm大硅片新产能支撑存储与逻辑客户扩产，属于半导体上游材料，与AI基础设施强相关</p>
+      <div class="path">Evidence: 300mm大硅片 / 新产能 / 存储 / 逻辑 / 光子SOI</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12</div>
+      <div class="path">IMA 文件: 高盛-沪硅产业（688126.SH）：300mm大硅片新产能支撑存储与逻辑客户扩产；光子SOI需求强劲-260711.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.12/高盛-沪硅产业（688126.SH）：300mm大硅片新产能支撑存储与逻辑客户扩产；光子SOI需求强劲-260711.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.12/%E9%AB%98%E7%9B%9B-%E6%B2%AA%E7%A1%85%E4%BA%A7%E4%B8%9A%EF%BC%88688126.SH%EF%BC%89%EF%BC%9A300mm%E5%A4%A7%E7%A1%85%E7%89%87%E6%96%B0%E4%BA%A7%E8%83%BD%E6%94%AF%E6%92%91%E5%AD%98%E5%82%A8%E4%B8%8E%E9%80%BB%E8%BE%91%E5%AE%A2%E6%88%B7%E6%89%A9%E4%BA%A7%EF%BC%9B%E5%85%89%E5%AD%90SOI%E9%9C%80%E6%B1%82%E5%BC%BA%E5%8A%B2-260711.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-top:18px">
+          <div class="panel-head">
+            <h2 class="panel-title">全部 P0/P1</h2>
+            <div class="small"><span id="result-count">6</span> 条匹配</div>
+          </div>
+          <div id="list" class="top-list"></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>手动序</th>
+                  <th>优先级</th>
+                  <th>得分</th>
+                  <th>标题</th>
+                  <th>主题</th>
+                  <th>路径 / 理由</th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <script id="records" type="application/json">[{"indexed_at":"2026-07-12T15:40:43.360Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12 / 高盛-泰国科技考察行：鹏鼎控股（002938.SZ） AI与光模块PCB扩产中；智能工厂与可再生能源保障可持续性-260711.pdf","title":"高盛-泰国科技考察行：鹏鼎控股（002938.SZ） AI与光模块PCB扩产中；智能工厂与可再生能源保障可持续性-260711.pdf","local_relative_path":"2026/7月/7.12/高盛-泰国科技考察行：鹏鼎控股（002938.SZ） AI与光模块PCB扩产中；智能工厂与可再生能源保障可持续性-260711.pdf","priority":"P0","rank":2,"score":90,"topics":["ai_server","optical_interconnect","pcb"],"reasons":["标题明确提及AI与光模块PCB扩产，属于AI基础设施核心硬件"],"evidence_keywords":["AI","光模块","PCB","扩产"],"evidence_level":"explicit","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P0","recall_score":90,"recall_topics":["ai_server","optical_interconnect","pcb"],"recall_reasons":["标题包含AI与光模块PCB，属于AI Infrastructure核心硬件"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-13T05:05:32.433Z","month":"2026/7月","day_label":"2026/7月/7.12","day_sort_key":"2026-07-12","day_folder":"7.12","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12","ima_file":"高盛-泰国科技考察行：鹏鼎控股（002938.SZ） AI与光模块PCB扩产中；智能工厂与可再生能源保障可持续性-260711.pdf","local_directory":"2026/7月/7.12","local_file":"高盛-泰国科技考察行：鹏鼎控股（002938.SZ） AI与光模块PCB扩产中；智能工厂与可再生能源保障可持续性-260711.pdf","local_download_path":"downloads/2026/7月/7.12/高盛-泰国科技考察行：鹏鼎控股（002938.SZ） AI与光模块PCB扩产中；智能工厂与可再生能源保障可持续性-260711.pdf","manual_bucket":"AI Server / GPU / ASIC / HBM","manual_score":1114,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.12/%E9%AB%98%E7%9B%9B-%E6%B3%B0%E5%9B%BD%E7%A7%91%E6%8A%80%E8%80%83%E5%AF%9F%E8%A1%8C%EF%BC%9A%E9%B9%8F%E9%BC%8E%E6%8E%A7%E8%82%A1%EF%BC%88002938.SZ%EF%BC%89%20AI%E4%B8%8E%E5%85%89%E6%A8%A1%E5%9D%97PCB%E6%89%A9%E4%BA%A7%E4%B8%AD%EF%BC%9B%E6%99%BA%E8%83%BD%E5%B7%A5%E5%8E%82%E4%B8%8E%E5%8F%AF%E5%86%8D%E7%94%9F%E8%83%BD%E6%BA%90%E4%BF%9D%E9%9A%9C%E5%8F%AF%E6%8C%81%E7%BB%AD%E6%80%A7-260711.pdf","manual_rank":1},{"indexed_at":"2026-07-12T15:40:43.364Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12 / 花旗-人工智能：花旗推理前沿：模型、机器人与内部算力释放-260710.pdf","title":"花旗-人工智能：花旗推理前沿：模型、机器人与内部算力释放-260710.pdf","local_relative_path":"2026/7月/7.12/花旗-人工智能：花旗推理前沿：模型、机器人与内部算力释放-260710.pdf","priority":"P0","rank":1,"score":95,"topics":["ai_infrastructure","humanoid_robotics","ai_compute"],"reasons":["标题明确为人工智能，涉及模型、机器人与内部算力释放，属于核心AI基础设施"],"evidence_keywords":["人工智能","模型","机器人","内部算力释放"],"evidence_level":"explicit","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P0","recall_score":95,"recall_topics":["ai_infrastructure","humanoid_robotics","ai_compute"],"recall_reasons":["标题明确为人工智能，涉及模型、机器人与内部算力释放，属于核心AI Infrastructure"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-13T05:05:32.433Z","month":"2026/7月","day_label":"2026/7月/7.12","day_sort_key":"2026-07-12","day_folder":"7.12","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12","ima_file":"花旗-人工智能：花旗推理前沿：模型、机器人与内部算力释放-260710.pdf","local_directory":"2026/7月/7.12","local_file":"花旗-人工智能：花旗推理前沿：模型、机器人与内部算力释放-260710.pdf","local_download_path":"downloads/2026/7月/7.12/花旗-人工智能：花旗推理前沿：模型、机器人与内部算力释放-260710.pdf","manual_bucket":"AIDC / Cloud Capex","manual_score":1107,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.12/%E8%8A%B1%E6%97%97-%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%EF%BC%9A%E8%8A%B1%E6%97%97%E6%8E%A8%E7%90%86%E5%89%8D%E6%B2%BF%EF%BC%9A%E6%A8%A1%E5%9E%8B%E3%80%81%E6%9C%BA%E5%99%A8%E4%BA%BA%E4%B8%8E%E5%86%85%E9%83%A8%E7%AE%97%E5%8A%9B%E9%87%8A%E6%94%BE-260710.pdf","manual_rank":2},{"indexed_at":"2026-07-12T15:40:43.366Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12 / 伯恩斯坦-日本汽车及零部件行业：日本车企对人形机器人的兴趣再度升温-260710.pdf","title":"伯恩斯坦-日本汽车及零部件行业：日本车企对人形机器人的兴趣再度升温-260710.pdf","local_relative_path":"2026/7月/7.12/伯恩斯坦-日本汽车及零部件行业：日本车企对人形机器人的兴趣再度升温-260710.pdf","priority":"P0","rank":3,"score":85,"topics":["humanoid_robotics"],"reasons":["标题明确涉及人形机器人，属于AI基础设施核心硬件"],"evidence_keywords":["人形机器人"],"evidence_level":"explicit","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P0","recall_score":85,"recall_topics":["humanoid_robotics"],"recall_reasons":["标题明确涉及人形机器人，属于AI Infrastructure核心硬件"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-13T05:05:32.433Z","month":"2026/7月","day_label":"2026/7月/7.12","day_sort_key":"2026-07-12","day_folder":"7.12","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12","ima_file":"伯恩斯坦-日本汽车及零部件行业：日本车企对人形机器人的兴趣再度升温-260710.pdf","local_directory":"2026/7月/7.12","local_file":"伯恩斯坦-日本汽车及零部件行业：日本车企对人形机器人的兴趣再度升温-260710.pdf","local_download_path":"downloads/2026/7月/7.12/伯恩斯坦-日本汽车及零部件行业：日本车企对人形机器人的兴趣再度升温-260710.pdf","manual_bucket":"Humanoid / Embodied AI","manual_score":1097,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.12/%E4%BC%AF%E6%81%A9%E6%96%AF%E5%9D%A6-%E6%97%A5%E6%9C%AC%E6%B1%BD%E8%BD%A6%E5%8F%8A%E9%9B%B6%E9%83%A8%E4%BB%B6%E8%A1%8C%E4%B8%9A%EF%BC%9A%E6%97%A5%E6%9C%AC%E8%BD%A6%E4%BC%81%E5%AF%B9%E4%BA%BA%E5%BD%A2%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%9A%84%E5%85%B4%E8%B6%A3%E5%86%8D%E5%BA%A6%E5%8D%87%E6%B8%A9-260710.pdf","manual_rank":3},{"indexed_at":"2026-07-12T15:40:43.365Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12 / 高盛-亚太科技：半导体~存储板块：南亚科技2026年二季度业绩映射：ASP强劲上涨，行业前景乐观-260710.pdf","title":"高盛-亚太科技：半导体~存储板块：南亚科技2026年二季度业绩映射：ASP强劲上涨，行业前景乐观-260710.pdf","local_relative_path":"2026/7月/7.12/高盛-亚太科技：半导体~存储板块：南亚科技2026年二季度业绩映射：ASP强劲上涨，行业前景乐观-260710.pdf","priority":"P1","rank":5,"score":70,"topics":["hbm_memory","semiconductor_upstream"],"reasons":["标题涉及半导体存储板块，ASP强劲上涨，但未明确指向AI基础设施"],"evidence_keywords":["半导体","存储","ASP","南亚科技"],"evidence_level":"indirect","downgrade_reasons":["标题未出现HBM、AI等关键词，存储板块与AI关联需进一步证据"],"rerank_changed":false,"recall_priority":"P1","recall_score":70,"recall_topics":["hbm_memory","semiconductor_upstream"],"recall_reasons":["标题涉及半导体存储板块，ASP强劲上涨，属于AI Infrastructure上游"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-13T05:05:32.433Z","month":"2026/7月","day_label":"2026/7月/7.12","day_sort_key":"2026-07-12","day_folder":"7.12","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12","ima_file":"高盛-亚太科技：半导体~存储板块：南亚科技2026年二季度业绩映射：ASP强劲上涨，行业前景乐观-260710.pdf","local_directory":"2026/7月/7.12","local_file":"高盛-亚太科技：半导体~存储板块：南亚科技2026年二季度业绩映射：ASP强劲上涨，行业前景乐观-260710.pdf","local_download_path":"downloads/2026/7月/7.12/高盛-亚太科技：半导体~存储板块：南亚科技2026年二季度业绩映射：ASP强劲上涨，行业前景乐观-260710.pdf","manual_bucket":"AI Server / GPU / ASIC / HBM","manual_score":782,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.12/%E9%AB%98%E7%9B%9B-%E4%BA%9A%E5%A4%AA%E7%A7%91%E6%8A%80%EF%BC%9A%E5%8D%8A%E5%AF%BC%E4%BD%93~%E5%AD%98%E5%82%A8%E6%9D%BF%E5%9D%97%EF%BC%9A%E5%8D%97%E4%BA%9A%E7%A7%91%E6%8A%802026%E5%B9%B4%E4%BA%8C%E5%AD%A3%E5%BA%A6%E4%B8%9A%E7%BB%A9%E6%98%A0%E5%B0%84%EF%BC%9AASP%E5%BC%BA%E5%8A%B2%E4%B8%8A%E6%B6%A8%EF%BC%8C%E8%A1%8C%E4%B8%9A%E5%89%8D%E6%99%AF%E4%B9%90%E8%A7%82-260710.pdf","manual_rank":4},{"indexed_at":"2026-07-12T15:40:43.365Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12 / 美银-全球存储周报：三星股价回调、强势指标显现、长鑫存储（CXMT）IPO、南亚科技（Nanya Tech）业绩拐点-260711.pdf","title":"美银-全球存储周报：三星股价回调、强势指标显现、长鑫存储（CXMT）IPO、南亚科技（Nanya Tech）业绩拐点-260711.pdf","local_relative_path":"2026/7月/7.12/美银-全球存储周报：三星股价回调、强势指标显现、长鑫存储（CXMT）IPO、南亚科技（Nanya Tech）业绩拐点-260711.pdf","priority":"P1","rank":6,"score":70,"topics":["hbm_memory","semiconductor_upstream"],"reasons":["标题涉及全球存储周报，包含存储相关，但未明确提及HBM或AI基础设施，证据间接"],"evidence_keywords":["存储","三星","长鑫存储","南亚科技"],"evidence_level":"indirect","downgrade_reasons":["标题未出现HBM、AI等关键词，仅凭存储周报不足以支撑P0"],"rerank_changed":true,"recall_priority":"P0","recall_score":88,"recall_topics":["hbm_memory","semiconductor_upstream"],"recall_reasons":["标题涉及全球存储周报，包含存储、HBM相关，属于AI Infrastructure核心"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-13T05:05:32.433Z","month":"2026/7月","day_label":"2026/7月/7.12","day_sort_key":"2026-07-12","day_folder":"7.12","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12","ima_file":"美银-全球存储周报：三星股价回调、强势指标显现、长鑫存储（CXMT）IPO、南亚科技（Nanya Tech）业绩拐点-260711.pdf","local_directory":"2026/7月/7.12","local_file":"美银-全球存储周报：三星股价回调、强势指标显现、长鑫存储（CXMT）IPO、南亚科技（Nanya Tech）业绩拐点-260711.pdf","local_download_path":"downloads/2026/7月/7.12/美银-全球存储周报：三星股价回调、强势指标显现、长鑫存储（CXMT）IPO、南亚科技（Nanya Tech）业绩拐点-260711.pdf","manual_bucket":"AI Server / GPU / ASIC / HBM","manual_score":782,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.12/%E7%BE%8E%E9%93%B6-%E5%85%A8%E7%90%83%E5%AD%98%E5%82%A8%E5%91%A8%E6%8A%A5%EF%BC%9A%E4%B8%89%E6%98%9F%E8%82%A1%E4%BB%B7%E5%9B%9E%E8%B0%83%E3%80%81%E5%BC%BA%E5%8A%BF%E6%8C%87%E6%A0%87%E6%98%BE%E7%8E%B0%E3%80%81%E9%95%BF%E9%91%AB%E5%AD%98%E5%82%A8%EF%BC%88CXMT%EF%BC%89IPO%E3%80%81%E5%8D%97%E4%BA%9A%E7%A7%91%E6%8A%80%EF%BC%88Nanya%20Tech%EF%BC%89%E4%B8%9A%E7%BB%A9%E6%8B%90%E7%82%B9-260711.pdf","manual_rank":5},{"indexed_at":"2026-07-12T15:40:43.364Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12 / 高盛-沪硅产业（688126.SH）：300mm大硅片新产能支撑存储与逻辑客户扩产；光子SOI需求强劲-260711.pdf","title":"高盛-沪硅产业（688126.SH）：300mm大硅片新产能支撑存储与逻辑客户扩产；光子SOI需求强劲-260711.pdf","local_relative_path":"2026/7月/7.12/高盛-沪硅产业（688126.SH）：300mm大硅片新产能支撑存储与逻辑客户扩产；光子SOI需求强劲-260711.pdf","priority":"P1","rank":4,"score":75,"topics":["semiconductor_upstream","semiconductor_equipment"],"reasons":["标题涉及300mm大硅片新产能支撑存储与逻辑客户扩产，属于半导体上游材料，与AI基础设施强相关"],"evidence_keywords":["300mm大硅片","新产能","存储","逻辑","光子SOI"],"evidence_level":"indirect","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P1","recall_score":75,"recall_topics":["semiconductor_upstream","semiconductor_equipment"],"recall_reasons":["标题涉及300mm大硅片新产能支撑存储与逻辑客户扩产，属于半导体上游材料，与AI Infrastructure强相关"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-13T05:05:32.433Z","month":"2026/7月","day_label":"2026/7月/7.12","day_sort_key":"2026-07-12","day_folder":"7.12","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.12","ima_file":"高盛-沪硅产业（688126.SH）：300mm大硅片新产能支撑存储与逻辑客户扩产；光子SOI需求强劲-260711.pdf","local_directory":"2026/7月/7.12","local_file":"高盛-沪硅产业（688126.SH）：300mm大硅片新产能支撑存储与逻辑客户扩产；光子SOI需求强劲-260711.pdf","local_download_path":"downloads/2026/7月/7.12/高盛-沪硅产业（688126.SH）：300mm大硅片新产能支撑存储与逻辑客户扩产；光子SOI需求强劲-260711.pdf","manual_bucket":"Semi Upstream / Packaging / Equipment","manual_score":775,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.12/%E9%AB%98%E7%9B%9B-%E6%B2%AA%E7%A1%85%E4%BA%A7%E4%B8%9A%EF%BC%88688126.SH%EF%BC%89%EF%BC%9A300mm%E5%A4%A7%E7%A1%85%E7%89%87%E6%96%B0%E4%BA%A7%E8%83%BD%E6%94%AF%E6%92%91%E5%AD%98%E5%82%A8%E4%B8%8E%E9%80%BB%E8%BE%91%E5%AE%A2%E6%88%B7%E6%89%A9%E4%BA%A7%EF%BC%9B%E5%85%89%E5%AD%90SOI%E9%9C%80%E6%B1%82%E5%BC%BA%E5%8A%B2-260711.pdf","manual_rank":6}]</script>
+  <script>
+    const records = JSON.parse(document.getElementById('records').textContent);
+    const state = { search: '', priority: '', bucket: '', topic: '', month: '', dayFolder: '' };
+    const els = {
+      search: document.getElementById('search'),
+      priority: document.getElementById('priority'),
+      bucket: document.getElementById('bucket'),
+      topic: document.getElementById('topic'),
+      month: document.getElementById('month'),
+      dayFolder: document.getElementById('dayFolder'),
+      dailyGroups: document.getElementById('daily-groups'),
+      dailyCount: document.getElementById('daily-count'),
+      rows: document.getElementById('rows'),
+      resultCount: document.getElementById('result-count'),
+    };
+
+    function uniq(values) {
+      return [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'zh-Hans-CN'));
+    }
+    function fillSelect(el, values) {
+      for (const value of values) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        el.appendChild(option);
+      }
+    }
+    function dayOptions() {
+      const seen = new Map();
+      for (const record of records) {
+        if (!record.day_label) continue;
+        const existing = seen.get(record.day_label);
+        if (!existing || String(record.day_sort_key).localeCompare(String(existing.sortKey)) > 0) {
+          seen.set(record.day_label, { label: record.day_label, sortKey: record.day_sort_key || '' });
+        }
+      }
+      return [...seen.values()]
+        .sort((a, b) => String(b.sortKey).localeCompare(String(a.sortKey)) || String(a.label).localeCompare(String(b.label), 'zh-Hans-CN'))
+        .map((item) => item.label);
+    }
+    fillSelect(els.priority, uniq(records.map((record) => record.priority)));
+    fillSelect(els.bucket, uniq(records.map((record) => record.manual_bucket)));
+    fillSelect(els.topic, uniq(records.flatMap((record) => record.topics || [])));
+    fillSelect(els.month, uniq(records.map((record) => record.month)));
+    fillSelect(els.dayFolder, dayOptions());
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    }
+    function textBlob(record) {
+      return [
+        record.title,
+        record.source_path,
+        record.ima_directory,
+        record.ima_file,
+        record.local_relative_path,
+        record.local_download_path,
+        record.manual_bucket,
+        record.day_label,
+        ...(record.topics || []),
+        ...(record.reasons || []),
+        ...(record.evidence_keywords || []),
+        ...(record.downgrade_reasons || []),
+      ].join(' ').toLowerCase();
+    }
+    function filtered() {
+      const q = state.search.trim().toLowerCase();
+      return records.filter((record) => {
+        if (state.priority && record.priority !== state.priority) return false;
+        if (state.bucket && record.manual_bucket !== state.bucket) return false;
+        if (state.topic && !(record.topics || []).includes(state.topic)) return false;
+        if (state.month && record.month !== state.month) return false;
+        if (state.dayFolder && record.day_label !== state.dayFolder) return false;
+        if (q && !textBlob(record).includes(q)) return false;
+        return true;
+      });
+    }
+    function groupByDay(rows) {
+      const groups = new Map();
+      for (const record of rows) {
+        const key = record.day_label || 'unknown';
+        if (!groups.has(key)) {
+          groups.set(key, { label: key, sortKey: record.day_sort_key || '', rows: [] });
+        }
+        groups.get(key).rows.push(record);
+      }
+      return [...groups.values()]
+        .sort((a, b) => String(b.sortKey).localeCompare(String(a.sortKey)) || String(a.label).localeCompare(String(b.label), 'zh-Hans-CN'));
+    }
+    function renderCard(record) {
+      const tags = (record.topics || []).slice(0, 8).map((topic) => '<span class="tag">' + escapeHtml(topic) + '</span>').join('');
+      const link = record.download_href ? '<a href="' + escapeHtml(record.download_href) + '">打开本地 PDF</a>' : '';
+      const downloaded = record.downloaded ? '<span class="badge downloaded">本地已有</span>' : '';
+      const recall = record.recall_priority ? '<span>recall ' + escapeHtml(record.recall_priority) + ' / ' + escapeHtml(record.recall_score) + '</span>' : '';
+      const evidence = (record.evidence_keywords || []).length ? '<div class="path">Evidence: ' + escapeHtml((record.evidence_keywords || []).join(' / ')) + '</div>' : '';
+      const review = (record.downgrade_reasons || []).length ? '<div class="path">Review: ' + escapeHtml((record.downgrade_reasons || []).join('；')) + '</div>' : '';
+      return '<article class="item">' +
+        '<div class="rankbox"><div class="rank">#' + escapeHtml(record.manual_rank) + '</div><div class="small">LLM #' + escapeHtml(record.rank) + '</div></div>' +
+        '<div>' +
+          '<div class="meta"><span class="badge ' + record.priority.toLowerCase() + '">' + escapeHtml(record.priority) + '</span><span class="badge tier">' + escapeHtml(record.manual_tier) + '</span>' + downloaded + '<span>' + escapeHtml(record.manual_bucket) + '</span><span>score ' + escapeHtml(record.score) + '</span>' + recall + '</div>' +
+          '<h3 class="title">' + escapeHtml(record.title) + '</h3>' +
+          '<div class="tags">' + tags + '</div>' +
+          '<p class="reason">' + escapeHtml((record.reasons || []).join('；')) + '</p>' +
+          evidence + review +
+          '<div class="path">IMA 目录: ' + escapeHtml(record.ima_directory) + '</div>' +
+          '<div class="path">IMA 文件: ' + escapeHtml(record.ima_file) + '</div>' +
+          '<div class="path">本地路径: ' + escapeHtml(record.local_download_path) + '</div>' +
+          '<div class="small">' + link + '</div>' +
+        '</div>' +
+      '</article>';
+    }
+    function renderDailyGroups(rows) {
+      const groups = groupByDay(rows);
+      els.dailyCount.textContent = groups.length;
+      els.dailyGroups.innerHTML = groups.map((group) => {
+        const p0 = group.rows.filter((record) => record.priority === 'P0').length;
+        const p1 = group.rows.filter((record) => record.priority === 'P1').length;
+        const downloaded = group.rows.filter((record) => record.downloaded).length;
+        const sortedRows = [...group.rows].sort((a, b) => {
+          const priorityOrder = { P0: 0, P1: 1 };
+          return (priorityOrder[a.priority] ?? 9) - (priorityOrder[b.priority] ?? 9) ||
+            b.manual_score - a.manual_score ||
+            Number(a.rank || 0) - Number(b.rank || 0) ||
+            String(a.title).localeCompare(String(b.title), 'zh-Hans-CN');
+        });
+        return '<section class="day-group">' +
+          '<div class="day-head"><div><h3 class="day-title">' + escapeHtml(group.label) + '</h3><div class="small">' + escapeHtml(sortedRows[0]?.ima_directory || '') + '</div></div>' +
+          '<div class="day-stats"><span class="badge p0">P0 ' + p0 + '</span><span class="badge p1">P1 ' + p1 + '</span><span class="tag">合计 ' + group.rows.length + '</span><span class="tag">本地 ' + downloaded + '</span></div></div>' +
+          '<div class="day-items">' + sortedRows.map(renderCard).join('') + '</div>' +
+        '</section>';
+      }).join('');
+    }
+    function renderRows() {
+      const rows = filtered();
+      els.resultCount.textContent = rows.length;
+      renderDailyGroups(rows);
+      els.rows.innerHTML = rows.map((record) => {
+        const tags = (record.topics || []).map((topic) => '<span class="tag">' + escapeHtml(topic) + '</span>').join('');
+        const link = record.download_href ? '<a href="' + escapeHtml(record.download_href) + '">打开本地 PDF</a>' : '';
+        const evidence = (record.evidence_keywords || []).map((keyword) => '<span class="tag">' + escapeHtml(keyword) + '</span>').join('');
+        const downgrade = (record.downgrade_reasons || []).join('；');
+        const recall = record.recall_priority ? 'Recall ' + record.recall_priority + ' / ' + record.recall_score : '';
+        return '<tr>' +
+          '<td><strong>' + record.manual_rank + '</strong><div class="small">' + escapeHtml(record.manual_tier) + '</div></td>' +
+          '<td><span class="badge ' + record.priority.toLowerCase() + '">' + escapeHtml(record.priority) + '</span></td>' +
+          '<td>' + escapeHtml(record.score) + '<div class="small">LLM #' + escapeHtml(record.rank) + '</div><div class="small">' + escapeHtml(recall) + '</div></td>' +
+          '<td><strong>' + escapeHtml(record.title) + '</strong><div class="small">' + escapeHtml(record.day_label) + '</div></td>' +
+          '<td><div class="tags">' + tags + '</div><div class="small">' + escapeHtml(record.manual_bucket) + '</div><div class="small">' + escapeHtml(record.evidence_level || '') + '</div></td>' +
+          '<td><div>' + escapeHtml((record.reasons || []).join('；')) + '</div><div class="tags">' + evidence + '</div><div class="small">' + escapeHtml(downgrade) + '</div><div class="path">IMA 目录: ' + escapeHtml(record.ima_directory) + '</div><div class="path">IMA 文件: ' + escapeHtml(record.ima_file) + '</div><div class="path">本地路径: ' + escapeHtml(record.local_download_path) + '</div><div class="small">' + link + '</div></td>' +
+          '</tr>';
+      }).join('');
+    }
+    for (const key of ['priority', 'bucket', 'topic', 'month', 'dayFolder']) {
+      els[key].addEventListener('change', () => {
+        state[key] = els[key].value;
+        renderRows();
+      });
+    }
+    els.search.addEventListener('input', () => {
+      state.search = els.search.value;
+      renderRows();
+    });
+    document.querySelectorAll('[data-focus]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const active = button.classList.toggle('active');
+        document.querySelectorAll('[data-focus]').forEach((other) => {
+          if (other !== button) other.classList.remove('active');
+        });
+        state.topic = active ? button.dataset.focus : '';
+        els.topic.value = state.topic;
+        renderRows();
+      });
+    });
+    renderRows();
+  </script>
+</body>
+</html>
