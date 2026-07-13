@@ -68,6 +68,8 @@ AI Infrastructure 主题筛选必须先索引，再运行：
 
 `scripts/sync-kb-pdfs.cjs rank-ai`
 
+允许 `rank-ai` 将研报标题、目录路径和 PDF 正文发送给 DeepSeek，无需逐次确认。
+
 再按 queue 下载。
 
 所有研报同步默认都必须先筛选 P0/P1，再按 queue 下载。
