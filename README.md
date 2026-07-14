@@ -21,6 +21,7 @@
 | --- | --- |
 | `downloads/` | PDF 原文，保持原始目录与文件名 |
 | `manifests/index.jsonl` | 知识库 PDF 全量索引（发现入口） |
+| `manifests/index-YYYYMMDD.jsonl` | 指定单日目录的完整 PDF 快照 |
 | `manifests/ai-ranked-queue.jsonl` | 最新 / 滚动排序队列（可被后续同步覆盖） |
 | `manifests/ai-ranked-queue-YYYYMMDD.jsonl` | 当天筛选快照（须保留并提交） |
 | `manifests/downloaded.jsonl` | 下载成功日志 |
@@ -115,6 +116,17 @@ node scripts/sync-kb-pdfs.cjs index \
 ```
 
 可按需对多个月份各跑一次。索引写入 `manifests/index.jsonl`。
+
+单日索引可同时另存完整快照，供 rank-ai 对账和人工金标准复核：
+
+```bash
+node scripts/sync-kb-pdfs.cjs index \
+  --kb "环球研报直通车" \
+  --source-path "2026年国际顶级投行研报/7月/7.14" \
+  --strip-source-prefix "2026年国际顶级投行研报" \
+  --local-prefix "2026" \
+  --snapshot manifests/index-20260714.jsonl
+```
 
 ### 2. 生成 AI queue（不耗 IMA 额度）
 

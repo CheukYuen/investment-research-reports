@@ -12,6 +12,7 @@
 
 - PDF 原文文件：保存在 `downloads/`
 - 知识库 PDF 索引：保存在 `manifests/index.jsonl`
+- 单日 PDF 快照：保存在 `manifests/index-YYYYMMDD.jsonl`
 - 下载成功/失败事件日志：保存在 `manifests/downloaded.jsonl`、`manifests/failed.jsonl`
 - AI Infrastructure 主题排序队列：保存在 `manifests/ai-ranked-queue*.jsonl`
 - P0/P1 人工查看页面：保存在 `manifests/ai-p0p1-analysis*.html`
@@ -35,6 +36,7 @@ downloads/
 
 manifests/
   index.jsonl
+  index-YYYYMMDD.jsonl
   downloaded.jsonl
   failed.jsonl
   ai-ranked-queue.jsonl
@@ -93,6 +95,10 @@ const pdfPath = path.join(repoRoot, 'downloads', record.local_relative_path);
 - 文件系统引用首选 `local_relative_path`
 
 注意：`index.jsonl` 是索引结果文件，不代表 PDF 都已下载。判断本地是否已有 PDF，应结合 `downloads/` 或 `downloaded.jsonl`。
+
+### `manifests/index-YYYYMMDD.jsonl`
+
+指定单日 IMA 文件夹的完整 PDF 快照。它与 append-only 的 `index.jsonl` 不同：即使 `media_id` 已在全局索引中，仍会出现在本日快照。字段与 `index.jsonl` 相同，用于 rank-ai 单日对账和人工金标准复核。
 
 ### `manifests/downloaded.jsonl`
 

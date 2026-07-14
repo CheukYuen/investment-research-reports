@@ -24,7 +24,7 @@ const PRIORITY_ORDER = new Map([
 
 function usage() {
   console.log(`Usage:
-  node scripts/sync-kb-pdfs.cjs index --kb <name> [--source-path <path>] [--strip-source-prefix <path>] [--local-prefix <path>]
+  node scripts/sync-kb-pdfs.cjs index --kb <name> [--source-path <path>] [--strip-source-prefix <path>] [--local-prefix <path>] [--snapshot <path>]
   node scripts/sync-kb-pdfs.cjs download --kb <name> [--source-path <path>] [--limit <n>]
   node scripts/sync-kb-pdfs.cjs sync --kb <name> [--source-path <path>] [--strip-source-prefix <path>] [--local-prefix <path>] [--limit <n>]
   node scripts/sync-kb-pdfs.cjs rank-ai [--months <month1,month2>] [--queue <path>] [--batch-size <n>] [--rerank-batch-size <n>]
@@ -548,12 +548,19 @@ function existingIndexKeys() {
   return new Set(readJsonl(INDEX_PATH).map((record) => record.media_id).filter(Boolean));
 }
 
-async function indexFolder(knowledgeBaseId, knowledgeBaseName, folderId, folderParts, opts, seen, stats) {
+async function collectFolderRecords(knowledgeBaseId, knowledgeBaseName, folderId, folderParts, opts, records) {
   const items = listFolderAll(knowledgeBaseId, folderId);
 
   for (const item of items) {
     if (item.media_type === FOLDER_MEDIA_TYPE) {
-      await indexFolder(knowledgeBaseId, knowledgeBaseName, item.media_id, [...folderParts, item.title], opts, seen, stats);
+      await collectFolderRecords(
+        knowledgeBaseId,
+        knowledgeBaseName,
+        item.media_id,
+        [...folderParts, item.title],
+        opts,
+        records
+      );
       continue;
     }
 
@@ -562,7 +569,7 @@ async function indexFolder(knowledgeBaseId, knowledgeBaseName, folderId, folderP
 
     const localParts = localPartsFromSource(folderParts, item.title, opts);
     const savedPath = path.join(DOWNLOADS_DIR, ...localParts);
-    const record = {
+    records.push({
       indexed_at: new Date().toISOString(),
       knowledge_base: knowledgeBaseName,
       source_path: fullSourcePath(knowledgeBaseName, [...folderParts, item.title]),
@@ -572,17 +579,7 @@ async function indexFolder(knowledgeBaseId, knowledgeBaseName, folderId, folderP
       parent_folder_id: item.parent_folder_id || null,
       local_relative_path: localParts.join('/'),
       saved_path: savedPath,
-    };
-
-    stats.seen += 1;
-    if (seen.has(item.media_id)) {
-      stats.skipped_existing_index += 1;
-      continue;
-    }
-
-    appendJsonl(INDEX_PATH, record);
-    seen.add(item.media_id);
-    stats.indexed += 1;
+    });
   }
 }
 
@@ -595,9 +592,50 @@ async function runIndex(opts) {
   const folderParts = splitPath(opts['source-path']);
   const folderId = resolveFolderPath(knowledgeBaseId, folderParts);
   const seen = existingIndexKeys();
-  const stats = { seen: 0, indexed: 0, skipped_existing_index: 0 };
+  const collected = [];
 
-  await indexFolder(knowledgeBaseId, knowledgeBaseName, folderId, folderParts, opts, seen, stats);
+  await collectFolderRecords(
+    knowledgeBaseId,
+    knowledgeBaseName,
+    folderId,
+    folderParts,
+    opts,
+    collected
+  );
+
+  const records = uniqueByMediaId(collected);
+  if (records.length === 0) {
+    throw new Error(`No PDFs found in source folder: ${opts['source-path'] || '(knowledge base root)'}`);
+  }
+
+  const stats = {
+    seen: records.length,
+    indexed: 0,
+    skipped_existing_index: 0,
+    snapshot: null,
+    snapshot_written: 0,
+  };
+
+  for (const record of records) {
+    if (seen.has(record.media_id)) {
+      stats.skipped_existing_index += 1;
+      continue;
+    }
+    appendJsonl(INDEX_PATH, record);
+    seen.add(record.media_id);
+    stats.indexed += 1;
+  }
+
+  if (opts.snapshot != null) {
+    if (opts.snapshot === true || String(opts.snapshot).trim() === '') {
+      throw new Error('--snapshot requires a path');
+    }
+    const snapshotPath = resolveRootPath(opts.snapshot);
+    writeJsonlAtomic(snapshotPath, records);
+    stats.snapshot = path.relative(ROOT, snapshotPath);
+    stats.snapshot_written = records.length;
+  }
+
   return stats;
 }
 
