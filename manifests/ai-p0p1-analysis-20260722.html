@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Infrastructure Daily P0/P1 Queue</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --ink: #17202a;
+      --muted: #5e6a75;
+      --line: #d9e0e7;
+      --p0: #b42318;
+      --p1: #8a6116;
+      --blue: #155eef;
+      --green: #067647;
+      --violet: #6941c6;
+      --shadow: 0 10px 30px rgba(21, 28, 38, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.45;
+    }
+    header {
+      background: #111827;
+      color: #fff;
+      padding: 28px clamp(18px, 4vw, 56px);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 4vw, 42px);
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+    .subhead {
+      max-width: 980px;
+      color: #cdd5df;
+      font-size: 15px;
+    }
+    main {
+      padding: 24px clamp(16px, 4vw, 56px) 52px;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+    .metric .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .metric .value {
+      margin-top: 6px;
+      font-size: 28px;
+      font-weight: 760;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    aside, section.panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    aside {
+      position: sticky;
+      top: 14px;
+      padding: 14px;
+    }
+    .filter-group {
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      margin-top: 12px;
+    }
+    .filter-group:first-child {
+      border-top: 0;
+      padding-top: 0;
+      margin-top: 0;
+    }
+    label {
+      display: block;
+      margin: 0 0 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input, select {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+    .quick {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    button {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      cursor: pointer;
+    }
+    button.active {
+      border-color: #111827;
+      background: #111827;
+      color: #fff;
+    }
+    .panel {
+      overflow: hidden;
+    }
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      align-items: center;
+    }
+    .panel-title {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
+      padding: 16px 18px 18px;
+    }
+    .summary-block {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfe;
+    }
+    .summary-block h3 {
+      margin: 0 0 10px;
+      font-size: 14px;
+    }
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(88px, 1fr) 52px;
+      gap: 8px;
+      align-items: center;
+      margin: 7px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .bar {
+      height: 8px;
+      margin-top: 3px;
+      background: #e7ebf0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .bar span {
+      display: block;
+      height: 100%;
+      background: #2e90fa;
+    }
+    .top-list {
+      display: grid;
+      gap: 10px;
+      padding: 0 18px 18px;
+    }
+    .daily-groups {
+      display: grid;
+      gap: 14px;
+      padding: 16px 18px 18px;
+    }
+    .day-group {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+      overflow: hidden;
+    }
+    .day-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #f3f6f9;
+    }
+    .day-title {
+      margin: 0 0 4px;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+    .day-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .day-items {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+    }
+    .item {
+      display: grid;
+      grid-template-columns: 76px minmax(0, 1fr);
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+    .rankbox {
+      text-align: center;
+      border-right: 1px solid var(--line);
+      padding-right: 12px;
+    }
+    .rankbox .rank {
+      font-size: 20px;
+      font-weight: 800;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      min-height: 22px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .badge.p0 { background: var(--p0); }
+    .badge.p1 { background: var(--p1); }
+    .badge.tier { background: var(--green); }
+    .badge.downloaded { background: var(--blue); }
+    .title {
+      margin: 0 0 6px;
+      font-size: 15px;
+      font-weight: 760;
+      overflow-wrap: anywhere;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0;
+    }
+    .tag {
+      border: 1px solid #ccd6e0;
+      border-radius: 999px;
+      padding: 2px 8px;
+      color: #334155;
+      background: #f8fafc;
+      font-size: 12px;
+    }
+    .reason {
+      color: #344054;
+      font-size: 13px;
+      margin: 6px 0 0;
+    }
+    .path {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 8px;
+      overflow-wrap: anywhere;
+    }
+    .table-wrap {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border-top: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #f3f6f9;
+      color: #344054;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    td:nth-child(4) {
+      min-width: 320px;
+    }
+    a {
+      color: #155eef;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .hidden { display: none; }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { position: static; }
+      .item { grid-template-columns: 1fr; }
+      .rankbox {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        padding: 0 0 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AI Infrastructure Daily P0/P1 Queue</h1>
+    <div class="subhead">来源：manifests/ai-ranked-queue-20260722.jsonl。仅使用 PDF 标题和路径排序；若 queue 包含二轮复核字段，将展示证据与降权理由。生成时间：2026-07-22T13:04:51.742Z</div>
+  </header>
+  <main>
+    <div class="metrics">
+      <div class="metric"><div class="label">P0/P1</div><div class="value">9</div></div>
+      <div class="metric"><div class="label">P0</div><div class="value">6</div></div>
+      <div class="metric"><div class="label">P1</div><div class="value">3</div></div>
+      <div class="metric"><div class="label">二轮调整</div><div class="value">0</div></div>
+      <div class="metric"><div class="label">已在本地</div><div class="value">9</div></div>
+      <div class="metric"><div class="label">日期目录</div><div class="value">1</div></div>
+      <div class="metric"><div class="label">最新目录</div><div class="value">2026/7月/7.22</div></div>
+      <div class="metric"><div class="label">最新 P0/P1</div><div class="value">6/3</div></div>
+    </div>
+
+    <div class="layout">
+      <aside>
+        <div class="filter-group">
+          <label for="search">Search</label>
+          <input id="search" type="search" placeholder="标题、路径、topic、理由">
+        </div>
+        <div class="filter-group">
+          <label for="priority">Priority</label>
+          <select id="priority"><option value="">P0 + P1</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="bucket">Theme</label>
+          <select id="bucket"><option value="">All themes</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="topic">Topic</label>
+          <select id="topic"><option value="">All topics</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="month">Month</label>
+          <select id="month"><option value="">All months</option></select>
+        </div>
+        <div class="filter-group">
+          <label for="dayFolder">Day / Original Folder</label>
+          <select id="dayFolder"><option value="">All folders</option></select>
+        </div>
+        <div class="filter-group">
+          <label>Quick Focus</label>
+          <div class="quick">
+            <button data-focus="aidc_capex">AIDC</button>
+            <button data-focus="optical_interconnect">光互联</button>
+            <button data-focus="hbm_memory">HBM</button>
+            <button data-focus="humanoid_robotics">机器人</button>
+          </div>
+        </div>
+      </aside>
+
+      <div>
+        <section class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">主题分布</h2>
+            <div class="small">按 P0/P1 记录数统计</div>
+          </div>
+          <div class="summary-grid">
+            <div class="summary-block">
+    <h3>Priority</h3>
+    <div class="bar-row"><div>P0<div class="bar"><span style="width:100%"></span></div></div><strong>6</strong></div>
+<div class="bar-row"><div>P1<div class="bar"><span style="width:50%"></span></div></div><strong>3</strong></div>
+  </div>
+            <div class="summary-block">
+    <h3>Month</h3>
+    <div class="bar-row"><div>2026/7月<div class="bar"><span style="width:100%"></span></div></div><strong>9</strong></div>
+  </div>
+            <div class="summary-block">
+    <h3>Theme</h3>
+    <div class="bar-row"><div>AIDC / Cloud Capex<div class="bar"><span style="width:100%"></span></div></div><strong>3</strong></div>
+<div class="bar-row"><div>AI Server / GPU / ASIC / HBM<div class="bar"><span style="width:67%"></span></div></div><strong>2</strong></div>
+<div class="bar-row"><div>Humanoid / Embodied AI<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>Optical / DC Network<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>Other P0/P1<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>Semi Upstream / Packaging / Equipment<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+  </div>
+            <div class="summary-block">
+    <h3>Top Topics</h3>
+    <div class="bar-row"><div>ai_application<div class="bar"><span style="width:100%"></span></div></div><strong>3</strong></div>
+<div class="bar-row"><div>semiconductor_upstream<div class="bar"><span style="width:100%"></span></div></div><strong>3</strong></div>
+<div class="bar-row"><div>advanced_packaging<div class="bar"><span style="width:67%"></span></div></div><strong>2</strong></div>
+<div class="bar-row"><div>aidc_capex<div class="bar"><span style="width:67%"></span></div></div><strong>2</strong></div>
+<div class="bar-row"><div>hbm_memory<div class="bar"><span style="width:67%"></span></div></div><strong>2</strong></div>
+<div class="bar-row"><div>abf_substrate<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>ai_chip<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>ai_infrastructure<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>ai_spending<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>humanoid_robotics<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>optical_interconnect<div class="bar"><span style="width:33%"></span></div></div><strong>1</strong></div>
+  </div>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-top:18px">
+          <div class="panel-head">
+            <h2 class="panel-title">每日 P0/P1</h2>
+            <div class="small"><span id="daily-count">1</span> 个日期目录</div>
+          </div>
+          <div id="daily-groups" class="daily-groups"></div>
+        </section>
+
+        <section class="panel" style="margin-top:18px">
+          <div class="panel-head">
+            <h2 class="panel-title">手动下载优先 Top 20</h2>
+            <div class="small">综合二轮 priority、score、AI 基建核心 topic 派生排序</div>
+          </div>
+          <div class="top-list">
+            <article class="item">
+    <div class="rankbox">
+      <div class="rank">#1</div>
+      <div class="small">LLM #1</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>AIDC / Cloud Capex</span>
+        <span>score 95</span>
+        <span>recall P0 / 95</span>
+      </div>
+      <h3 class="title">摩根大通-中国AI芯片：2026世界人工智能大会（WAIC）核心启示：中国AI基础设施全面转向系统级部署-260720.pdf</h3>
+      <div class="tags"><span class="tag">ai_chip</span><span class="tag">aidc_capex</span></div>
+      <p class="reason">标题明确提及AI芯片、AI基础设施、系统级部署，属于核心AI基础设施</p>
+      <div class="path">Evidence: AI芯片 / AI基础设施 / 系统级部署</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22</div>
+      <div class="path">IMA 文件: 摩根大通-中国AI芯片：2026世界人工智能大会（WAIC）核心启示：中国AI基础设施全面转向系统级部署-260720.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.22/摩根大通-中国AI芯片：2026世界人工智能大会（WAIC）核心启示：中国AI基础设施全面转向系统级部署-260720.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-%E4%B8%AD%E5%9B%BDAI%E8%8A%AF%E7%89%87%EF%BC%9A2026%E4%B8%96%E7%95%8C%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%A4%A7%E4%BC%9A%EF%BC%88WAIC%EF%BC%89%E6%A0%B8%E5%BF%83%E5%90%AF%E7%A4%BA%EF%BC%9A%E4%B8%AD%E5%9B%BDAI%E5%9F%BA%E7%A1%80%E8%AE%BE%E6%96%BD%E5%85%A8%E9%9D%A2%E8%BD%AC%E5%90%91%E7%B3%BB%E7%BB%9F%E7%BA%A7%E9%83%A8%E7%BD%B2-260720.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#2</div>
+      <div class="small">LLM #2</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>AIDC / Cloud Capex</span>
+        <span>score 95</span>
+        <span>recall P0 / 95</span>
+      </div>
+      <h3 class="title">野村-全球AI趋势追踪：AI专家电话会纪要（第70期）：玻璃桥与先进封装技术解析-260721.pdf</h3>
+      <div class="tags"><span class="tag">advanced_packaging</span><span class="tag">ai_infrastructure</span></div>
+      <p class="reason">标题明确提及AI专家电话会、玻璃桥与先进封装技术，直接关联AI基础设施核心</p>
+      <div class="path">Evidence: AI专家电话会 / 玻璃桥 / 先进封装</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22</div>
+      <div class="path">IMA 文件: 野村-全球AI趋势追踪：AI专家电话会纪要（第70期）：玻璃桥与先进封装技术解析-260721.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.22/野村-全球AI趋势追踪：AI专家电话会纪要（第70期）：玻璃桥与先进封装技术解析-260721.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E9%87%8E%E6%9D%91-%E5%85%A8%E7%90%83AI%E8%B6%8B%E5%8A%BF%E8%BF%BD%E8%B8%AA%EF%BC%9AAI%E4%B8%93%E5%AE%B6%E7%94%B5%E8%AF%9D%E4%BC%9A%E7%BA%AA%E8%A6%81%EF%BC%88%E7%AC%AC70%E6%9C%9F%EF%BC%89%EF%BC%9A%E7%8E%BB%E7%92%83%E6%A1%A5%E4%B8%8E%E5%85%88%E8%BF%9B%E5%B0%81%E8%A3%85%E6%8A%80%E6%9C%AF%E8%A7%A3%E6%9E%90-260721.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#3</div>
+      <div class="small">LLM #3</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>Optical / DC Network</span>
+        <span>score 95</span>
+        <span>recall P0 / 95</span>
+      </div>
+      <h3 class="title">野村-源杰科技（688498.SH）：上半年业绩预增强劲，印证光芯片长周期景气趋势-260721.pdf</h3>
+      <div class="tags"><span class="tag">optical_interconnect</span><span class="tag">semiconductor_upstream</span></div>
+      <p class="reason">标题明确提及光芯片，属于AI基础设施核心（光互联）</p>
+      <div class="path">Evidence: 光芯片 / 景气趋势</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22</div>
+      <div class="path">IMA 文件: 野村-源杰科技（688498.SH）：上半年业绩预增强劲，印证光芯片长周期景气趋势-260721.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.22/野村-源杰科技（688498.SH）：上半年业绩预增强劲，印证光芯片长周期景气趋势-260721.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E9%87%8E%E6%9D%91-%E6%BA%90%E6%9D%B0%E7%A7%91%E6%8A%80%EF%BC%88688498.SH%EF%BC%89%EF%BC%9A%E4%B8%8A%E5%8D%8A%E5%B9%B4%E4%B8%9A%E7%BB%A9%E9%A2%84%E5%A2%9E%E5%BC%BA%E5%8A%B2%EF%BC%8C%E5%8D%B0%E8%AF%81%E5%85%89%E8%8A%AF%E7%89%87%E9%95%BF%E5%91%A8%E6%9C%9F%E6%99%AF%E6%B0%94%E8%B6%8B%E5%8A%BF-260721.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#4</div>
+      <div class="small">LLM #4</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>AI Server / GPU / ASIC / HBM</span>
+        <span>score 90</span>
+        <span>recall P0 / 90</span>
+      </div>
+      <h3 class="title">大摩-全球科技网络研讨会实录：ASML管理层路演、存储创新与苹果AI进展-260721.pdf</h3>
+      <div class="tags"><span class="tag">semiconductor_upstream</span><span class="tag">hbm_memory</span><span class="tag">ai_application</span></div>
+      <p class="reason">标题明确提及ASML管理层路演（半导体设备）、存储创新（HBM等）、苹果AI进展，直接关联AI基础设施上游</p>
+      <div class="path">Evidence: ASML / 存储创新 / 苹果AI</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22</div>
+      <div class="path">IMA 文件: 大摩-全球科技网络研讨会实录：ASML管理层路演、存储创新与苹果AI进展-260721.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.22/大摩-全球科技网络研讨会实录：ASML管理层路演、存储创新与苹果AI进展-260721.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E5%A4%A7%E6%91%A9-%E5%85%A8%E7%90%83%E7%A7%91%E6%8A%80%E7%BD%91%E7%BB%9C%E7%A0%94%E8%AE%A8%E4%BC%9A%E5%AE%9E%E5%BD%95%EF%BC%9AASML%E7%AE%A1%E7%90%86%E5%B1%82%E8%B7%AF%E6%BC%94%E3%80%81%E5%AD%98%E5%82%A8%E5%88%9B%E6%96%B0%E4%B8%8E%E8%8B%B9%E6%9E%9CAI%E8%BF%9B%E5%B1%95-260721.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#5</div>
+      <div class="small">LLM #5</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>AI Server / GPU / ASIC / HBM</span>
+        <span>score 90</span>
+        <span>recall P0 / 90</span>
+      </div>
+      <h3 class="title">美银-美国半导体行业：看多存储芯片的逻辑，“开源”如何拓宽总可寻址市场-260720.pdf</h3>
+      <div class="tags"><span class="tag">hbm_memory</span><span class="tag">semiconductor_upstream</span></div>
+      <p class="reason">标题明确提及存储芯片和总可寻址市场，属于AI基础设施核心（HBM等）</p>
+      <div class="path">Evidence: 存储芯片 / 总可寻址市场</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22</div>
+      <div class="path">IMA 文件: 美银-美国半导体行业：看多存储芯片的逻辑，“开源”如何拓宽总可寻址市场-260720.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.22/美银-美国半导体行业：看多存储芯片的逻辑，“开源”如何拓宽总可寻址市场-260720.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E7%BE%8E%E9%93%B6-%E7%BE%8E%E5%9B%BD%E5%8D%8A%E5%AF%BC%E4%BD%93%E8%A1%8C%E4%B8%9A%EF%BC%9A%E7%9C%8B%E5%A4%9A%E5%AD%98%E5%82%A8%E8%8A%AF%E7%89%87%E7%9A%84%E9%80%BB%E8%BE%91%EF%BC%8C%E2%80%9C%E5%BC%80%E6%BA%90%E2%80%9D%E5%A6%82%E4%BD%95%E6%8B%93%E5%AE%BD%E6%80%BB%E5%8F%AF%E5%AF%BB%E5%9D%80%E5%B8%82%E5%9C%BA-260720.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#6</div>
+      <div class="small">LLM #6</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>AIDC / Cloud Capex</span>
+        <span>score 90</span>
+        <span>recall P0 / 90</span>
+      </div>
+      <h3 class="title">摩根大通-潍柴动力（000338.SZ）：闭门交流会及管理层更新印证AIDC逻辑，股价回调创造绝佳布局时机，2026年上半年业绩前瞻-260720.pdf</h3>
+      <div class="tags"><span class="tag">aidc_capex</span></div>
+      <p class="reason">标题明确提及AIDC逻辑，属于核心AI基础设施</p>
+      <div class="path">Evidence: AIDC逻辑</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22</div>
+      <div class="path">IMA 文件: 摩根大通-潍柴动力（000338.SZ）：闭门交流会及管理层更新印证AIDC逻辑，股价回调创造绝佳布局时机，2026年上半年业绩前瞻-260720.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.22/摩根大通-潍柴动力（000338.SZ）：闭门交流会及管理层更新印证AIDC逻辑，股价回调创造绝佳布局时机，2026年上半年业绩前瞻-260720.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-%E6%BD%8D%E6%9F%B4%E5%8A%A8%E5%8A%9B%EF%BC%88000338.SZ%EF%BC%89%EF%BC%9A%E9%97%AD%E9%97%A8%E4%BA%A4%E6%B5%81%E4%BC%9A%E5%8F%8A%E7%AE%A1%E7%90%86%E5%B1%82%E6%9B%B4%E6%96%B0%E5%8D%B0%E8%AF%81AIDC%E9%80%BB%E8%BE%91%EF%BC%8C%E8%82%A1%E4%BB%B7%E5%9B%9E%E8%B0%83%E5%88%9B%E9%80%A0%E7%BB%9D%E4%BD%B3%E5%B8%83%E5%B1%80%E6%97%B6%E6%9C%BA%EF%BC%8C2026%E5%B9%B4%E4%B8%8A%E5%8D%8A%E5%B9%B4%E4%B8%9A%E7%BB%A9%E5%89%8D%E7%9E%BB-260720.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#7</div>
+      <div class="small">LLM #7</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p1">P1</span>
+        <span class="badge tier">Watchlist</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>Semi Upstream / Packaging / Equipment</span>
+        <span>score 80</span>
+        <span>recall P1 / 80</span>
+      </div>
+      <h3 class="title">摩根大通-电子元件行业：FC-BGA（ABF）载板技术研讨会纪要-260721.pdf</h3>
+      <div class="tags"><span class="tag">advanced_packaging</span><span class="tag">abf_substrate</span></div>
+      <p class="reason">标题明确提及FC-BGA（ABF）载板，属于AI基础设施上游（先进封装）</p>
+      <div class="path">Evidence: FC-BGA / ABF载板</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22</div>
+      <div class="path">IMA 文件: 摩根大通-电子元件行业：FC-BGA（ABF）载板技术研讨会纪要-260721.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.22/摩根大通-电子元件行业：FC-BGA（ABF）载板技术研讨会纪要-260721.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-%E7%94%B5%E5%AD%90%E5%85%83%E4%BB%B6%E8%A1%8C%E4%B8%9A%EF%BC%9AFC-BGA%EF%BC%88ABF%EF%BC%89%E8%BD%BD%E6%9D%BF%E6%8A%80%E6%9C%AF%E7%A0%94%E8%AE%A8%E4%BC%9A%E7%BA%AA%E8%A6%81-260721.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#8</div>
+      <div class="small">LLM #9</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p1">P1</span>
+        <span class="badge tier">Watchlist</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>Humanoid / Embodied AI</span>
+        <span>score 70</span>
+        <span>recall P1 / 70</span>
+      </div>
+      <h3 class="title">大摩-中国工业行业：2026世界人工智能大会（WAIC）纪要：物理AI加速迭代-260720.pdf</h3>
+      <div class="tags"><span class="tag">ai_application</span><span class="tag">humanoid_robotics</span></div>
+      <p class="reason">标题包含世界人工智能大会、物理AI，与AI基础设施上游相关</p>
+      <div class="path">Evidence: 世界人工智能大会 / 物理AI</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22</div>
+      <div class="path">IMA 文件: 大摩-中国工业行业：2026世界人工智能大会（WAIC）纪要：物理AI加速迭代-260720.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.22/大摩-中国工业行业：2026世界人工智能大会（WAIC）纪要：物理AI加速迭代-260720.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E5%A4%A7%E6%91%A9-%E4%B8%AD%E5%9B%BD%E5%B7%A5%E4%B8%9A%E8%A1%8C%E4%B8%9A%EF%BC%9A2026%E4%B8%96%E7%95%8C%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%A4%A7%E4%BC%9A%EF%BC%88WAIC%EF%BC%89%E7%BA%AA%E8%A6%81%EF%BC%9A%E7%89%A9%E7%90%86AI%E5%8A%A0%E9%80%9F%E8%BF%AD%E4%BB%A3-260720.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#9</div>
+      <div class="small">LLM #8</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p1">P1</span>
+        <span class="badge tier">Watchlist</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>Other P0/P1</span>
+        <span>score 75</span>
+        <span>recall P1 / 75</span>
+      </div>
+      <h3 class="title">高盛-美国科技：软件行业重访护城河：AI支出与安全AI支出的时滞，以及拐点何时出现-260721.pdf</h3>
+      <div class="tags"><span class="tag">ai_spending</span><span class="tag">ai_application</span></div>
+      <p class="reason">标题明确提及AI支出和安全AI支出，属于AI基础设施相关投资主题</p>
+      <div class="path">Evidence: AI支出 / 安全AI支出</div>
+
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22</div>
+      <div class="path">IMA 文件: 高盛-美国科技：软件行业重访护城河：AI支出与安全AI支出的时滞，以及拐点何时出现-260721.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.22/高盛-美国科技：软件行业重访护城河：AI支出与安全AI支出的时滞，以及拐点何时出现-260721.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E9%AB%98%E7%9B%9B-%E7%BE%8E%E5%9B%BD%E7%A7%91%E6%8A%80%EF%BC%9A%E8%BD%AF%E4%BB%B6%E8%A1%8C%E4%B8%9A%E9%87%8D%E8%AE%BF%E6%8A%A4%E5%9F%8E%E6%B2%B3%EF%BC%9AAI%E6%94%AF%E5%87%BA%E4%B8%8E%E5%AE%89%E5%85%A8AI%E6%94%AF%E5%87%BA%E7%9A%84%E6%97%B6%E6%BB%9E%EF%BC%8C%E4%BB%A5%E5%8F%8A%E6%8B%90%E7%82%B9%E4%BD%95%E6%97%B6%E5%87%BA%E7%8E%B0-260721.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+          </div>
+        </section>
+
+        <section class="panel" style="margin-top:18px">
+          <div class="panel-head">
+            <h2 class="panel-title">全部 P0/P1</h2>
+            <div class="small"><span id="result-count">9</span> 条匹配</div>
+          </div>
+          <div id="list" class="top-list"></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>手动序</th>
+                  <th>优先级</th>
+                  <th>得分</th>
+                  <th>标题</th>
+                  <th>主题</th>
+                  <th>路径 / 理由</th>
+                </tr>
+              </thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <script id="records" type="application/json">[{"indexed_at":"2026-07-22T13:03:08.131Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22 / 摩根大通-中国AI芯片：2026世界人工智能大会（WAIC）核心启示：中国AI基础设施全面转向系统级部署-260720.pdf","title":"摩根大通-中国AI芯片：2026世界人工智能大会（WAIC）核心启示：中国AI基础设施全面转向系统级部署-260720.pdf","local_relative_path":"2026/7月/7.22/摩根大通-中国AI芯片：2026世界人工智能大会（WAIC）核心启示：中国AI基础设施全面转向系统级部署-260720.pdf","priority":"P0","rank":1,"score":95,"topics":["ai_chip","aidc_capex"],"reasons":["标题明确提及AI芯片、AI基础设施、系统级部署，属于核心AI基础设施"],"evidence_keywords":["AI芯片","AI基础设施","系统级部署"],"evidence_level":"explicit","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P0","recall_score":95,"recall_topics":["ai_chip","aidc_capex"],"recall_reasons":["标题明确提及AI芯片、AI基础设施、系统级部署，属于核心AI基础设施"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-22T13:03:14.095Z","month":"2026/7月","day_label":"2026/7月/7.22","day_sort_key":"2026-07-22","day_folder":"7.22","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22","ima_file":"摩根大通-中国AI芯片：2026世界人工智能大会（WAIC）核心启示：中国AI基础设施全面转向系统级部署-260720.pdf","local_directory":"2026/7月/7.22","local_file":"摩根大通-中国AI芯片：2026世界人工智能大会（WAIC）核心启示：中国AI基础设施全面转向系统级部署-260720.pdf","local_download_path":"downloads/2026/7月/7.22/摩根大通-中国AI芯片：2026世界人工智能大会（WAIC）核心启示：中国AI基础设施全面转向系统级部署-260720.pdf","manual_bucket":"AIDC / Cloud Capex","manual_score":1107,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-%E4%B8%AD%E5%9B%BDAI%E8%8A%AF%E7%89%87%EF%BC%9A2026%E4%B8%96%E7%95%8C%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%A4%A7%E4%BC%9A%EF%BC%88WAIC%EF%BC%89%E6%A0%B8%E5%BF%83%E5%90%AF%E7%A4%BA%EF%BC%9A%E4%B8%AD%E5%9B%BDAI%E5%9F%BA%E7%A1%80%E8%AE%BE%E6%96%BD%E5%85%A8%E9%9D%A2%E8%BD%AC%E5%90%91%E7%B3%BB%E7%BB%9F%E7%BA%A7%E9%83%A8%E7%BD%B2-260720.pdf","manual_rank":1},{"indexed_at":"2026-07-22T13:03:08.130Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22 / 野村-全球AI趋势追踪：AI专家电话会纪要（第70期）：玻璃桥与先进封装技术解析-260721.pdf","title":"野村-全球AI趋势追踪：AI专家电话会纪要（第70期）：玻璃桥与先进封装技术解析-260721.pdf","local_relative_path":"2026/7月/7.22/野村-全球AI趋势追踪：AI专家电话会纪要（第70期）：玻璃桥与先进封装技术解析-260721.pdf","priority":"P0","rank":2,"score":95,"topics":["advanced_packaging","ai_infrastructure"],"reasons":["标题明确提及AI专家电话会、玻璃桥与先进封装技术，直接关联AI基础设施核心"],"evidence_keywords":["AI专家电话会","玻璃桥","先进封装"],"evidence_level":"explicit","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P0","recall_score":95,"recall_topics":["advanced_packaging","ai_infrastructure"],"recall_reasons":["标题明确提及AI专家电话会、玻璃桥与先进封装技术，直接关联AI基础设施核心"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-22T13:03:14.095Z","month":"2026/7月","day_label":"2026/7月/7.22","day_sort_key":"2026-07-22","day_folder":"7.22","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22","ima_file":"野村-全球AI趋势追踪：AI专家电话会纪要（第70期）：玻璃桥与先进封装技术解析-260721.pdf","local_directory":"2026/7月/7.22","local_file":"野村-全球AI趋势追踪：AI专家电话会纪要（第70期）：玻璃桥与先进封装技术解析-260721.pdf","local_download_path":"downloads/2026/7月/7.22/野村-全球AI趋势追踪：AI专家电话会纪要（第70期）：玻璃桥与先进封装技术解析-260721.pdf","manual_bucket":"AIDC / Cloud Capex","manual_score":1107,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E9%87%8E%E6%9D%91-%E5%85%A8%E7%90%83AI%E8%B6%8B%E5%8A%BF%E8%BF%BD%E8%B8%AA%EF%BC%9AAI%E4%B8%93%E5%AE%B6%E7%94%B5%E8%AF%9D%E4%BC%9A%E7%BA%AA%E8%A6%81%EF%BC%88%E7%AC%AC70%E6%9C%9F%EF%BC%89%EF%BC%9A%E7%8E%BB%E7%92%83%E6%A1%A5%E4%B8%8E%E5%85%88%E8%BF%9B%E5%B0%81%E8%A3%85%E6%8A%80%E6%9C%AF%E8%A7%A3%E6%9E%90-260721.pdf","manual_rank":2},{"indexed_at":"2026-07-22T13:03:08.130Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22 / 野村-源杰科技（688498.SH）：上半年业绩预增强劲，印证光芯片长周期景气趋势-260721.pdf","title":"野村-源杰科技（688498.SH）：上半年业绩预增强劲，印证光芯片长周期景气趋势-260721.pdf","local_relative_path":"2026/7月/7.22/野村-源杰科技（688498.SH）：上半年业绩预增强劲，印证光芯片长周期景气趋势-260721.pdf","priority":"P0","rank":3,"score":95,"topics":["optical_interconnect","semiconductor_upstream"],"reasons":["标题明确提及光芯片，属于AI基础设施核心（光互联）"],"evidence_keywords":["光芯片","景气趋势"],"evidence_level":"explicit","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P0","recall_score":95,"recall_topics":["optical_interconnect","semiconductor_upstream"],"recall_reasons":["标题明确提及光芯片，属于AI基础设施核心（光互联）"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-22T13:03:14.095Z","month":"2026/7月","day_label":"2026/7月/7.22","day_sort_key":"2026-07-22","day_folder":"7.22","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22","ima_file":"野村-源杰科技（688498.SH）：上半年业绩预增强劲，印证光芯片长周期景气趋势-260721.pdf","local_directory":"2026/7月/7.22","local_file":"野村-源杰科技（688498.SH）：上半年业绩预增强劲，印证光芯片长周期景气趋势-260721.pdf","local_download_path":"downloads/2026/7月/7.22/野村-源杰科技（688498.SH）：上半年业绩预增强劲，印证光芯片长周期景气趋势-260721.pdf","manual_bucket":"Optical / DC Network","manual_score":1107,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E9%87%8E%E6%9D%91-%E6%BA%90%E6%9D%B0%E7%A7%91%E6%8A%80%EF%BC%88688498.SH%EF%BC%89%EF%BC%9A%E4%B8%8A%E5%8D%8A%E5%B9%B4%E4%B8%9A%E7%BB%A9%E9%A2%84%E5%A2%9E%E5%BC%BA%E5%8A%B2%EF%BC%8C%E5%8D%B0%E8%AF%81%E5%85%89%E8%8A%AF%E7%89%87%E9%95%BF%E5%91%A8%E6%9C%9F%E6%99%AF%E6%B0%94%E8%B6%8B%E5%8A%BF-260721.pdf","manual_rank":3},{"indexed_at":"2026-07-22T13:03:08.130Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22 / 大摩-全球科技网络研讨会实录：ASML管理层路演、存储创新与苹果AI进展-260721.pdf","title":"大摩-全球科技网络研讨会实录：ASML管理层路演、存储创新与苹果AI进展-260721.pdf","local_relative_path":"2026/7月/7.22/大摩-全球科技网络研讨会实录：ASML管理层路演、存储创新与苹果AI进展-260721.pdf","priority":"P0","rank":4,"score":90,"topics":["semiconductor_upstream","hbm_memory","ai_application"],"reasons":["标题明确提及ASML管理层路演（半导体设备）、存储创新（HBM等）、苹果AI进展，直接关联AI基础设施上游"],"evidence_keywords":["ASML","存储创新","苹果AI"],"evidence_level":"explicit","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P0","recall_score":90,"recall_topics":["semiconductor_upstream","hbm_memory","ai_application"],"recall_reasons":["标题提及ASML管理层路演（半导体设备）、存储创新（HBM等）、苹果AI进展，直接关联AI基础设施上游"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-22T13:03:14.095Z","month":"2026/7月","day_label":"2026/7月/7.22","day_sort_key":"2026-07-22","day_folder":"7.22","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22","ima_file":"大摩-全球科技网络研讨会实录：ASML管理层路演、存储创新与苹果AI进展-260721.pdf","local_directory":"2026/7月/7.22","local_file":"大摩-全球科技网络研讨会实录：ASML管理层路演、存储创新与苹果AI进展-260721.pdf","local_download_path":"downloads/2026/7月/7.22/大摩-全球科技网络研讨会实录：ASML管理层路演、存储创新与苹果AI进展-260721.pdf","manual_bucket":"AI Server / GPU / ASIC / HBM","manual_score":1102,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E5%A4%A7%E6%91%A9-%E5%85%A8%E7%90%83%E7%A7%91%E6%8A%80%E7%BD%91%E7%BB%9C%E7%A0%94%E8%AE%A8%E4%BC%9A%E5%AE%9E%E5%BD%95%EF%BC%9AASML%E7%AE%A1%E7%90%86%E5%B1%82%E8%B7%AF%E6%BC%94%E3%80%81%E5%AD%98%E5%82%A8%E5%88%9B%E6%96%B0%E4%B8%8E%E8%8B%B9%E6%9E%9CAI%E8%BF%9B%E5%B1%95-260721.pdf","manual_rank":4},{"indexed_at":"2026-07-22T13:03:08.130Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22 / 美银-美国半导体行业：看多存储芯片的逻辑，“开源”如何拓宽总可寻址市场-260720.pdf","title":"美银-美国半导体行业：看多存储芯片的逻辑，“开源”如何拓宽总可寻址市场-260720.pdf","local_relative_path":"2026/7月/7.22/美银-美国半导体行业：看多存储芯片的逻辑，“开源”如何拓宽总可寻址市场-260720.pdf","priority":"P0","rank":5,"score":90,"topics":["hbm_memory","semiconductor_upstream"],"reasons":["标题明确提及存储芯片和总可寻址市场，属于AI基础设施核心（HBM等）"],"evidence_keywords":["存储芯片","总可寻址市场"],"evidence_level":"explicit","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P0","recall_score":90,"recall_topics":["hbm_memory","semiconductor_upstream"],"recall_reasons":["标题明确提及存储芯片和总可寻址市场，属于AI基础设施核心（HBM等）"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-22T13:03:14.095Z","month":"2026/7月","day_label":"2026/7月/7.22","day_sort_key":"2026-07-22","day_folder":"7.22","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22","ima_file":"美银-美国半导体行业：看多存储芯片的逻辑，“开源”如何拓宽总可寻址市场-260720.pdf","local_directory":"2026/7月/7.22","local_file":"美银-美国半导体行业：看多存储芯片的逻辑，“开源”如何拓宽总可寻址市场-260720.pdf","local_download_path":"downloads/2026/7月/7.22/美银-美国半导体行业：看多存储芯片的逻辑，“开源”如何拓宽总可寻址市场-260720.pdf","manual_bucket":"AI Server / GPU / ASIC / HBM","manual_score":1102,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E7%BE%8E%E9%93%B6-%E7%BE%8E%E5%9B%BD%E5%8D%8A%E5%AF%BC%E4%BD%93%E8%A1%8C%E4%B8%9A%EF%BC%9A%E7%9C%8B%E5%A4%9A%E5%AD%98%E5%82%A8%E8%8A%AF%E7%89%87%E7%9A%84%E9%80%BB%E8%BE%91%EF%BC%8C%E2%80%9C%E5%BC%80%E6%BA%90%E2%80%9D%E5%A6%82%E4%BD%95%E6%8B%93%E5%AE%BD%E6%80%BB%E5%8F%AF%E5%AF%BB%E5%9D%80%E5%B8%82%E5%9C%BA-260720.pdf","manual_rank":5},{"indexed_at":"2026-07-22T13:03:08.131Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22 / 摩根大通-潍柴动力（000338.SZ）：闭门交流会及管理层更新印证AIDC逻辑，股价回调创造绝佳布局时机，2026年上半年业绩前瞻-260720.pdf","title":"摩根大通-潍柴动力（000338.SZ）：闭门交流会及管理层更新印证AIDC逻辑，股价回调创造绝佳布局时机，2026年上半年业绩前瞻-260720.pdf","local_relative_path":"2026/7月/7.22/摩根大通-潍柴动力（000338.SZ）：闭门交流会及管理层更新印证AIDC逻辑，股价回调创造绝佳布局时机，2026年上半年业绩前瞻-260720.pdf","priority":"P0","rank":6,"score":90,"topics":["aidc_capex"],"reasons":["标题明确提及AIDC逻辑，属于核心AI基础设施"],"evidence_keywords":["AIDC逻辑"],"evidence_level":"explicit","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P0","recall_score":90,"recall_topics":["aidc_capex"],"recall_reasons":["标题明确提及AIDC逻辑，属于核心AI基础设施"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-22T13:03:14.095Z","month":"2026/7月","day_label":"2026/7月/7.22","day_sort_key":"2026-07-22","day_folder":"7.22","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22","ima_file":"摩根大通-潍柴动力（000338.SZ）：闭门交流会及管理层更新印证AIDC逻辑，股价回调创造绝佳布局时机，2026年上半年业绩前瞻-260720.pdf","local_directory":"2026/7月/7.22","local_file":"摩根大通-潍柴动力（000338.SZ）：闭门交流会及管理层更新印证AIDC逻辑，股价回调创造绝佳布局时机，2026年上半年业绩前瞻-260720.pdf","local_download_path":"downloads/2026/7月/7.22/摩根大通-潍柴动力（000338.SZ）：闭门交流会及管理层更新印证AIDC逻辑，股价回调创造绝佳布局时机，2026年上半年业绩前瞻-260720.pdf","manual_bucket":"AIDC / Cloud Capex","manual_score":1102,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-%E6%BD%8D%E6%9F%B4%E5%8A%A8%E5%8A%9B%EF%BC%88000338.SZ%EF%BC%89%EF%BC%9A%E9%97%AD%E9%97%A8%E4%BA%A4%E6%B5%81%E4%BC%9A%E5%8F%8A%E7%AE%A1%E7%90%86%E5%B1%82%E6%9B%B4%E6%96%B0%E5%8D%B0%E8%AF%81AIDC%E9%80%BB%E8%BE%91%EF%BC%8C%E8%82%A1%E4%BB%B7%E5%9B%9E%E8%B0%83%E5%88%9B%E9%80%A0%E7%BB%9D%E4%BD%B3%E5%B8%83%E5%B1%80%E6%97%B6%E6%9C%BA%EF%BC%8C2026%E5%B9%B4%E4%B8%8A%E5%8D%8A%E5%B9%B4%E4%B8%9A%E7%BB%A9%E5%89%8D%E7%9E%BB-260720.pdf","manual_rank":6},{"indexed_at":"2026-07-22T13:03:08.130Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22 / 摩根大通-电子元件行业：FC-BGA（ABF）载板技术研讨会纪要-260721.pdf","title":"摩根大通-电子元件行业：FC-BGA（ABF）载板技术研讨会纪要-260721.pdf","local_relative_path":"2026/7月/7.22/摩根大通-电子元件行业：FC-BGA（ABF）载板技术研讨会纪要-260721.pdf","priority":"P1","rank":7,"score":80,"topics":["advanced_packaging","abf_substrate"],"reasons":["标题明确提及FC-BGA（ABF）载板，属于AI基础设施上游（先进封装）"],"evidence_keywords":["FC-BGA","ABF载板"],"evidence_level":"explicit","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P1","recall_score":80,"recall_topics":["advanced_packaging","abf_substrate"],"recall_reasons":["标题明确提及FC-BGA（ABF）载板，属于AI基础设施上游（先进封装）"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-22T13:03:14.095Z","month":"2026/7月","day_label":"2026/7月/7.22","day_sort_key":"2026-07-22","day_folder":"7.22","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22","ima_file":"摩根大通-电子元件行业：FC-BGA（ABF）载板技术研讨会纪要-260721.pdf","local_directory":"2026/7月/7.22","local_file":"摩根大通-电子元件行业：FC-BGA（ABF）载板技术研讨会纪要-260721.pdf","local_download_path":"downloads/2026/7月/7.22/摩根大通-电子元件行业：FC-BGA（ABF）载板技术研讨会纪要-260721.pdf","manual_bucket":"Semi Upstream / Packaging / Equipment","manual_score":792,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-%E7%94%B5%E5%AD%90%E5%85%83%E4%BB%B6%E8%A1%8C%E4%B8%9A%EF%BC%9AFC-BGA%EF%BC%88ABF%EF%BC%89%E8%BD%BD%E6%9D%BF%E6%8A%80%E6%9C%AF%E7%A0%94%E8%AE%A8%E4%BC%9A%E7%BA%AA%E8%A6%81-260721.pdf","manual_rank":7},{"indexed_at":"2026-07-22T13:03:08.131Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22 / 大摩-中国工业行业：2026世界人工智能大会（WAIC）纪要：物理AI加速迭代-260720.pdf","title":"大摩-中国工业行业：2026世界人工智能大会（WAIC）纪要：物理AI加速迭代-260720.pdf","local_relative_path":"2026/7月/7.22/大摩-中国工业行业：2026世界人工智能大会（WAIC）纪要：物理AI加速迭代-260720.pdf","priority":"P1","rank":9,"score":70,"topics":["ai_application","humanoid_robotics"],"reasons":["标题包含世界人工智能大会、物理AI，与AI基础设施上游相关"],"evidence_keywords":["世界人工智能大会","物理AI"],"evidence_level":"indirect","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P1","recall_score":70,"recall_topics":["ai_application","humanoid_robotics"],"recall_reasons":["标题包含世界人工智能大会、物理AI，与AI基础设施上游相关"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-22T13:03:14.095Z","month":"2026/7月","day_label":"2026/7月/7.22","day_sort_key":"2026-07-22","day_folder":"7.22","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22","ima_file":"大摩-中国工业行业：2026世界人工智能大会（WAIC）纪要：物理AI加速迭代-260720.pdf","local_directory":"2026/7月/7.22","local_file":"大摩-中国工业行业：2026世界人工智能大会（WAIC）纪要：物理AI加速迭代-260720.pdf","local_download_path":"downloads/2026/7月/7.22/大摩-中国工业行业：2026世界人工智能大会（WAIC）纪要：物理AI加速迭代-260720.pdf","manual_bucket":"Humanoid / Embodied AI","manual_score":782,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E5%A4%A7%E6%91%A9-%E4%B8%AD%E5%9B%BD%E5%B7%A5%E4%B8%9A%E8%A1%8C%E4%B8%9A%EF%BC%9A2026%E4%B8%96%E7%95%8C%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%A4%A7%E4%BC%9A%EF%BC%88WAIC%EF%BC%89%E7%BA%AA%E8%A6%81%EF%BC%9A%E7%89%A9%E7%90%86AI%E5%8A%A0%E9%80%9F%E8%BF%AD%E4%BB%A3-260720.pdf","manual_rank":8},{"indexed_at":"2026-07-22T13:03:08.130Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22 / 高盛-美国科技：软件行业重访护城河：AI支出与安全AI支出的时滞，以及拐点何时出现-260721.pdf","title":"高盛-美国科技：软件行业重访护城河：AI支出与安全AI支出的时滞，以及拐点何时出现-260721.pdf","local_relative_path":"2026/7月/7.22/高盛-美国科技：软件行业重访护城河：AI支出与安全AI支出的时滞，以及拐点何时出现-260721.pdf","priority":"P1","rank":8,"score":75,"topics":["ai_spending","ai_application"],"reasons":["标题明确提及AI支出和安全AI支出，属于AI基础设施相关投资主题"],"evidence_keywords":["AI支出","安全AI支出"],"evidence_level":"explicit","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"P1","recall_score":75,"recall_topics":["ai_spending","ai_application"],"recall_reasons":["标题明确提及AI支出和安全AI支出，属于AI基础设施相关投资主题"],"llm_provider":"deepseek","llm_model":"deepseek-v4-flash+deepseek-v4-pro","recall_llm_model":"deepseek-v4-flash","rerank_llm_model":"deepseek-v4-pro","ranked_at":"2026-07-22T13:03:14.095Z","month":"2026/7月","day_label":"2026/7月/7.22","day_sort_key":"2026-07-22","day_folder":"7.22","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.22","ima_file":"高盛-美国科技：软件行业重访护城河：AI支出与安全AI支出的时滞，以及拐点何时出现-260721.pdf","local_directory":"2026/7月/7.22","local_file":"高盛-美国科技：软件行业重访护城河：AI支出与安全AI支出的时滞，以及拐点何时出现-260721.pdf","local_download_path":"downloads/2026/7月/7.22/高盛-美国科技：软件行业重访护城河：AI支出与安全AI支出的时滞，以及拐点何时出现-260721.pdf","manual_bucket":"Other P0/P1","manual_score":775,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.22/%E9%AB%98%E7%9B%9B-%E7%BE%8E%E5%9B%BD%E7%A7%91%E6%8A%80%EF%BC%9A%E8%BD%AF%E4%BB%B6%E8%A1%8C%E4%B8%9A%E9%87%8D%E8%AE%BF%E6%8A%A4%E5%9F%8E%E6%B2%B3%EF%BC%9AAI%E6%94%AF%E5%87%BA%E4%B8%8E%E5%AE%89%E5%85%A8AI%E6%94%AF%E5%87%BA%E7%9A%84%E6%97%B6%E6%BB%9E%EF%BC%8C%E4%BB%A5%E5%8F%8A%E6%8B%90%E7%82%B9%E4%BD%95%E6%97%B6%E5%87%BA%E7%8E%B0-260721.pdf","manual_rank":9}]</script>
+  <script>
+    const records = JSON.parse(document.getElementById('records').textContent);
+    const state = { search: '', priority: '', bucket: '', topic: '', month: '', dayFolder: '' };
+    const els = {
+      search: document.getElementById('search'),
+      priority: document.getElementById('priority'),
+      bucket: document.getElementById('bucket'),
+      topic: document.getElementById('topic'),
+      month: document.getElementById('month'),
+      dayFolder: document.getElementById('dayFolder'),
+      dailyGroups: document.getElementById('daily-groups'),
+      dailyCount: document.getElementById('daily-count'),
+      rows: document.getElementById('rows'),
+      resultCount: document.getElementById('result-count'),
+    };
+
+    function uniq(values) {
+      return [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'zh-Hans-CN'));
+    }
+    function fillSelect(el, values) {
+      for (const value of values) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        el.appendChild(option);
+      }
+    }
+    function dayOptions() {
+      const seen = new Map();
+      for (const record of records) {
+        if (!record.day_label) continue;
+        const existing = seen.get(record.day_label);
+        if (!existing || String(record.day_sort_key).localeCompare(String(existing.sortKey)) > 0) {
+          seen.set(record.day_label, { label: record.day_label, sortKey: record.day_sort_key || '' });
+        }
+      }
+      return [...seen.values()]
+        .sort((a, b) => String(b.sortKey).localeCompare(String(a.sortKey)) || String(a.label).localeCompare(String(b.label), 'zh-Hans-CN'))
+        .map((item) => item.label);
+    }
+    fillSelect(els.priority, uniq(records.map((record) => record.priority)));
+    fillSelect(els.bucket, uniq(records.map((record) => record.manual_bucket)));
+    fillSelect(els.topic, uniq(records.flatMap((record) => record.topics || [])));
+    fillSelect(els.month, uniq(records.map((record) => record.month)));
+    fillSelect(els.dayFolder, dayOptions());
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    }
+    function textBlob(record) {
+      return [
+        record.title,
+        record.source_path,
+        record.ima_directory,
+        record.ima_file,
+        record.local_relative_path,
+        record.local_download_path,
+        record.manual_bucket,
+        record.day_label,
+        ...(record.topics || []),
+        ...(record.reasons || []),
+        ...(record.evidence_keywords || []),
+        ...(record.downgrade_reasons || []),
+      ].join(' ').toLowerCase();
+    }
+    function filtered() {
+      const q = state.search.trim().toLowerCase();
+      return records.filter((record) => {
+        if (state.priority && record.priority !== state.priority) return false;
+        if (state.bucket && record.manual_bucket !== state.bucket) return false;
+        if (state.topic && !(record.topics || []).includes(state.topic)) return false;
+        if (state.month && record.month !== state.month) return false;
+        if (state.dayFolder && record.day_label !== state.dayFolder) return false;
+        if (q && !textBlob(record).includes(q)) return false;
+        return true;
+      });
+    }
+    function groupByDay(rows) {
+      const groups = new Map();
+      for (const record of rows) {
+        const key = record.day_label || 'unknown';
+        if (!groups.has(key)) {
+          groups.set(key, { label: key, sortKey: record.day_sort_key || '', rows: [] });
+        }
+        groups.get(key).rows.push(record);
+      }
+      return [...groups.values()]
+        .sort((a, b) => String(b.sortKey).localeCompare(String(a.sortKey)) || String(a.label).localeCompare(String(b.label), 'zh-Hans-CN'));
+    }
+    function renderCard(record) {
+      const tags = (record.topics || []).slice(0, 8).map((topic) => '<span class="tag">' + escapeHtml(topic) + '</span>').join('');
+      const link = record.download_href ? '<a href="' + escapeHtml(record.download_href) + '">打开本地 PDF</a>' : '';
+      const downloaded = record.downloaded ? '<span class="badge downloaded">本地已有</span>' : '';
+      const recall = record.recall_priority ? '<span>recall ' + escapeHtml(record.recall_priority) + ' / ' + escapeHtml(record.recall_score) + '</span>' : '';
+      const evidence = (record.evidence_keywords || []).length ? '<div class="path">Evidence: ' + escapeHtml((record.evidence_keywords || []).join(' / ')) + '</div>' : '';
+      const review = (record.downgrade_reasons || []).length ? '<div class="path">Review: ' + escapeHtml((record.downgrade_reasons || []).join('；')) + '</div>' : '';
+      return '<article class="item">' +
+        '<div class="rankbox"><div class="rank">#' + escapeHtml(record.manual_rank) + '</div><div class="small">LLM #' + escapeHtml(record.rank) + '</div></div>' +
+        '<div>' +
+          '<div class="meta"><span class="badge ' + record.priority.toLowerCase() + '">' + escapeHtml(record.priority) + '</span><span class="badge tier">' + escapeHtml(record.manual_tier) + '</span>' + downloaded + '<span>' + escapeHtml(record.manual_bucket) + '</span><span>score ' + escapeHtml(record.score) + '</span>' + recall + '</div>' +
+          '<h3 class="title">' + escapeHtml(record.title) + '</h3>' +
+          '<div class="tags">' + tags + '</div>' +
+          '<p class="reason">' + escapeHtml((record.reasons || []).join('；')) + '</p>' +
+          evidence + review +
+          '<div class="path">IMA 目录: ' + escapeHtml(record.ima_directory) + '</div>' +
+          '<div class="path">IMA 文件: ' + escapeHtml(record.ima_file) + '</div>' +
+          '<div class="path">本地路径: ' + escapeHtml(record.local_download_path) + '</div>' +
+          '<div class="small">' + link + '</div>' +
+        '</div>' +
+      '</article>';
+    }
+    function renderDailyGroups(rows) {
+      const groups = groupByDay(rows);
+      els.dailyCount.textContent = groups.length;
+      els.dailyGroups.innerHTML = groups.map((group) => {
+        const p0 = group.rows.filter((record) => record.priority === 'P0').length;
+        const p1 = group.rows.filter((record) => record.priority === 'P1').length;
+        const downloaded = group.rows.filter((record) => record.downloaded).length;
+        const sortedRows = [...group.rows].sort((a, b) => {
+          const priorityOrder = { P0: 0, P1: 1 };
+          return (priorityOrder[a.priority] ?? 9) - (priorityOrder[b.priority] ?? 9) ||
+            b.manual_score - a.manual_score ||
+            Number(a.rank || 0) - Number(b.rank || 0) ||
+            String(a.title).localeCompare(String(b.title), 'zh-Hans-CN');
+        });
+        return '<section class="day-group">' +
+          '<div class="day-head"><div><h3 class="day-title">' + escapeHtml(group.label) + '</h3><div class="small">' + escapeHtml(sortedRows[0]?.ima_directory || '') + '</div></div>' +
+          '<div class="day-stats"><span class="badge p0">P0 ' + p0 + '</span><span class="badge p1">P1 ' + p1 + '</span><span class="tag">合计 ' + group.rows.length + '</span><span class="tag">本地 ' + downloaded + '</span></div></div>' +
+          '<div class="day-items">' + sortedRows.map(renderCard).join('') + '</div>' +
+        '</section>';
+      }).join('');
+    }
+    function renderRows() {
+      const rows = filtered();
+      els.resultCount.textContent = rows.length;
+      renderDailyGroups(rows);
+      els.rows.innerHTML = rows.map((record) => {
+        const tags = (record.topics || []).map((topic) => '<span class="tag">' + escapeHtml(topic) + '</span>').join('');
+        const link = record.download_href ? '<a href="' + escapeHtml(record.download_href) + '">打开本地 PDF</a>' : '';
+        const evidence = (record.evidence_keywords || []).map((keyword) => '<span class="tag">' + escapeHtml(keyword) + '</span>').join('');
+        const downgrade = (record.downgrade_reasons || []).join('；');
+        const recall = record.recall_priority ? 'Recall ' + record.recall_priority + ' / ' + record.recall_score : '';
+        return '<tr>' +
+          '<td><strong>' + record.manual_rank + '</strong><div class="small">' + escapeHtml(record.manual_tier) + '</div></td>' +
+          '<td><span class="badge ' + record.priority.toLowerCase() + '">' + escapeHtml(record.priority) + '</span></td>' +
+          '<td>' + escapeHtml(record.score) + '<div class="small">LLM #' + escapeHtml(record.rank) + '</div><div class="small">' + escapeHtml(recall) + '</div></td>' +
+          '<td><strong>' + escapeHtml(record.title) + '</strong><div class="small">' + escapeHtml(record.day_label) + '</div></td>' +
+          '<td><div class="tags">' + tags + '</div><div class="small">' + escapeHtml(record.manual_bucket) + '</div><div class="small">' + escapeHtml(record.evidence_level || '') + '</div></td>' +
+          '<td><div>' + escapeHtml((record.reasons || []).join('；')) + '</div><div class="tags">' + evidence + '</div><div class="small">' + escapeHtml(downgrade) + '</div><div class="path">IMA 目录: ' + escapeHtml(record.ima_directory) + '</div><div class="path">IMA 文件: ' + escapeHtml(record.ima_file) + '</div><div class="path">本地路径: ' + escapeHtml(record.local_download_path) + '</div><div class="small">' + link + '</div></td>' +
+          '</tr>';
+      }).join('');
+    }
+    for (const key of ['priority', 'bucket', 'topic', 'month', 'dayFolder']) {
+      els[key].addEventListener('change', () => {
+        state[key] = els[key].value;
+        renderRows();
+      });
+    }
+    els.search.addEventListener('input', () => {
+      state.search = els.search.value;
+      renderRows();
+    });
+    document.querySelectorAll('[data-focus]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const active = button.classList.toggle('active');
+        document.querySelectorAll('[data-focus]').forEach((other) => {
+          if (other !== button) other.classList.remove('active');
+        });
+        state.topic = active ? button.dataset.focus : '';
+        els.topic.value = state.topic;
+        renderRows();
+      });
+    });
+    renderRows();
+  </script>
+</body>
+</html>
