@@ -1,6 +1,6 @@
 # investment-research-reports
 
-从腾讯 ima 知识库同步并归档 PDF 研报。默认不做全量下载：先按 **AI Infrastructure** 主题筛出 P0/P1，再按每日预算限量下载。
+从腾讯 ima 知识库同步并归档 PDF 研报。默认不做全量下载：先按 **AI Infrastructure** 主题排序，P0/P1 优先下载，普通额度有空余时用 P2 补到每日 30 篇。
 
 这是一个 AI Workspace（上游数据源），不是传统应用程序。知识库访问与 PDF 下载通过 `ima-skill` + `scripts/sync-kb-pdfs.cjs` 完成，并保持 ima 中的原始目录结构和文件名。
 
@@ -10,7 +10,7 @@
 | --- | --- |
 | 这是什么？ | PDF 原文 + JSONL manifest 的上游归档仓 |
 | 不是什么？ | 不做全文抽取、embedding、财务结构化，也不自行实现 IMA SDK |
-| 默认下载谁？ | 仅 AI Infrastructure **P0 + P1**，每日预算约 28 份 |
+| 默认下载谁？ | AI Infrastructure **P0/P1 优先，P2 补足**，每日普通额度 30 份 |
 | 其他项目怎么读？ | 读 `manifests/` + `downloads/<local_relative_path>` |
 | 字段与接入示例？ | 见 [docs/data-catalog.md](docs/data-catalog.md) |
 | Agent 硬规则？ | 见 [AGENTS.md](AGENTS.md) |
@@ -22,10 +22,11 @@
 | `downloads/` | PDF 原文，保持原始目录与文件名 |
 | `manifests/index.jsonl` | 知识库 PDF 全量索引（发现入口） |
 | `manifests/index-YYYYMMDD.jsonl` | 指定单日目录的完整 PDF 快照 |
-| `manifests/ai-ranked-queue.jsonl` | 最新 / 滚动排序队列（可被后续同步覆盖） |
-| `manifests/ai-ranked-queue-YYYYMMDD.jsonl` | 当天筛选快照（须保留并提交） |
+| `manifests/report-summaries-YYYYMMDD.jsonl` | 当天 IMA 通用摘要权威快照，角色为下载路由候选 |
+| `manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl` | 基于摘要正文的一轮 DeepSeek 主题排序 |
 | `manifests/downloaded.jsonl` | 下载成功日志 |
 | `manifests/failed.jsonl` | 下载失败日志 |
+| `manifests/download-attempts.jsonl` | 上海日期口径的下载额度与第31篇探测审计日志 |
 | `manifests/ai-p0p1-analysis.html` | 最新 P0/P1 人工查看页（可覆盖） |
 | `manifests/ai-p0p1-analysis-YYYYMMDD.html` | 当天 P0/P1 分析页（须保留并提交） |
 
@@ -33,28 +34,20 @@ HTML 仅供人工复核，不是机器读取的主数据源。跨机器引用 PD
 
 ## 排序与过滤规则
 
-主路径只服务 **AI Infrastructure** 主题。`rank-ai` 只看标题和路径，不读 PDF 正文，不调用 IMA，不消耗资料获取额度。
+主路径只服务 **AI Infrastructure** 主题。IMA 先逐篇生成行业无关通用摘要，DeepSeek 随后只做一次正文排序。IMA 摘要本身不判断 P0—P3，主题评级由 `rank-ai --summary-source` 完成。
 
 ```mermaid
 flowchart LR
-  indexJsonl[index.jsonl] --> recall[Round1_recall_flash]
-  recall --> rerank[Round2_rerank_P0P1_only_pro]
-  rerank --> queue[ai-ranked-queue]
-  queue --> download[download-queue_P0P1_budget28]
+  indexJsonl["index-YYYYMMDD.jsonl"] --> imaSummary["IMA 通用摘要<br/>Hy3 快速 每批最多5篇"]
+  imaSummary --> summaryRank["DeepSeek 一轮正文排序"]
+  summaryRank --> queue["P0/P1优先 P2补足"]
 ```
 
-### 两轮流程
+### 一轮排序
 
-1. **第一轮召回（recall）**  
-   模型：`deepseek-v4-flash`（可用 `DEEPSEEK_MODEL` 覆盖）。  
-   对索引中的候选全量打 `P0`–`P3`，目标是高召回：宁可多放进 P0/P1，留给第二轮收紧。
+模型默认 `deepseek-v4-pro`，可用 `DEEPSEEK_RANK_MODEL` 覆盖；为兼容旧环境，未设置时仍读取 `DEEPSEEK_RERANK_MODEL`。输入是标题、报告类型、通用摘要、关键结论、内容标签、关键数字、实体和原文证据。一次输出 P0–P3、score、理由与证据。
 
-2. **第二轮复核（rerank）**  
-   模型：`deepseek-v4-pro`（可用 `DEEPSEEK_RERANK_MODEL` 覆盖）。  
-   **只复核第一轮的 P0/P1**。要求标题或路径中有证据词；禁止仅凭公司名、ticker 或行业常识抬到 P0。证据不足时可降为 P1/P2/P3。
-
-3. **最终排序**  
-   `priority`（P0→P3）→ `score` 降序 → 日期新优先 → 标题。写入 queue 后赋 `rank`（从 1 开始）。
+最终按 `priority`（P0→P3）→ `score` 降序 → 标题排序，并赋予从 1 开始的 `rank`。
 
 ### 优先级定义
 
@@ -72,16 +65,13 @@ flowchart LR
 - 区分「数据中心 / 地产 / 信托 / 估值 / 买卖评级」叙事与「技术资本开支」信号。
 - 仅有前者、标题无 AI 基建技术证据 → 降权；同时出现 GPU、服务器、光模块、液冷、hyperscaler 扩建等证据 → 可保留较高优先级。
 
-### 兜漏复核（可选）
-
-标题看不出内容的漏网（如普通业绩点评标题、正文含 ASIC/预测表），可用 IMA 文件夹问答做**单日粒度**的兜漏复核。2026-07-11 校准实测：51 份中 rank-ai 仅漏 1 份边缘候选，IMA 问答自身漏 2 份且假阳性 9 份——**IMA 只能兜漏，不能替代排序**。Prompt、使用规则与完整对账见 [docs/ima-recall-check.md](docs/ima-recall-check.md)。
-
 ### 默认下载过滤
 
 | 规则 | 默认值 |
 | --- | --- |
-| 下载优先级 | `--priorities P0,P1`（P2/P3 不进默认下载） |
-| 每日预算 | `--daily-budget 28` |
+| 下载优先级 | `--priorities P0,P1,P2`（P0/P1 优先，P2 补足，P3 不自动下载） |
+| 每日预算 | `--daily-budget 30` |
+| 上限探测 | `--quota-probe-extra 1`（第 31 篇只试一次，绝不继续第 32 篇） |
 | 全量下载 | 仅当用户明确要求时才做 |
 | `download-queue` | 未经用户明确要求，不要运行 |
 | IMA 额度触顶 | 「资料获取次数已达上限」等错误必须立即停止 |
@@ -89,7 +79,7 @@ flowchart LR
 ## 其他项目怎么读
 
 1. **发现有哪些 PDF** → 读 `manifests/index.jsonl`
-2. **只要 AI Infra 高优** → 读 `manifests/ai-ranked-queue.jsonl`（或当日 `*-YYYYMMDD.jsonl`），过滤 `priority === 'P0' || priority === 'P1'`，按 `rank` 排序
+2. **只要 AI Infra 高优** → 读当天 `manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl`，过滤 `priority === 'P0' || priority === 'P1'`，按 `rank` 排序
 3. **读本地 PDF** → `path.join(repoRoot, 'downloads', record.local_relative_path)`
 
 字段含义、完整示例与约束见 [docs/data-catalog.md](docs/data-catalog.md)。
@@ -100,8 +90,7 @@ DeepSeek 配置从 `.env` 读取（不提交）：
 
 ```bash
 DEEPSEEK_API_KEY=...
-DEEPSEEK_MODEL=deepseek-v4-flash
-DEEPSEEK_RERANK_MODEL=deepseek-v4-pro
+DEEPSEEK_RANK_MODEL=deepseek-v4-pro
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
 
@@ -128,52 +117,56 @@ node scripts/sync-kb-pdfs.cjs index \
   --snapshot manifests/index-20260714.jsonl
 ```
 
-### 2. 生成 AI queue（不耗 IMA 额度）
+### 每日 IMA 正文摘要与可恢复排序
+
+仓库已将“当天目录、Hy3 快速、Browser 优先且 App 兜底、每批最多 5 篇、每批新建独立对话、提取完整 JSON、逐篇写进度、断点续跑、正文排序”固化为日期参数化任务：
+
+```bash
+node scripts/ima-daily-summary.cjs prepare
+node scripts/ima-daily-summary.cjs next --surface browser
+# Browser 直接提取完整回答后传给 ingest；仅在 Browser 失败时改用：
+node scripts/ima-daily-summary.cjs next --surface app
+pbpaste | node scripts/ima-daily-summary.cjs ingest --surface app
+node scripts/ima-daily-summary.cjs finalize
+node scripts/ima-daily-summary.cjs status
+```
+
+Prompt 使用 `prompts/ima-download-screen-summary-batch-v2.txt`，每日状态全部保存在 `manifests/`。完整的 Browser 优先、IMA App 兜底、失败停止、下载与 Git 开关见 [docs/ima-daily-summary-runbook.md](docs/ima-daily-summary-runbook.md)。
+
+### 2. 一轮生成摘要正文 queue（不耗 IMA 下载额度）
 
 ```bash
 node scripts/sync-kb-pdfs.cjs rank-ai \
-  --months "2026/6月,2026/7月" \
-  --queue manifests/ai-ranked-queue.jsonl
-```
-
-正式结果应同时保留日期快照，例如：
-
-```bash
-cp manifests/ai-ranked-queue.jsonl manifests/ai-ranked-queue-$(date +%Y%m%d).jsonl
+  --summary-source manifests/report-summaries-YYYYMMDD.jsonl \
+  --queue manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl
 ```
 
 ### 3. 生成 P0/P1 查看页（不调 DeepSeek / IMA）
 
 ```bash
 node scripts/render-ai-p0p1-html.cjs \
-  --queue manifests/ai-ranked-queue.jsonl \
-  --out manifests/ai-p0p1-analysis.html
+  --queue manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl \
+  --out manifests/ai-p0p1-analysis-summary-YYYYMMDD.html
 ```
-
-日期快照同理保留 `ai-p0p1-analysis-YYYYMMDD.html`。
 
 ### 4. 按 queue 下载（耗 IMA 额度）
 
 ```bash
 node scripts/sync-kb-pdfs.cjs download-queue \
   --kb "环球研报直通车" \
-  --queue manifests/ai-ranked-queue.jsonl \
-  --priorities P0,P1 \
-  --daily-budget 28
+  --queue manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl \
+  --priorities P0,P1,P2 \
+  --daily-budget 30 \
+  --quota-probe-extra 1
 ```
 
 每个文件下载前会重新调用 `get_media_info`，用返回的临时 URL 与 headers 拉取 PDF。成功立即写 `downloaded.jsonl`，失败写 `failed.jsonl`。已存在的文件跳过。
 
 关注输出中的 `by_priority`、`downloaded`、`budget_used`、`stopped_quota`。
 
-### 备份与提交
+### 提交
 
-```bash
-cp manifests/ai-ranked-queue.jsonl manifests/ai-ranked-queue.jsonl.bak-$(date +%Y%m%d-%H%M%S)
-```
-
-- 当天正式结果：提交 `ai-ranked-queue-YYYYMMDD.jsonl` 与 `ai-p0p1-analysis-YYYYMMDD.html`
-- 滚动文件可覆盖；`*.bak-*` 不提交
+- 当天正式结果：提交 `report-summaries-YYYYMMDD.jsonl`、`ai-ranked-queue-summary-YYYYMMDD.jsonl` 与 `ai-p0p1-analysis-summary-YYYYMMDD.html`
 - PDF 是否提交需单独确认，避免无意提交大量文件
 
 ## 仅明确要求全量时

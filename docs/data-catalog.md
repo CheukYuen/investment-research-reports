@@ -14,14 +14,17 @@
 - 知识库 PDF 索引：保存在 `manifests/index.jsonl`
 - 单日 PDF 快照：保存在 `manifests/index-YYYYMMDD.jsonl`
 - 下载成功/失败事件日志：保存在 `manifests/downloaded.jsonl`、`manifests/failed.jsonl`
-- AI Infrastructure 主题排序队列：保存在 `manifests/ai-ranked-queue*.jsonl`
+- 每日额度与上限探测日志：保存在 `manifests/download-attempts.jsonl`
+- AI Infrastructure 主题排序队列：保存在 `manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl`
+- IMA 通用摘要快照：保存在 `manifests/report-summaries-YYYYMMDD.jsonl`
+- DeepSeek 基于摘要正文的一轮排序：保存在 `manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl`
 - P0/P1 人工查看页面：保存在 `manifests/ai-p0p1-analysis*.html`
 
 当前快照（2026-07-06）：
 
 - `manifests/index.jsonl`：2242 条 PDF 索引记录
 - 已下载 PDF：62 份，约 268MB
-- `manifests/ai-ranked-queue.jsonl`：42 条 AI Infrastructure 排序记录，其中 P0 5 条、P1 5 条、P2 6 条、P3 26 条
+- 旧的标题-only `ai-ranked-queue*.jsonl` 仅为历史产物，不再由每日任务生成
 - 当前索引月份：`2026/6月`、`2026/7月`
 
 ## 目录结构
@@ -39,10 +42,13 @@ manifests/
   index-YYYYMMDD.jsonl
   downloaded.jsonl
   failed.jsonl
-  ai-ranked-queue.jsonl
-  ai-ranked-queue-YYYYMMDD.jsonl
-  ai-p0p1-analysis.html
-  ai-p0p1-analysis-YYYYMMDD.html
+  download-attempts.jsonl
+  report-summary-browser-progress-YYYYMMDD.jsonl
+  report-summary-browser-failures-YYYYMMDD.jsonl
+  report-summary-batches-YYYYMMDD.jsonl
+  report-summaries-YYYYMMDD.jsonl
+  ai-ranked-queue-summary-YYYYMMDD.jsonl
+  ai-p0p1-analysis-summary-YYYYMMDD.html
 ```
 
 项目约定保留 ima 知识库中的原始目录结构和原始文件名。其他项目引用 PDF 时，推荐使用：
@@ -100,6 +106,41 @@ const pdfPath = path.join(repoRoot, 'downloads', record.local_relative_path);
 
 指定单日 IMA 文件夹的完整 PDF 快照。它与 append-only 的 `index.jsonl` 不同：即使 `media_id` 已在全局索引中，仍会出现在本日快照。字段与 `index.jsonl` 相同，用于 rank-ai 单日对账和人工金标准复核。
 
+### `manifests/report-summaries-YYYYMMDD.jsonl`
+
+当天通用摘要的权威快照，每个索引 `media_id` 恰好一行。`status=reviewed` 表示 IMA 回答已通过本轮下载筛选所需的宽松校验；`UNREVIEWED` 表示没有可用摘要或已达到重试上限。
+
+主要字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `media_id` / `title` / `source_path` / `local_relative_path` | 从当天索引继承的稳定身份与后续下载定位 |
+| `status` | `reviewed` 或 `UNREVIEWED` |
+| `summary_role` | 固定为 `routing_candidate`，不得当作正式 PDF 提取结果 |
+| `report_type` / `research_subject` / `executive_summary` | 报告类型、研究主体和通用摘要 |
+| `key_findings` / `content_tags` | 关键结论和内容覆盖标签 |
+| `data_points` | 最多 4 条原始口径关键数字；未做单位或指标标准化 |
+| `entities` / `evidence` | 路由实体和对应报告的连续原文线索 |
+| `source_match` | IMA 返回的 `source_title` 是否精确对应索引文件名 |
+| `prompt_version` / `model_version` | Prompt 与 IMA 模型版本 |
+| `generated_at` / `elapsed_ms` / `attempts` | 生成时间、批次耗时和累计尝试次数 |
+| `raw_answer` | 该批 IMA 的完整原始 JSON 回答 |
+| `validation_warnings` / `failure_code` | 宽松校验警告或失败原因 |
+
+其他项目可以按 `media_id` 读取摘要做候选筛选，但必须回到 `downloads/<local_relative_path>` 的 PDF 执行正式数字、页码和证据验证。
+
+增量执行状态分别位于：
+
+- `report-summary-browser-progress-YYYYMMDD.jsonl`：成功记录，完成一篇立即原子写入；
+- `report-summary-browser-failures-YYYYMMDD.jsonl`：失败类型与尝试次数；
+- `report-summary-batches-YYYYMMDD.jsonl`：每批 Prompt、文件清单、状态、耗时和回答哈希。
+
+### `manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl`
+
+读取标题、通用摘要、关键结论、内容标签、原始关键数字、实体和证据后生成的 AI Infrastructure 正文排序。只接收 `reviewed + source_match + executive_summary` 记录；失败项不会由标题评级静默补齐。
+
+该队列保留索引身份和下载字段，可直接作为 `download-queue` 的输入。每篇只经过一次 DeepSeek 分类，`ranking_mode=single_summary_pass`；不再生成标题基线或标题/正文对照。
+
 ### `manifests/downloaded.jsonl`
 
 下载成功事件日志。每成功处理一个文件，脚本会立即追加一行。
@@ -122,6 +163,16 @@ const pdfPath = path.join(repoRoot, 'downloads', record.local_relative_path);
 
 这是 append-only 事件日志。消费方需要得到“当前已下载集合”时，应按 `media_id` 或 `saved_path` 去重。
 
+### `manifests/download-attempts.jsonl`
+
+下载额度审计日志，按 Asia/Shanghai 日期累计，避免同一天续跑时重新获得一份本地预算。
+
+- `daily_baseline`：当天首次运行时，从已有成功和失败日志推断此前真实调用数；
+- `download_attempt`：每次调用 `get_media_info` 前立即写入，包含 `media_id`、优先级和 `budget|probe` 槽位；
+- 同一天 `daily_baseline.attempts + download_attempt 条数` 即本地认定的累计调用次数。
+
+第 31 篇是一次性上限探测。其结果仍分别落入 `downloaded.jsonl` 或 `failed.jsonl`；无论成功还是失败，当天都不再尝试第 32 篇。
+
 ### `manifests/failed.jsonl`
 
 下载失败事件日志。失败会立即追加一行。
@@ -143,11 +194,9 @@ const pdfPath = path.join(repoRoot, 'downloads', record.local_relative_path);
 
 常见失败包括 ima 资料获取额度上限。遇到 `资料获取次数已达上限` 这类错误时，同步脚本会停止继续下载。
 
-### `manifests/ai-ranked-queue.jsonl`
+### 一轮正文排序字段
 
-AI Infrastructure 主题的滚动下载队列。它由 `index.jsonl` 生成，只基于标题和路径进行 DeepSeek 排序，不读取 PDF 正文，不调用 IMA 下载接口。
-
-该文件在索引字段基础上增加：
+`manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl` 在摘要字段基础上增加：
 
 | 字段 | 含义 |
 | --- | --- |
@@ -157,18 +206,11 @@ AI Infrastructure 主题的滚动下载队列。它由 `index.jsonl` 生成，�
 | `topics` | 英文主题标签数组 |
 | `reasons` | 排序理由数组 |
 | `llm_provider` | LLM 提供方，目前为 `deepseek` |
-| `llm_model` | 实际使用的模型组合 |
+| `ranking_evidence` | 排序直接引用的摘要原文证据 |
+| `false_positive_checks` | 数据中心地产、租赁、并购等假阳性检查 |
+| `ranking_mode` | 固定为 `single_summary_pass` |
+| `llm_model` | 实际使用的单一 DeepSeek 模型 |
 | `ranked_at` | 排序生成时间 |
-| `recall_priority` | 第一轮召回优先级 |
-| `recall_score` | 第一轮召回分数 |
-| `recall_topics` | 第一轮主题标签 |
-| `recall_reasons` | 第一轮理由 |
-| `recall_llm_model` | 第一轮模型 |
-| `evidence_keywords` | 第二轮复核使用的标题/路径证据词 |
-| `evidence_level` | `explicit`、`indirect`、`weak`、`none` |
-| `downgrade_reasons` | 第二轮降级理由 |
-| `rerank_changed` | 第二轮是否改变优先级或分数 |
-| `rerank_llm_model` | 第二轮模型 |
 
 优先级解释：
 
@@ -193,28 +235,9 @@ AI Infrastructure 主题的滚动下载队列。它由 `index.jsonl` 生成，�
 - `ai_application`
 - `unrelated`
 
-### `manifests/ai-ranked-queue-YYYYMMDD.jsonl`
+旧的 `ai-ranked-queue.jsonl`、`ai-ranked-queue-YYYYMMDD.jsonl`、`ai-ranking-comparison-YYYYMMDD.jsonl` 和非 summary HTML 仅保留作历史审计，不再更新，也不得作为新流程输入。
 
-某一天生成的 AI Infrastructure 队列快照。与滚动文件字段相同。
-
-引用建议：
-
-- 需要“最新队列”时读 `manifests/ai-ranked-queue.jsonl`
-- 需要复现某天筛选结果时读 `manifests/ai-ranked-queue-YYYYMMDD.jsonl`
-
-项目约定当天快照必须保留。
-
-### `manifests/ai-p0p1-analysis.html`
-
-P0/P1 研报的人工查看页面，由 `manifests/ai-ranked-queue.jsonl` 渲染而来。它用于人工快速浏览、筛选和复核，不是机器读取的主数据源。
-
-日期快照：
-
-- `manifests/ai-p0p1-analysis-YYYYMMDD.html`
-
-滚动最新版：
-
-- `manifests/ai-p0p1-analysis.html`
+P0/P1 人工查看页面固定为 `manifests/ai-p0p1-analysis-summary-YYYYMMDD.html`。
 
 ## 推荐接入方式
 
@@ -265,7 +288,7 @@ const localPdfs = index
 读取 queue，并过滤 `priority`：
 
 ```js
-const queue = readJsonl(path.join(repoRoot, 'manifests/ai-ranked-queue.jsonl'));
+const queue = readJsonl(path.join(repoRoot, 'manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl'));
 
 const highPriority = queue
   .filter((record) => record.priority === 'P0' || record.priority === 'P1')
@@ -292,16 +315,16 @@ node scripts/sync-kb-pdfs.cjs index \
 
 ```bash
 node scripts/sync-kb-pdfs.cjs rank-ai \
-  --months "2026/6月,2026/7月" \
-  --queue manifests/ai-ranked-queue.jsonl
+  --summary-source manifests/report-summaries-YYYYMMDD.jsonl \
+  --queue manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl
 ```
 
 生成 P0/P1 查看页：
 
 ```bash
 node scripts/render-ai-p0p1-html.cjs \
-  --queue manifests/ai-ranked-queue.jsonl \
-  --out manifests/ai-p0p1-analysis.html
+  --queue manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl \
+  --out manifests/ai-p0p1-analysis-summary-YYYYMMDD.html
 ```
 
 按 queue 下载 PDF：
@@ -309,12 +332,15 @@ node scripts/render-ai-p0p1-html.cjs \
 ```bash
 node scripts/sync-kb-pdfs.cjs download-queue \
   --kb "环球研报直通车" \
-  --queue manifests/ai-ranked-queue.jsonl \
-  --priorities P0,P1 \
-  --daily-budget 28
+  --queue manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl \
+  --priorities P0,P1,P2 \
+  --daily-budget 30 \
+  --quota-probe-extra 1
 ```
 
-注意：`download-queue` 会调用 IMA `get_media_info` 并消耗资料获取额度。未经明确要求，不应自动运行该命令。
+注意：`download-queue` 会调用 IMA `get_media_info` 并消耗资料获取额度。每日自动任务按 P0/P1/P2 顺序运行，P2 只用于补足 30 篇普通额度；达到 30 次后只额外探测 1 篇。其他场景未经明确要求，不应自动运行该命令。
+
+`manifests/download-attempts.jsonl` 是追加式额度审计日志。每天第一条 `daily_baseline` 从既有成功和失败清单推断当日已消耗次数，后续每次真实下载调用在调用前写入 `download_attempt`，用于跨中断和跨续跑限制第 30/31 次。
 
 ## 使用约束
 
@@ -324,8 +350,9 @@ node scripts/sync-kb-pdfs.cjs download-queue \
 - 下载成功立即追加 `downloaded.jsonl`
 - 下载失败立即追加 `failed.jsonl`
 - 所有同步任务支持断点恢复
-- AI Infrastructure 研报同步默认先筛选 P0/P1，再按 queue 下载
-- 默认下载预算为 `--daily-budget 28`
+- AI Infrastructure 研报同步默认先排序，P0/P1 优先、P2 补足，P3 不自动下载
+- 默认下载预算为 `--daily-budget 30`
+- 普通额度用满后默认只额外探测 1 篇
 - 不提交 `.env`
 
 ## 这个项目不提供的数据

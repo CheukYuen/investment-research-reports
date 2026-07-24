@@ -1,0 +1,13 @@
+{
+  "knowledge_base": "环球研报直通车",
+  "interaction_order": ["browser", "app"],
+  "browser_model_version": "ima-web-hy3-fast",
+  "app_model_version": "ima-app-hy3-fast",
+  "max_batch_size": 5,
+  "max_attempts": 4,
+  "daily_budget": 30,
+  "download_priorities": ["P0", "P1", "P2"],
+  "quota_probe_extra": 1,
+  "auto_download": true,
+  "auto_git_commit": false
+}

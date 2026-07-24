@@ -302,6 +302,22 @@
       font-size: 13px;
       margin: 6px 0 0;
     }
+    .ima-summary {
+      color: #17202a;
+      font-size: 13px;
+      line-height: 1.65;
+      margin: 10px 0 0;
+      padding: 9px 11px;
+      border-left: 3px solid var(--blue);
+      background: #f5f9ff;
+    }
+    .findings {
+      margin: 7px 0 0 18px;
+      padding: 0;
+      color: #344054;
+      font-size: 12px;
+      line-height: 1.55;
+    }
     .path {
       color: var(--muted);
       font-size: 12px;
@@ -355,18 +371,18 @@
 <body>
   <header>
     <h1>AI Infrastructure Daily P0/P1 Queue</h1>
-    <div class="subhead">来源：manifests/ai-ranked-queue-summary-20260723.jsonl。仅使用 PDF 标题和路径排序；若 queue 包含二轮复核字段，将展示证据与降权理由。生成时间：2026-07-24T10:19:00.180Z</div>
+    <div class="subhead">来源：manifests/ai-ranked-queue-summary-20260723.jsonl。展示主题排序理由；若 queue 包含 IMA 通用摘要，将同时展示摘要与关键结论。生成时间：2026-07-24T14:00:27.801Z</div>
   </header>
   <main>
     <div class="metrics">
-      <div class="metric"><div class="label">P0/P1</div><div class="value">18</div></div>
-      <div class="metric"><div class="label">P0</div><div class="value">7</div></div>
-      <div class="metric"><div class="label">P1</div><div class="value">11</div></div>
-      <div class="metric"><div class="label">二轮调整</div><div class="value">0</div></div>
-      <div class="metric"><div class="label">已在本地</div><div class="value">18</div></div>
+      <div class="metric"><div class="label">P0/P1</div><div class="value">22</div></div>
+      <div class="metric"><div class="label">P0</div><div class="value">10</div></div>
+      <div class="metric"><div class="label">P1</div><div class="value">12</div></div>
+      <div class="metric"><div class="label">排序轮次</div><div class="value">1</div></div>
+      <div class="metric"><div class="label">已在本地</div><div class="value">22</div></div>
       <div class="metric"><div class="label">日期目录</div><div class="value">1</div></div>
       <div class="metric"><div class="label">最新目录</div><div class="value">2026/7月/7.23</div></div>
-      <div class="metric"><div class="label">最新 P0/P1</div><div class="value">7/11</div></div>
+      <div class="metric"><div class="label">最新 P0/P1</div><div class="value">10/12</div></div>
     </div>
 
     <div class="layout">
@@ -396,6 +412,14 @@
           <select id="dayFolder"><option value="">All folders</option></select>
         </div>
         <div class="filter-group">
+          <label for="localStatus">Local PDF</label>
+          <select id="localStatus">
+            <option value="">All</option>
+            <option value="downloaded">本地已有</option>
+            <option value="missing">尚未下载</option>
+          </select>
+        </div>
+        <div class="filter-group">
           <label>Quick Focus</label>
           <div class="quick">
             <button data-focus="aidc_capex">AIDC</button>
@@ -415,47 +439,47 @@
           <div class="summary-grid">
             <div class="summary-block">
     <h3>Priority</h3>
-    <div class="bar-row"><div>P1<div class="bar"><span style="width:100%"></span></div></div><strong>11</strong></div>
-<div class="bar-row"><div>P0<div class="bar"><span style="width:64%"></span></div></div><strong>7</strong></div>
+    <div class="bar-row"><div>P1<div class="bar"><span style="width:100%"></span></div></div><strong>12</strong></div>
+<div class="bar-row"><div>P0<div class="bar"><span style="width:83%"></span></div></div><strong>10</strong></div>
   </div>
             <div class="summary-block">
     <h3>Month</h3>
-    <div class="bar-row"><div>2026/7月<div class="bar"><span style="width:100%"></span></div></div><strong>18</strong></div>
+    <div class="bar-row"><div>2026/7月<div class="bar"><span style="width:100%"></span></div></div><strong>22</strong></div>
   </div>
             <div class="summary-block">
     <h3>Theme</h3>
-    <div class="bar-row"><div>Other P0/P1<div class="bar"><span style="width:100%"></span></div></div><strong>9</strong></div>
-<div class="bar-row"><div>Semi Upstream / Packaging / Equipment<div class="bar"><span style="width:33%"></span></div></div><strong>3</strong></div>
-<div class="bar-row"><div>AI Server / GPU / ASIC / HBM<div class="bar"><span style="width:22%"></span></div></div><strong>2</strong></div>
-<div class="bar-row"><div>AIDC / Cloud Capex<div class="bar"><span style="width:22%"></span></div></div><strong>2</strong></div>
-<div class="bar-row"><div>Power / Cooling / Energy<div class="bar"><span style="width:22%"></span></div></div><strong>2</strong></div>
+    <div class="bar-row"><div>Other P0/P1<div class="bar"><span style="width:100%"></span></div></div><strong>11</strong></div>
+<div class="bar-row"><div>Semi Upstream / Packaging / Equipment<div class="bar"><span style="width:45%"></span></div></div><strong>5</strong></div>
+<div class="bar-row"><div>AI Server / GPU / ASIC / HBM<div class="bar"><span style="width:18%"></span></div></div><strong>2</strong></div>
+<div class="bar-row"><div>AIDC / Cloud Capex<div class="bar"><span style="width:18%"></span></div></div><strong>2</strong></div>
+<div class="bar-row"><div>Power / Cooling / Energy<div class="bar"><span style="width:18%"></span></div></div><strong>2</strong></div>
   </div>
             <div class="summary-block">
     <h3>Top Topics</h3>
-    <div class="bar-row"><div>数据中心<div class="bar"><span style="width:100%"></span></div></div><strong>5</strong></div>
-<div class="bar-row"><div>云基础设施<div class="bar"><span style="width:60%"></span></div></div><strong>3</strong></div>
-<div class="bar-row"><div>资本开支<div class="bar"><span style="width:60%"></span></div></div><strong>3</strong></div>
-<div class="bar-row"><div>半导体设备<div class="bar"><span style="width:40%"></span></div></div><strong>2</strong></div>
-<div class="bar-row"><div>电力基础设施<div class="bar"><span style="width:40%"></span></div></div><strong>2</strong></div>
-<div class="bar-row"><div>电网设备<div class="bar"><span style="width:40%"></span></div></div><strong>2</strong></div>
-<div class="bar-row"><div>先进封装<div class="bar"><span style="width:40%"></span></div></div><strong>2</strong></div>
-<div class="bar-row"><div>AI服务器/TPU<div class="bar"><span style="width:40%"></span></div></div><strong>2</strong></div>
-<div class="bar-row"><div>AI基础设施<div class="bar"><span style="width:40%"></span></div></div><strong>2</strong></div>
-<div class="bar-row"><div>AI数据中心资本开支<div class="bar"><span style="width:40%"></span></div></div><strong>2</strong></div>
-<div class="bar-row"><div>HBM<div class="bar"><span style="width:40%"></span></div></div><strong>2</strong></div>
-<div class="bar-row"><div>变压器<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
-<div class="bar-row"><div>超大规模云厂商<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
-<div class="bar-row"><div>代理式AI<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
-<div class="bar-row"><div>第三方算力<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
-<div class="bar-row"><div>电容器<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
-<div class="bar-row"><div>服务器CPU<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
-<div class="bar-row"><div>工厂自动化<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
-<div class="bar-row"><div>工业<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
-<div class="bar-row"><div>工业科技<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
-<div class="bar-row"><div>功率半导体<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
-<div class="bar-row"><div>光通信<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
-<div class="bar-row"><div>光纤<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
-<div class="bar-row"><div>光纤光缆<div class="bar"><span style="width:20%"></span></div></div><strong>1</strong></div>
+    <div class="bar-row"><div>数据中心<div class="bar"><span style="width:100%"></span></div></div><strong>6</strong></div>
+<div class="bar-row"><div>资本开支<div class="bar"><span style="width:67%"></span></div></div><strong>4</strong></div>
+<div class="bar-row"><div>先进封装<div class="bar"><span style="width:50%"></span></div></div><strong>3</strong></div>
+<div class="bar-row"><div>云基础设施<div class="bar"><span style="width:50%"></span></div></div><strong>3</strong></div>
+<div class="bar-row"><div>变压器<div class="bar"><span style="width:33%"></span></div></div><strong>2</strong></div>
+<div class="bar-row"><div>前端设备<div class="bar"><span style="width:33%"></span></div></div><strong>2</strong></div>
+<div class="bar-row"><div>AI基础设施<div class="bar"><span style="width:33%"></span></div></div><strong>2</strong></div>
+<div class="bar-row"><div>HBM<div class="bar"><span style="width:33%"></span></div></div><strong>2</strong></div>
+<div class="bar-row"><div>半导体设备<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>半导体设备进口<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>半导体真空泵<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>产能扩张<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>超大规模云厂商<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>代理式AI<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>第三方算力<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>电力<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>电容器<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>电网设备<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>电网升级<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>电信资本开支<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>服务器CPU<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>工厂自动化<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>工业<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
+<div class="bar-row"><div>工业机器人<div class="bar"><span style="width:17%"></span></div></div><strong>1</strong></div>
   </div>
           </div>
         </section>
@@ -477,32 +501,7 @@
             <article class="item">
     <div class="rankbox">
       <div class="rank">#1</div>
-      <div class="small">LLM #6</div>
-    </div>
-    <div>
-      <div class="meta">
-        <span class="badge p0">P0</span>
-        <span class="badge tier">Core</span>
-        <span class="badge downloaded">本地已有</span>
-        <span>Semi Upstream / Packaging / Equipment</span>
-        <span>score 90</span>
-
-      </div>
-      <h3 class="title">摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf</h3>
-      <div class="tags"><span class="tag">先进封装</span><span class="tag">HBM</span><span class="tag">CoWoS</span></div>
-      <p class="reason">ASMPT提供TCB等先进封装设备，直接用于AI芯片的CoWoS和HBM生产，属于AI基建的先进封装领域。</p>
-
-
-      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-ASMPT%EF%BC%880522.HK%EF%BC%89%EF%BC%9A%E6%96%B0%E4%BB%BBCEO%E5%B0%98%E5%9F%83%E8%90%BD%E5%AE%9A%EF%BC%8C%E5%85%88%E8%BF%9B%E5%B0%81%E8%A3%85%E6%88%98%E7%95%A5%E5%B0%86%E8%BF%9B%E4%B8%80%E6%AD%A5%E5%BC%BA%E5%8C%96-260721.pdf">打开本地 PDF</a></div>
-    </div>
-  </article>
-<article class="item">
-    <div class="rankbox">
-      <div class="rank">#2</div>
-      <div class="small">LLM #7</div>
+      <div class="small">LLM #5</div>
     </div>
     <div>
       <div class="meta">
@@ -510,14 +509,15 @@
         <span class="badge tier">Core</span>
         <span class="badge downloaded">本地已有</span>
         <span>AI Server / GPU / ASIC / HBM</span>
-        <span>score 90</span>
-
+        <span>score 95</span>
       </div>
       <h3 class="title">瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf</h3>
-      <div class="tags"><span class="tag">AI基础设施</span><span class="tag">GPU</span><span class="tag">先进封装</span><span class="tag">数据中心</span><span class="tag">SuperPod</span></div>
-      <p class="reason">正文直接涉及AI基础设施端需求，包括华为Atlas 950 SuperPod（1024芯片）、先进封装投资、数据中心营收指引；供应链对AI基础设施需求反馈积极，算力卡需求紧、ODM数据中心业务强劲；推荐半导体供应链（北方华创、长电科技）和硬件供应链，均为AI基建核心环节</p>
-
-
+      <div class="tags"><span class="tag">AI基础设施</span><span class="tag">GPU</span><span class="tag">网络</span><span class="tag">先进封装</span><span class="tag">数据中心</span></div>
+      <p class="reason">正文明确以AI基础设施为核心，涵盖GPU、网络、先进封装、数据中心等，华为Atlas 950 SuperPod、长电科技先进封装投资、华勤数据中心营收指引等均为AI基建直接证据；报告推荐中国AI LLM、半导体供应链、硬件供应链，投资逻辑清晰围绕AI基建；WAIC调研显示供应链对AI基础设施端需求反馈积极，算力卡需求紧、ODM数据中心业务强劲</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>瑞银WAIC 2026科技调研显示中国AI生态与科技供应链能力持续增强，大会超1100家参展商、40万以上参会者，中国牵头成立涉29国AI合作组织并签30亿美元海外合同。调研覆盖大模型、GPU、网络、先进封装等12家企业，各业务快速进展，供应链对AI基础设施端需求反馈积极。瑞银看好中国AI科技供应链企业2026年及后续增长，给出LLM、半导体供应链、硬件供应链重点推荐。</p>
+      <ul class="findings"><li>中国AI生态与科技供应链能力持续增强，WAIC 2026吸引超1100家参展商、40万以上参会者，中国成立WAICO涉及29国并签约30亿美元海外合同</li><li>国内AI基础设施供给演进，华为Atlas 950 SuperPod达1024芯片，多家厂商发布SuperPod方案，大模型迭代包括Kimi K3和Qwen 3.8-Max</li><li>供应链对AI基础设施端需求反馈积极，算力卡需求紧、ODM数据中心业务强劲，先进封装产能扩张明确</li><li>瑞银推荐中国AI LLM（智谱、MiniMax）、半导体供应链（北方华创、长电科技、大族激光）、硬件供应链（立讯、蓝思、瑞声）</li></ul>
+      <div class="path">Evidence: Huawei brought its Atlas 950 SuperPod with 1,024 chips. / JCET recently announced it would build an advanced packaging fab in Shanghai with a total investment of Rmb7.8 bn / Management guided data centre revenue to reach Rmb70bn in 2026 (+50% YoY) / Strengthening AI ecosystem and tech supply chain capability</div>
+      <div class="path">False-positive checks: 无假阳性：数据中心为AI算力基础设施，非地产租赁</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
       <div class="path">IMA 文件: 瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf</div>
       <div class="path">本地路径: downloads/2026/7月/7.23/瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf</div>
@@ -526,8 +526,34 @@
   </article>
 <article class="item">
     <div class="rankbox">
-      <div class="rank">#3</div>
+      <div class="rank">#2</div>
       <div class="small">LLM #1</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>Semi Upstream / Packaging / Equipment</span>
+        <span>score 98</span>
+      </div>
+      <h3 class="title">高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf</h3>
+      <div class="tags"><span class="tag">半导体设备</span><span class="tag">前端设备</span><span class="tag">HBM</span><span class="tag">先进逻辑</span></div>
+      <p class="reason">正文以日本半导体生产设备为核心，明确前端设备需求强劲，覆盖HBM、先进逻辑等AI芯片制造关键环节。；SEAJ数据与预测显示销售持续增长，需求预测几乎每月上调，直接关联AI数据中心芯片扩产。；报告推荐买入Lasertec、Ebara、Disco、东京电子，均为半导体设备龙头，构成AI基建上游投资逻辑。</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>高盛基于SEAJ于7月21日收盘后发布的2026年6月数据，指出日本半导体生产设备4-6月月均销售5136亿日元（同比+27%、环比+7.0%），FY3/27需求预测上调至6.55万亿日元（+26% yoy）。前端设备需求成为增长核心，应用广泛。高盛上调盈利预测，维持Lasertec、Ebara、Disco、东京电子买入评级，并因日元假设调整由155升至160。</p>
+      <ul class="findings"><li>日本半导体生产设备4-6月平均月销售5136亿日元，同比+27%、环比+7.0%</li><li>SEAJ于7月2日更新预测：FY3/27销售6.55万亿日元（+26% yoy）、FY3/28销售7.40万亿日元（+13% yoy）</li><li>前端设备需求强劲，覆盖HBM、先进逻辑、商品DRAM及SSD(NAND)等广泛应用，需求预测几乎每月上调</li><li>高盛维持Lasertec、Ebara、Disco、东京电子买入评级，因日元假设由155调至160上调盈利预测</li></ul>
+      <div class="path">Evidence: According to June 2026 data released after the July 21 close by the Semiconductor Equipment Association of Japan (SEAJ), monthly sales of Japanese semiconductor production equipment in April-June averaged ¥513.6 bn (+27% yoy, +7.0% qoq). / Per SEAJ, whereas back-end equipment demand (centered on inspection equipment) was strong until FY3/26, front-end equipment demand is driving growth thus far in FY3/27, with strong demand across a broad range of applications, including HBM and leading-edge logic as well as commodity DRAM and SSD (NAND). / The SEAJ noted that the demand outlook is currently being revised upward almost every month, suggesting that customer requests for accelerated delivery of ordered equipment are continuing.</div>
+      <div class="path">False-positive checks: 无假阳性风险：半导体设备直接用于AI芯片制造，非地产/租赁。</div>
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
+      <div class="path">IMA 文件: 高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E6%97%A5%E6%9C%AC%E7%A7%91%E6%8A%80%E8%A1%8C%E4%B8%9A%EF%BD%9C%E5%8D%8A%E5%AF%BC%E4%BD%93%E8%AE%BE%E5%A4%87%EF%BC%9A6%E6%9C%88SEAJ%E6%95%B0%E6%8D%AE%EF%BC%9A%E5%89%8D%E7%AB%AF%E8%AE%BE%E5%A4%87%E5%BC%95%E9%A2%86%E5%BC%BA%E5%8A%B2%E9%9C%80%E6%B1%82%EF%BC%9B%E4%B8%8A%E8%B0%83%E7%9B%88%E5%88%A9%E9%A2%84%E6%B5%8B%EF%BC%9B%E6%8E%A8%E8%8D%90%E4%B9%B0%E5%85%A5Lasertec%E3%80%81Ebara%E3%80%81Disco%E3%80%81%E4%B8%9C%E4%BA%AC%E7%94%B5%E5%AD%90-260723.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#3</div>
+      <div class="small">LLM #2</div>
     </div>
     <div>
       <div class="meta">
@@ -536,13 +562,14 @@
         <span class="badge downloaded">本地已有</span>
         <span>Power / Cooling / Energy</span>
         <span>score 95</span>
-
       </div>
       <h3 class="title">高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf</h3>
-      <div class="tags"><span class="tag">电网设备</span><span class="tag">数据中心</span><span class="tag">变压器</span><span class="tag">开关设备</span><span class="tag">日立能源</span></div>
-      <p class="reason">正文明确以GE Vernova电网业务强劲需求为核心，强调数据中心相关订单超50亿美元，直接关联AI数据中心电力基础设施。；报告将GEV业绩映射至日立能源，形成AI基建电力设备投资逻辑，符合P0标准。</p>
-
-
+      <div class="tags"><span class="tag">电网设备</span><span class="tag">数据中心订单</span><span class="tag">变压器</span><span class="tag">开关设备</span></div>
+      <p class="reason">正文明确以数据中心电力/冷却相关基建为核心：GE Vernova电气化业务订单同比增93%，数据中心相关订单上半年超50亿美元。；电网产品如变压器、开关设备直接服务于AI数据中心电力需求，构成AI基建投资逻辑。；报告将强劲需求映射至日立能源，维持买入评级，提供明确投资建议。</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>高盛指出GE Vernova二季度电气化业务销售额36.37亿美元、EBITDA 6.71亿美元均超预期，订单同比增93%至63.47亿美元，上调全年销售指引至145-150亿美元。电网产品需求强劲且数据中心相关订单上半年超50亿美元，对相似业务的日立能源形成利好。高盛对日立维持买入评级，12个月目标价6300日元，基于13倍EV/EBITDA。</p>
+      <ul class="findings"><li>GEV二季度电气化业务销售36.37亿美元（共识34.37亿）、EBITDA 6.71亿美元（共识6.30亿）均超预期</li><li>GEV二季度订单63.47亿美元，有机增长+66% yoy；上调全年销售指引至145-150亿美元</li><li>电网设备需求强劲，1H FY26数据中心相关订单超50亿美元，超FY25全年水平</li><li>高盛对日立维持买入评级，12个月目标价6300日元，基于13倍EV/EBITDA</li></ul>
+      <div class="path">Evidence: 2Q orders for the business were $6,347 mn, up 93% yoy. / Data center-related orders in 1H FY26 exceeded $5 bn, already surpassing the full-year FY25 level / The results confirmed that the demand environment for power grid products such as transformers and switchgear remains strong.</div>
+      <div class="path">False-positive checks: 无假阳性风险：电网设备直接关联数据中心电力基础设施，非地产/租赁。</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
       <div class="path">IMA 文件: 高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf</div>
       <div class="path">本地路径: downloads/2026/7月/7.23/高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf</div>
@@ -552,31 +579,6 @@
 <article class="item">
     <div class="rankbox">
       <div class="rank">#4</div>
-      <div class="small">LLM #2</div>
-    </div>
-    <div>
-      <div class="meta">
-        <span class="badge p0">P0</span>
-        <span class="badge tier">Core</span>
-        <span class="badge downloaded">本地已有</span>
-        <span>AIDC / Cloud Capex</span>
-        <span>score 95</span>
-
-      </div>
-      <h3 class="title">美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf</h3>
-      <div class="tags"><span class="tag">AI数据中心资本开支</span><span class="tag">云基础设施</span><span class="tag">AI服务器/TPU</span></div>
-      <p class="reason">正文明确以AI数据中心资本开支为核心投资逻辑，资本开支上调至1950-2050亿美元，加速数据中心建设以满足云需求；云业务加速至82%增长，积压订单达5140亿美元，直接反映AI基建需求强劲；报告强调云需求强劲、AI差异化支撑长期增长，估值具吸引力，AI基建是主要驱动力</p>
-
-
-      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-Alphabet%EF%BC%88GOOG.US%EF%BC%89%EF%BC%9A%E8%B5%84%E6%9C%AC%E5%BC%80%E6%94%AF%E4%B8%8A%E8%B0%83%E6%8A%A2%E8%B5%B0%E9%A3%8E%E5%A4%B4%EF%BC%8C%E4%BD%86%E4%BA%91%E4%B8%9A%E5%8A%A1%E5%8A%A0%E9%80%9F%E5%BC%BA%E5%8A%B2%EF%BC%9B%E9%87%8D%E7%94%B3%E2%80%9C%E4%B9%B0%E5%85%A5%E2%80%9D-260723.pdf">打开本地 PDF</a></div>
-    </div>
-  </article>
-<article class="item">
-    <div class="rankbox">
-      <div class="rank">#5</div>
       <div class="small">LLM #3</div>
     </div>
     <div>
@@ -585,24 +587,51 @@
         <span class="badge tier">Core</span>
         <span class="badge downloaded">本地已有</span>
         <span>Semi Upstream / Packaging / Equipment</span>
-        <span>score 92</span>
-
+        <span>score 95</span>
       </div>
-      <h3 class="title">高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf</h3>
-      <div class="tags"><span class="tag">半导体设备</span><span class="tag">前端设备</span><span class="tag">HBM</span><span class="tag">先进逻辑</span><span class="tag">NAND</span></div>
-      <p class="reason">正文以日本半导体设备强劲需求为核心，明确提及HBM、先进逻辑等AI相关芯片制造设备，直接属于AI基建上游硬件投资。；SEAJ数据及预测上调反映AI驱动的半导体资本开支，推荐买入Lasertec、Ebara、Disco、东京电子等设备股。</p>
-
-
+      <h3 class="title">杰富瑞-日本科技行业：半导体后道工艺与封装趋势-260721.pdf</h3>
+      <div class="tags"><span class="tag">先进封装</span><span class="tag">AI半导体市场</span><span class="tag">Chiplets</span><span class="tag">共封装光学</span><span class="tag">混合键合</span></div>
+      <p class="reason">正文明确以AI半导体市场扩张和先进封装为核心投资逻辑，提供具体市场规模数据（2025年2360亿美元，2028年3710亿美元）；讨论Chiplets、共封装光学、混合键合等AI基础设施关键技术，直接关联AI数据中心硬件需求</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>杰富瑞指出AI应用扩张推动先进封装市场发展，Chiplets、共封装光学、边缘AI、混合键合为核心方向。2025年AI半导体市场达2360亿美元，预计2028年扩至3710亿美元。日本企业在材料零部件领先，但系统搭建、封装量产及光电热协同设计落后全球量产节奏。建议材料厂商转向“工艺+评估+设计”整体方案并搭建海外后道共创平台。</p>
+      <ul class="findings"><li>AI半导体市场2025年2360亿美元，2028年预计3710亿美元</li><li>日本企业材料领先但封装系统弱，落后于全球量产化</li><li>材料厂商需从卖材料转向提供工艺+评估+设计整体方案</li></ul>
+      <div class="path">Evidence: AI application has significantly expanded the market for advanced packages. The AI semiconductor market was worth US$236bn in 2025 (including cloud AI at roughly US$160bn and edge AI at about US$80bn). According to the VLSI forecast, this should expand to US$371bn in 2028 with cloud AI at US$250bn and edge AI at US$120bn.</div>
+      <div class="path">False-positive checks: 无假阳性风险：正文聚焦AI半导体和先进封装，非地产或租赁</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E6%97%A5%E6%9C%AC%E7%A7%91%E6%8A%80%E8%A1%8C%E4%B8%9A%EF%BD%9C%E5%8D%8A%E5%AF%BC%E4%BD%93%E8%AE%BE%E5%A4%87%EF%BC%9A6%E6%9C%88SEAJ%E6%95%B0%E6%8D%AE%EF%BC%9A%E5%89%8D%E7%AB%AF%E8%AE%BE%E5%A4%87%E5%BC%95%E9%A2%86%E5%BC%BA%E5%8A%B2%E9%9C%80%E6%B1%82%EF%BC%9B%E4%B8%8A%E8%B0%83%E7%9B%88%E5%88%A9%E9%A2%84%E6%B5%8B%EF%BC%9B%E6%8E%A8%E8%8D%90%E4%B9%B0%E5%85%A5Lasertec%E3%80%81Ebara%E3%80%81Disco%E3%80%81%E4%B8%9C%E4%BA%AC%E7%94%B5%E5%AD%90-260723.pdf">打开本地 PDF</a></div>
+      <div class="path">IMA 文件: 杰富瑞-日本科技行业：半导体后道工艺与封装趋势-260721.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/杰富瑞-日本科技行业：半导体后道工艺与封装趋势-260721.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%9D%B0%E5%AF%8C%E7%91%9E-%E6%97%A5%E6%9C%AC%E7%A7%91%E6%8A%80%E8%A1%8C%E4%B8%9A%EF%BC%9A%E5%8D%8A%E5%AF%BC%E4%BD%93%E5%90%8E%E9%81%93%E5%B7%A5%E8%89%BA%E4%B8%8E%E5%B0%81%E8%A3%85%E8%B6%8B%E5%8A%BF-260721.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#5</div>
+      <div class="small">LLM #4</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>AIDC / Cloud Capex</span>
+        <span>score 95</span>
+      </div>
+      <h3 class="title">美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf</h3>
+      <div class="tags"><span class="tag">云基础设施</span><span class="tag">资本开支</span><span class="tag">数据中心</span></div>
+      <p class="reason">正文明确以AI数据中心资本开支为核心，云业务加速82%增长，积压订单5140亿美元；资本开支上调至1950-2050亿美元，因加速数据中心建设以满足AI需求；云基础设施是AI基建的直接组成部分，且报告强调云需求强劲、AI差异化</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>美银指出Alphabet二季度净营收1036亿美元超市场预期，云业务加速至82%增长，积压订单达5140亿美元，但资本开支上调至1950-2050亿美元引发短期股价承压。美银上调2027年净营收3%至5530亿美元、EPS 2%至15.01美元，维持买入评级及430美元目标价。认为云需求强劲、搜索稳健及AI差异化支撑长期增长，估值具吸引力。</p>
+      <ul class="findings"><li>云业务二季度增长82%远超市场预期65%，积压订单环比增11%至5140亿美元</li><li>资本开支上调约8%至1950-2050亿美元，预计2026年自由现金流为负160亿美元</li><li>上调2027年净营收3%至5530亿美元、EPS 2%至15.01美元</li><li>维持买入评级及430美元目标价，认为估值约22倍2027年GAAP EPS具吸引力</li></ul>
+      <div class="path">Evidence: 2Q Cloud revenue at $24.8bn (up 82% y/y) was above Street at $22.5bn (up 65% y/y). / To meet capacity demand, Google is accelerating capacity deployment and increased its FY26 capex guide by $15bn (~8%) to $195bn-$205bn.</div>
+      <div class="path">False-positive checks: 标题提及资本开支上调，正文明确为数据中心建设，属于AI基建核心</div>
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
+      <div class="path">IMA 文件: 美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-Alphabet%EF%BC%88GOOG.US%EF%BC%89%EF%BC%9A%E8%B5%84%E6%9C%AC%E5%BC%80%E6%94%AF%E4%B8%8A%E8%B0%83%E6%8A%A2%E8%B5%B0%E9%A3%8E%E5%A4%B4%EF%BC%8C%E4%BD%86%E4%BA%91%E4%B8%9A%E5%8A%A1%E5%8A%A0%E9%80%9F%E5%BC%BA%E5%8A%B2%EF%BC%9B%E9%87%8D%E7%94%B3%E2%80%9C%E4%B9%B0%E5%85%A5%E2%80%9D-260723.pdf">打开本地 PDF</a></div>
     </div>
   </article>
 <article class="item">
     <div class="rankbox">
       <div class="rank">#6</div>
-      <div class="small">LLM #4</div>
+      <div class="small">LLM #6</div>
     </div>
     <div>
       <div class="meta">
@@ -611,13 +640,14 @@
         <span class="badge downloaded">本地已有</span>
         <span>Other P0/P1</span>
         <span>score 90</span>
-
       </div>
       <h3 class="title">伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf</h3>
-      <div class="tags"><span class="tag">AI数据中心托管</span><span class="tag">第三方算力</span><span class="tag">电力基础设施</span></div>
-      <p class="reason">正文明确以新兴AI基础设施提供商（前比特币矿工）为核心，通过签订超7.5GW、1500亿美元第三方算力托管合同，成为解决算力短缺关键力量；电力获取与交付能力为核心壁垒，三重净租赁带来近100%利润率，直接涉及AI数据中心电力与冷却基础设施；板块获整体超重配评级，建议聚焦执行兑现，AI基建是唯一主线</p>
-
-
+      <div class="tags"><span class="tag">第三方算力</span><span class="tag">数据中心</span><span class="tag">电力</span></div>
+      <p class="reason">正文聚焦新兴AI基础设施提供商（前比特币矿工）签订超7.5GW、1500亿美元第三方算力托管合同；明确涉及数据中心托管、电力获取与交付，是AI基建的关键环节；三重净租赁、合同延至15-20年，经济效益改善，交付按时推进</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>伯恩斯坦指出新兴AI基础设施提供商（前比特币矿工）通过签订超7.5GW、1500亿美元第三方算力托管合同成为解决算力短缺关键力量，电力获取与交付能力为核心壁垒。行业订单势头强劲、经济效益改善（三重净租赁近100%利润率、合同延至15-20年），多家企业已按时启动初期交付。板块获整体超重配评级，建议聚焦具备执行兑现与稳定客户关系的头部企业，并关注监管与电网约束。</p>
+      <ul class="findings"><li>新兴AI基建商已签约约7.5GW、超1500亿美元第三方算力合同，7月每周有新交易</li><li>三重净租赁带来近100%利润率，近期合同期限延长至15-20年</li><li>WULF、IREN等已按时启动初期容量交付，预计H2&#39;26交付加速</li><li>板块获伯恩斯坦整体超重配评级，看好奇迹WULF、IREN等头部企业</li></ul>
+      <div class="path">Evidence: Emerging AI Infra stocks (former crypto miners) continue to see strong investor interest with a series of new deals announced in recent weeks. Our industry deals tracker for miners has seen a new deal every week in July, with combined deals standing at over 7.5GW contracted equivalent to $150Bn multi-year contracts. / Under triple net leases, tenant bears power, operating costs, taxes and insurance, effectively generating ~100% NOI margin for the landlord.</div>
+      <div class="path">False-positive checks: 标题明确为新兴AI基建，正文涉及算力托管与电力，属于AI基建核心</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
       <div class="path">IMA 文件: 伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf</div>
       <div class="path">本地路径: downloads/2026/7月/7.23/伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf</div>
@@ -627,26 +657,27 @@
 <article class="item">
     <div class="rankbox">
       <div class="rank">#7</div>
-      <div class="small">LLM #5</div>
+      <div class="small">LLM #7</div>
     </div>
     <div>
       <div class="meta">
         <span class="badge p0">P0</span>
         <span class="badge tier">Core</span>
         <span class="badge downloaded">本地已有</span>
-        <span>AI Server / GPU / ASIC / HBM</span>
+        <span>Semi Upstream / Packaging / Equipment</span>
         <span>score 90</span>
-
       </div>
-      <h3 class="title">美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf</h3>
-      <div class="tags"><span class="tag">服务器CPU</span><span class="tag">代理式AI</span><span class="tag">英伟达</span><span class="tag">AMD</span><span class="tag">数据中心</span></div>
-      <p class="reason">正文核心围绕英伟达与AMD在服务器CPU市场的路径之争，直接涉及AI数据中心核心硬件（CPU）架构和性能，属于AI基建投资逻辑。；明确讨论代理式AI工作负载对CPU设计的影响，以及机架级吞吐量优势，与AI服务器/GPU/ASIC等硬件投资高度相关。</p>
-
-
+      <h3 class="title">大摩-大中华区半导体行业：2026上海人工智能大会（WAIC）要点：中国规模化互联技术赋能超节点集群-260721.pdf</h3>
+      <div class="tags"><span class="tag">AI超节点集群</span><span class="tag">华为Atlas 950</span><span class="tag">NPU互联</span><span class="tag">SuperPod</span><span class="tag">P/D解耦推理</span></div>
+      <p class="reason">正文明确以AI算力基础设施为核心，讨论华为Atlas 950超节点（1024颗NPU）和64-128卡SuperPod方案；涉及AI服务器/GPU互联、系统级集群，直接对应AI数据中心硬件投资逻辑</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>2026 WAIC显示中国AI竞争从单芯片转向系统级超节点集群互联，华为发布支持1024颗NPU的Atlas 950超节点，国内多家厂商推出64-128卡SuperPod方案。P/D解耦推理架构、3D堆叠芯片成关注方向。大摩认为国内AI算力产业链具投资价值，推荐寒武纪、燧原科技、海光信息等芯片厂及中微公司、北方华创等设备厂。</p>
+      <ul class="findings"><li>华为Atlas 950 SuperPod扩展至1024 NPUs，含16计算柜与4 UnifiedBus柜</li><li>64-128加速器规模up配置渐普及，差异化靠互联等性能</li><li>P/D解耦成新推理主题，Attention/FFN解耦为下一阶段</li></ul>
+      <div class="path">Evidence: Huawei unveiled its next-generation Atlas 950 SuperPod at WAIC, marking another significant step-up in its scale-up architecture: Based on our checks at the event, the new system is primarily designed for Huawei&#39;s next-generation Ascend 950DT series, rather than the currently shipping 950PR series.</div>
+      <div class="path">False-positive checks: 无假阳性：聚焦AI算力集群，非地产或租赁</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-%E8%8B%B1%E4%BC%9F%E8%BE%BE%EF%BC%88NVDA.OQ%EF%BC%89%EF%BC%9A%E6%9B%B4%E5%A4%9A%E6%A0%B8%E5%BF%83%E8%BF%98%E6%98%AF%E6%9B%B4%E5%BF%AB%E6%A0%B8%E5%BF%83%EF%BC%9F%E8%8B%B1%E4%BC%9F%E8%BE%BE%E4%B8%8EAMD%E5%85%B3%E4%BA%8E%E4%BB%A3%E7%90%86%E5%BC%8FAI%20CPU%E7%9A%84%E8%B7%AF%E5%BE%84%E4%B9%8B%E4%BA%89-260722.pdf">打开本地 PDF</a></div>
+      <div class="path">IMA 文件: 大摩-大中华区半导体行业：2026上海人工智能大会（WAIC）要点：中国规模化互联技术赋能超节点集群-260721.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/大摩-大中华区半导体行业：2026上海人工智能大会（WAIC）要点：中国规模化互联技术赋能超节点集群-260721.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E5%A4%A7%E6%91%A9-%E5%A4%A7%E4%B8%AD%E5%8D%8E%E5%8C%BA%E5%8D%8A%E5%AF%BC%E4%BD%93%E8%A1%8C%E4%B8%9A%EF%BC%9A2026%E4%B8%8A%E6%B5%B7%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%A4%A7%E4%BC%9A%EF%BC%88WAIC%EF%BC%89%E8%A6%81%E7%82%B9%EF%BC%9A%E4%B8%AD%E5%9B%BD%E8%A7%84%E6%A8%A1%E5%8C%96%E4%BA%92%E8%81%94%E6%8A%80%E6%9C%AF%E8%B5%8B%E8%83%BD%E8%B6%85%E8%8A%82%E7%82%B9%E9%9B%86%E7%BE%A4-260721.pdf">打开本地 PDF</a></div>
     </div>
   </article>
 <article class="item">
@@ -656,22 +687,23 @@
     </div>
     <div>
       <div class="meta">
-        <span class="badge p1">P1</span>
-        <span class="badge tier">Watchlist</span>
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
         <span class="badge downloaded">本地已有</span>
-        <span>Other P0/P1</span>
-        <span>score 80</span>
-
+        <span>AI Server / GPU / ASIC / HBM</span>
+        <span>score 90</span>
       </div>
-      <h3 class="title">杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf</h3>
-      <div class="tags"><span class="tag">光纤光缆</span><span class="tag">数据中心互联</span></div>
-      <p class="reason">长飞光纤光缆受益于AI数据中心对光纤的需求增长，报告明确提及数据中心光纤需求占比大幅提升，属于AI基建的光互联/网络领域。</p>
-
-
+      <h3 class="title">美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf</h3>
+      <div class="tags"><span class="tag">服务器CPU</span><span class="tag">代理式AI</span><span class="tag">英伟达Vera</span><span class="tag">AMD EPYC</span></div>
+      <p class="reason">正文明确以AI数据中心核心硬件——服务器CPU为投资主线，讨论英伟达与AMD在代理式AI CPU路径上的分歧。；涉及1700亿美元服务器CPU市场，直接关联AI服务器/GPU/ASIC等核心基建，并提供具体技术细节与性能对比。；报告维持英伟达买入评级，建议关注CPU关键性能指标，构成明确的AI基建投资逻辑。</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>美银指出英伟达与AMD在1700亿美元服务器CPU市场上就代理式AI发展路径产生分歧：英伟达Vera CPU采用88个定制ARM核心与单片设计强调高单线程性能，AMD则依托EPYC芯片粒架构主张在固定功耗下通过更多核心实现更高并发。争论延伸至x86与ARM生态差异。美银维持英伟达买入评级与350美元目标价，建议关注CPU关键性能指标定义权归属及架构长期演化。</p>
+      <ul class="findings"><li>英伟达Vera CPU采用88个定制ARM核心与单片设计，强调高单线程性能以优化延迟与GPU利用率</li><li>AMD依托EPYC芯片粒架构主张在固定功耗下通过更多核心实现更高并发，建模显示2.4至3.3倍机架级优势</li><li>争论延伸至x86与ARM企业软件生态差异，投资者需判断代理式AI受限于任务完成时间还是每机架代理数量</li><li>美银维持英伟达买入评级与350美元目标价，AMD公开技术回应预计侧重建立行业首选性能指标</li></ul>
+      <div class="path">Evidence: 英伟达与AMD在预期规模达1700亿美元的服务器CPU市场上就代理式AI发展路径产生核心分歧：英伟达Vera CPU采用88个定制ARM核心与单片设计强调高单线程性能以优化延迟与GPU利用率，AMD则依托EPYC芯片粒架构主张在固定功耗下通过更多核心实现更高并发吞吐量（建模显示2.4至3.3倍机架级优势）。 / NVDA&#39;s core argument is that agentic AI consists of repeated CPU → GPU loops involving tool calls, code execution, retrieval and orchestration, where each step depends on completion of the previous one. In this framework, faster per-core performance directly improves agent response times, GPU utilization and overall AI-factory productivity.</div>
+      <div class="path">False-positive checks: 无假阳性风险：服务器CPU是AI数据中心核心组件，非地产/租赁/并购。</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%9D%B0%E5%AF%8C%E7%91%9E-%E9%95%BF%E9%A3%9E%E5%85%89%E7%BA%A4%E5%85%89%E7%BC%86%EF%BC%886869.HK%EF%BC%89%EF%BC%9A%E4%B8%AD%E5%9B%BD%E4%BA%A7%E8%83%BD%E6%89%A9%E5%BC%A0%E5%B0%86%E8%BF%85%E9%80%9F%E6%8A%B9%E5%B9%B3%E4%BE%9B%E7%BB%99%E7%BC%BA%E5%8F%A3%EF%BC%9B%E4%B8%8B%E8%B0%83%E8%AF%84%E7%BA%A7%E8%87%B3%E2%80%9C%E6%8C%81%E6%9C%89%E2%80%9D-260722.pdf">打开本地 PDF</a></div>
+      <div class="path">IMA 文件: 美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-%E8%8B%B1%E4%BC%9F%E8%BE%BE%EF%BC%88NVDA.OQ%EF%BC%89%EF%BC%9A%E6%9B%B4%E5%A4%9A%E6%A0%B8%E5%BF%83%E8%BF%98%E6%98%AF%E6%9B%B4%E5%BF%AB%E6%A0%B8%E5%BF%83%EF%BC%9F%E8%8B%B1%E4%BC%9F%E8%BE%BE%E4%B8%8EAMD%E5%85%B3%E4%BA%8E%E4%BB%A3%E7%90%86%E5%BC%8FAI%20CPU%E7%9A%84%E8%B7%AF%E5%BE%84%E4%B9%8B%E4%BA%89-260722.pdf">打开本地 PDF</a></div>
     </div>
   </article>
 <article class="item">
@@ -681,22 +713,23 @@
     </div>
     <div>
       <div class="meta">
-        <span class="badge p1">P1</span>
-        <span class="badge tier">Watchlist</span>
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
         <span class="badge downloaded">本地已有</span>
         <span>Other P0/P1</span>
-        <span>score 75</span>
-
+        <span>score 88</span>
       </div>
-      <h3 class="title">伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf</h3>
-      <div class="tags"><span class="tag">数据中心</span><span class="tag">模拟芯片</span><span class="tag">工业</span></div>
-      <p class="reason">正文明确提及数据中心业务实现翻倍同比增长，德州仪器作为模拟芯片供应商，其数据中心业务增长直接反映AI基建需求；工业业务增长约30%，汽车业务双位数增长，但报告核心是业绩复盘与估值，AI基建并非唯一主线；资本开支维持20-30亿美元区间，但未详细说明与AI基建的直接关联</p>
-
-
+      <h3 class="title">美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf</h3>
+      <div class="tags"><span class="tag">云基础设施</span><span class="tag">AWS</span><span class="tag">资本开支</span></div>
+      <p class="reason">正文上调AWS增速预期至33%，因AI合作驱动云需求，明确涉及AI基建；提及Anthropic相关营收及OpenAI模型推动Bedrock需求，云基础设施是AI基建核心；预计资本开支上升，与AI数据中心建设相关</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>美银证券发布亚马逊业绩前瞻，将AWS营收增速预期上调至33%（原31%），预计二季度总营收1988亿美元、营业利润241亿美元均高于市场共识，主因AI合作驱动云需求。零售预期与共识一致，AWS超预期。预计三季度营收指引2005-2055亿美元、营业利润215-265亿美元，与共识基本持平。重申买入评级，目标价310美元，提示资本开支上升与利润率压力等风险。</p>
+      <ul class="findings"><li>上调AWS二季度增速预期至33%（原31%），预计营收409.99亿美元</li><li>预计二季度总营收1988.16亿美元、GAAP营业利润241.49亿美元，均高于Street</li><li>预计三季度营收指引2005-2055亿美元，营业利润215-265亿美元，与Street基本持平</li><li>重申买入评级，目标价310美元，潜在风险为更高2026 capex及2Q margin压力</li></ul>
+      <div class="path">Evidence: we now estimate 2Q revenue/EBIT of $198.8bn/$24.1bn, above Street at $196.8bn/$23.6bn. We are raising our AWS growth est. to 33% y/y from 31% / We remain constructive on AWS&#39;s improving AI positioning, which should be apparent in results that show AWS growth acceleration, backlog expansion ($100bn of Anthropic backlog in 2Q)</div>
+      <div class="path">False-positive checks: 标题提及AWS增速上调，正文明确AI驱动云需求，属于AI基建</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E4%BC%AF%E6%81%A9%E6%96%AF%E5%9D%A6-%E5%BE%B7%E5%B7%9E%E4%BB%AA%E5%99%A8%EF%BC%88TXN.US%EF%BC%892026%E5%B9%B4%E7%AC%AC%E4%BA%8C%E5%AD%A3%E5%BA%A6%E4%B8%9A%E7%BB%A9%E5%A4%8D%E7%9B%98%EF%BC%9A%E4%B8%96%E7%95%8C%E5%B0%9A%E4%B8%8D%E8%B6%B3%E5%A4%9F%EF%BC%9F-260723.pdf">打开本地 PDF</a></div>
+      <div class="path">IMA 文件: 美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-%E4%BA%9A%E9%A9%AC%E9%80%8A%EF%BC%88AMZN.US%EF%BC%89%E4%BA%8C%E5%AD%A3%E5%BA%A6%E4%B8%9A%E7%BB%A9%E5%89%8D%E7%9E%BB%EF%BC%9A%E4%B8%8A%E8%B0%83AWS%E5%A2%9E%E9%80%9F%E9%A2%84%E6%9C%9F%EF%BC%8C%E9%A2%84%E8%AE%A1%E4%B8%89%E5%AD%A3%E5%BA%A6%E6%8C%87%E5%BC%95%E4%B8%8E%E5%B8%82%E5%9C%BA%E5%85%B1%E8%AF%86%E5%9F%BA%E6%9C%AC%E6%8C%81%E5%B9%B3-260722.pdf">打开本地 PDF</a></div>
     </div>
   </article>
 <article class="item">
@@ -706,22 +739,23 @@
     </div>
     <div>
       <div class="meta">
-        <span class="badge p1">P1</span>
-        <span class="badge tier">Watchlist</span>
+        <span class="badge p0">P0</span>
+        <span class="badge tier">Core</span>
         <span class="badge downloaded">本地已有</span>
-        <span>Power / Cooling / Energy</span>
-        <span>score 75</span>
-
+        <span>Other P0/P1</span>
+        <span>score 85</span>
       </div>
-      <h3 class="title">高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf</h3>
-      <div class="tags"><span class="tag">电网设备</span><span class="tag">电力基础设施</span></div>
-      <p class="reason">华明装备生产变压器分接开关，受益于全球电网升级，包括数据中心建设驱动的电网投资增长，属于AI基建的电力/冷却相关设备。</p>
-
-
+      <h3 class="title">瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf</h3>
+      <div class="tags"><span class="tag">云基础设施</span><span class="tag">资本开支</span><span class="tag">数据中心</span></div>
+      <p class="reason">正文提及云积压订单达5100亿美元，资本支出指引上调至1950-2050亿美元；资本开支上调因加速数据中心建设，与AI基建直接相关；虽然报告偏中性，但明确涉及AI基建资本开支</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>瑞银称Alphabet搜索与云增长符合预期、云积压订单达5100亿美元且YouTube广告超预期，但资本支出与薪酬成本上升拖累利润率，近期每股收益受股权重估提振。瑞银微修营收预测但上调成本假设，下调未来三年EPS预期，并将目标价从400美元降至379美元维持中性。鉴于近峰值倍数、盈利下修可能及生成式AI竞争威胁，认为风险回报偏中性。</p>
+      <ul class="findings"><li>云积压订单达5100亿美元，高于瑞银预测的4820亿美元</li><li>资本支出指引上调至1950-2050亿美元，高于共识1865亿美元</li><li>下调2026-2028年EPS预期，目标价从400美元降至379美元</li><li>维持中性评级，认为近峰值倍数与盈利下修风险使风险回报偏中性</li></ul>
+      <div class="path">Evidence: Google reported better-than-expected Cloud backlog, which hit about $510B as of 2Q26 close vs ~$462B at 1Q26 close. / Google guided CapEx at $195B-$205B versus $180B-$190B earlier and compared to consensus at $186.5B and UBSe at $196.2B.</div>
+      <div class="path">False-positive checks: 标题提及资本开支上调，正文明确为数据中心建设，属于AI基建核心</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E5%8D%8E%E6%98%8E%E8%A3%85%E5%A4%87%EF%BC%88002270.SZ%EF%BC%89%EF%BC%9A%E5%9B%9E%E8%B0%83%E5%90%8E%E4%BC%B0%E5%80%BC%E5%85%B7%E5%A4%87%E5%90%B8%E5%BC%95%E5%8A%9B%EF%BC%8C%E5%85%A8%E7%90%83%E7%94%B5%E7%BD%91%E5%8D%87%E7%BA%A7%E9%A9%B1%E5%8A%A8%E6%B5%B7%E5%A4%96%E5%A2%9E%E9%95%BF%E9%9F%A7%E6%80%A7%E4%B8%8D%E5%8F%98%EF%BC%8C%E4%B8%8A%E8%B0%83%E8%87%B3%E2%80%9C%E4%B9%B0%E5%85%A5%E2%80%9D%E8%AF%84%E7%BA%A7-260722.pdf">打开本地 PDF</a></div>
+      <div class="path">IMA 文件: 瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%91%9E%E9%93%B6-Alphabet%EF%BC%88GOOG.US%EF%BC%89%EF%BC%9A%E8%90%A5%E6%94%B6%E5%A2%9E%E9%95%BF%E9%A2%84%E6%9C%9F%E6%97%A9%E5%B7%B2%E8%A2%AB%E5%B8%82%E5%9C%BA%E5%85%85%E5%88%86%E5%AE%9A%E4%BB%B7-260723.pdf">打开本地 PDF</a></div>
     </div>
   </article>
 <article class="item">
@@ -734,19 +768,20 @@
         <span class="badge p1">P1</span>
         <span class="badge tier">Watchlist</span>
         <span class="badge downloaded">本地已有</span>
-        <span>Other P0/P1</span>
-        <span>score 75</span>
-
+        <span>Semi Upstream / Packaging / Equipment</span>
+        <span>score 85</span>
       </div>
-      <h3 class="title">美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf</h3>
-      <div class="tags"><span class="tag">云基础设施</span><span class="tag">AI服务器/芯片</span><span class="tag">资本开支</span></div>
-      <p class="reason">正文明确上调AWS增速预期至33%，受AI合作驱动云需求，反映AI基建需求强劲；提及Anthropic相关营收及OpenAI模型推动Bedrock需求，涉及AI服务器/芯片（Trainium）；但报告为业绩前瞻，AI基建并非唯一主线，且提示资本开支上升风险</p>
-
-
+      <h3 class="title">摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf</h3>
+      <div class="tags"><span class="tag">先进封装</span><span class="tag">TCB</span><span class="tag">HBM</span><span class="tag">CoWoS</span><span class="tag">AI服务器</span></div>
+      <p class="reason">ASMPT是先进封装设备龙头，正文明确TCB业务受CoWoS与HBM驱动增长强劲，直接受益于AI数据中心对高带宽内存和先进封装的需求，属于AI基建核心硬件（HBM/先进封装）的投资逻辑。</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>摩根大通指出ASMPT新任CEO Bassel Haddad将于8月就职，公司继续聚焦先进封装并退出SMT业务，短期运营不受影响。TCB业务受CoWoS与HBM驱动增长强劲，有望在韩客户获30-35%份额。报告给予增持评级，目标价225港元，基于12个月远期EPS的30倍估值，关键下行风险为宏观走弱影响主流半导体复苏。</p>
+      <ul class="findings"><li>新CEO Bassel Haddad 8月就职，战略聚焦先进封装并推进SMT退出，短期运营无影响</li><li>TCB业务势头强劲，有望在韩国客户获30-35%份额，HBM4订单加速</li><li>多催化剂包括中国先进封装产能注入、汽车/工业主流复苏、光子学增长</li><li>摩根大通给予增持评级，目标价225港元，基于12个月远期EPS的30倍</li></ul>
+      <div class="path">Evidence: With its leadership in Fluxless TCB technology, we believe ASMPT could take up 30-35% share in its Korean customers, with an upside pointing to new customer expansion (likely breakthrough in SEC, besides SKH and MU). / We are OW on ASMPT, given we expect continued growth in Advanced Packaging and a strong recovery in mainstream SEMI and SMT solutions, driven by AI server boards and PMICs.</div>
+      <div class="path">False-positive checks: TCB设备用于HBM和CoWoS先进封装，是AI服务器GPU/HBM制造的关键环节，属于AI基建核心硬件供应链，故为P0/P1边界，因明确提及AI服务器板卡驱动，给予P1高分。</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-%E4%BA%9A%E9%A9%AC%E9%80%8A%EF%BC%88AMZN.US%EF%BC%89%E4%BA%8C%E5%AD%A3%E5%BA%A6%E4%B8%9A%E7%BB%A9%E5%89%8D%E7%9E%BB%EF%BC%9A%E4%B8%8A%E8%B0%83AWS%E5%A2%9E%E9%80%9F%E9%A2%84%E6%9C%9F%EF%BC%8C%E9%A2%84%E8%AE%A1%E4%B8%89%E5%AD%A3%E5%BA%A6%E6%8C%87%E5%BC%95%E4%B8%8E%E5%B8%82%E5%9C%BA%E5%85%B1%E8%AF%86%E5%9F%BA%E6%9C%AC%E6%8C%81%E5%B9%B3-260722.pdf">打开本地 PDF</a></div>
+      <div class="path">IMA 文件: 摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-ASMPT%EF%BC%880522.HK%EF%BC%89%EF%BC%9A%E6%96%B0%E4%BB%BBCEO%E5%B0%98%E5%9F%83%E8%90%BD%E5%AE%9A%EF%BC%8C%E5%85%88%E8%BF%9B%E5%B0%81%E8%A3%85%E6%88%98%E7%95%A5%E5%B0%86%E8%BF%9B%E4%B8%80%E6%AD%A5%E5%BC%BA%E5%8C%96-260721.pdf">打开本地 PDF</a></div>
     </div>
   </article>
 <article class="item">
@@ -760,18 +795,19 @@
         <span class="badge tier">Watchlist</span>
         <span class="badge downloaded">本地已有</span>
         <span>Other P0/P1</span>
-        <span>score 75</span>
-
+        <span>score 80</span>
       </div>
-      <h3 class="title">瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf</h3>
-      <div class="tags"><span class="tag">AI受益电子元件</span><span class="tag">基板</span><span class="tag">电容器</span><span class="tag">功率半导体</span></div>
-      <p class="reason">正文明确AI利好开始实质影响基板、电容器、硬盘、功率半导体等子领域，属于AI基建上游电子元件；推荐已受益AI且估值合理的村田、Ibiden等，有明确投资逻辑</p>
-
-
+      <h3 class="title">杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf</h3>
+      <div class="tags"><span class="tag">光纤光缆</span><span class="tag">AI需求</span><span class="tag">数据中心</span><span class="tag">产能扩张</span></div>
+      <p class="reason">长飞光纤光缆受益于AI驱动的数据中心光纤需求，正文明确数据中心光纤需求占比从10%升至43%，并驱动ASP和毛利率飙升，属于AI基建中的光互联/网络环节，有明确需求、价格和产能证据。</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>杰富瑞指出AI及军事冲突带动光纤需求上涨，长飞光纤光缆光纤ASP及毛利率将大幅提升，2026年EPS预计同比涨10倍，但中国及全球产能大幅扩张将快速抹平供给缺口，2026年或成ASP峰值。基于SOTP估值法得出目标价142港元，较此前上调8%但上行空间仅9%，因此将评级由买入下调至持有。</p>
+      <ul class="findings"><li>AI需求及军事冲突带动光纤需求，公司光纤ASP及毛利率将大幅提升，2026年EPS预计同比涨10倍</li><li>中国及全球产能大幅扩张将快速抹平供给缺口，2026年或成ASP峰值，全球产能2028年增69%（中国翻倍）</li><li>基于SOTP估值法目标价142港元，较此前上调8%但上行空间仅9%，评级由买入下调至持有</li><li>公司是唯一未讨论扩产计划的主要玩家，或面临份额流失风险，但出口与光模块多元化策略稳健</li></ul>
+      <div class="path">Evidence: YOFC has risen ~14x in the past 12 months due to AI-driven growth in demand for OF and optical modules. / Datacom had been 10% of OF demand (80% telecom) until 2024. We est datacom will be 43% of demand in 2026 rising to 55% in 2027, implying 131%/65% YoY growth. / We estimate its OF ASP will rise 203% in 2026 to Rmb146/fkm, ~18% above the previous peak in 2018.</div>
+      <div class="path">False-positive checks: 光纤光缆属于数据中心互联基础设施，直接受AI基建拉动，但非服务器/GPU等核心算力硬件，且报告提示产能扩张可能抹平缺口，故为P1。</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%91%9E%E9%93%B6-%E6%97%A5%E6%9C%AC%E7%94%B5%E5%AD%90%E5%85%83%E4%BB%B6%E8%A1%8C%E4%B8%9A%EF%BC%9AAI%E6%B5%AA%E6%BD%AE%E2%80%9C%E6%9B%B4%E9%AB%98%E6%9B%B4%E4%B9%85%E2%80%9D%EF%BC%9F-260721.pdf">打开本地 PDF</a></div>
+      <div class="path">IMA 文件: 杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%9D%B0%E5%AF%8C%E7%91%9E-%E9%95%BF%E9%A3%9E%E5%85%89%E7%BA%A4%E5%85%89%E7%BC%86%EF%BC%886869.HK%EF%BC%89%EF%BC%9A%E4%B8%AD%E5%9B%BD%E4%BA%A7%E8%83%BD%E6%89%A9%E5%BC%A0%E5%B0%86%E8%BF%85%E9%80%9F%E6%8A%B9%E5%B9%B3%E4%BE%9B%E7%BB%99%E7%BC%BA%E5%8F%A3%EF%BC%9B%E4%B8%8B%E8%B0%83%E8%AF%84%E7%BA%A7%E8%87%B3%E2%80%9C%E6%8C%81%E6%9C%89%E2%80%9D-260722.pdf">打开本地 PDF</a></div>
     </div>
   </article>
 <article class="item">
@@ -784,19 +820,20 @@
         <span class="badge p1">P1</span>
         <span class="badge tier">Watchlist</span>
         <span class="badge downloaded">本地已有</span>
-        <span>AIDC / Cloud Capex</span>
-        <span>score 70</span>
-
+        <span>Other P0/P1</span>
+        <span>score 80</span>
       </div>
-      <h3 class="title">巴克莱-IT硬件与通信设备：AT&amp;T资本开支及iPhone销售数据解读-260722.pdf</h3>
-      <div class="tags"><span class="tag">光通信</span><span class="tag">光纤</span><span class="tag">资本开支</span><span class="tag">数据中心</span></div>
-      <p class="reason">正文明确提及光通信支出优先级提升，看好Ciena增持，并指出光学支出将加速，与AI数据中心光互联/网络相关。；AT&amp;T资本开支高于预期，全年指引维持，但报告主要围绕电信运营商设备升级和iPhone销售，AI基建不是唯一主线。</p>
-
-
+      <h3 class="title">瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf</h3>
+      <div class="tags"><span class="tag">日本电子元件</span><span class="tag">AI受益</span><span class="tag">基板</span><span class="tag">电容器</span><span class="tag">功率半导体</span></div>
+      <p class="reason">正文明确2026年是日本电子元件行业从传统应用转向AI受益领域的转型拐点，AI利好实质影响基板、电容器、硬盘、功率半导体等子领域；这些子领域直接服务于AI服务器和数据中心，属于AI基建核心硬件供应链；报告推荐已受益AI且估值合理的村田、Ibiden等，具有明确投资传导</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>瑞银指出2026年是日本电子元件行业从传统应用转向AI受益领域的转型拐点，此前行业与智能手机、PC、汽车等传统应用关联度高，AI利好正实质性影响基板、电容器、硬盘、功率半导体等细分领域。内存价格上涨压制中低端传统应用需求，高端应用保持稳健。行业市值占比与估值均处低位，推荐村田、Ibiden等已受益AI且估值合理的企业，对京瓷、广濑电机等持中性。</p>
+      <ul class="findings"><li>2026年为行业转型拐点，从传统应用导向转向AI受益领域，AI利好开始实质影响基板、电容器、硬盘、功率半导体等子领域</li><li>内存价格上涨压制中低端传统应用需求，高端应用需求相对稳健</li><li>行业市值占比与估值均处于低位，偏好已受益于AI且估值合理的村田、Ibiden等</li><li>推荐买入Murata、Ibiden、Rohm、Minebea Mitsumi、TDK、Nidec；京瓷、广濑电机、Niterra、Taiyo Yuden、Mabuchi Motor、Alps Alpine为中性</li></ul>
+      <div class="path">Evidence: 2026 is inflection for the sector to transform into AI beneficiary, shifting from legacy application / AI benefit finally starting to have meaningful impact on certain subvectors such as substrates, capacitors (MLCC, aluminum), HDDs, and power semiconductors. / We prefer names that have started to benefit from AI with undemanding valuations such as Murata, Ibiden.</div>
+      <div class="path">False-positive checks: 无假阳性：直接涉及AI服务器相关电子元件</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 巴克莱-IT硬件与通信设备：AT&amp;T资本开支及iPhone销售数据解读-260722.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/巴克莱-IT硬件与通信设备：AT&amp;T资本开支及iPhone销售数据解读-260722.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E5%B7%B4%E5%85%8B%E8%8E%B1-IT%E7%A1%AC%E4%BB%B6%E4%B8%8E%E9%80%9A%E4%BF%A1%E8%AE%BE%E5%A4%87%EF%BC%9AAT&amp;T%E8%B5%84%E6%9C%AC%E5%BC%80%E6%94%AF%E5%8F%8AiPhone%E9%94%80%E5%94%AE%E6%95%B0%E6%8D%AE%E8%A7%A3%E8%AF%BB-260722.pdf">打开本地 PDF</a></div>
+      <div class="path">IMA 文件: 瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%91%9E%E9%93%B6-%E6%97%A5%E6%9C%AC%E7%94%B5%E5%AD%90%E5%85%83%E4%BB%B6%E8%A1%8C%E4%B8%9A%EF%BC%9AAI%E6%B5%AA%E6%BD%AE%E2%80%9C%E6%9B%B4%E9%AB%98%E6%9B%B4%E4%B9%85%E2%80%9D%EF%BC%9F-260721.pdf">打开本地 PDF</a></div>
     </div>
   </article>
 <article class="item">
@@ -810,18 +847,19 @@
         <span class="badge tier">Watchlist</span>
         <span class="badge downloaded">本地已有</span>
         <span>Other P0/P1</span>
-        <span>score 70</span>
-
+        <span>score 75</span>
       </div>
-      <h3 class="title">大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf</h3>
-      <div class="tags"><span class="tag">自动驾驶</span><span class="tag">人形机器人</span><span class="tag">资本开支</span></div>
-      <p class="reason">正文明确提及特斯拉加速资本开支以确立自动驾驶与机器人领导地位，但报告核心是财务与估值，AI基建并非唯一主线；FSD北美附着率55%远超预估，Robotaxi与Optimus进展积极，但受限于软件校准与供应链复杂度；资本开支增加导致自由现金流转负，目标价下调，但未深入分析AI数据中心基础设施</p>
-
-
+      <h3 class="title">伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf</h3>
+      <div class="tags"><span class="tag">数据中心</span><span class="tag">模拟芯片</span><span class="tag">工业</span></div>
+      <p class="reason">正文明确提及数据中心业务翻倍增长，德州仪器作为模拟芯片供应商受益于AI基建需求；工业、数据中心与汽车业务分别实现约30%、翻倍及双位数同比增长，数据中心是明确增长点；资本开支维持20-30亿美元，但未详细说明用于AI基建</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>伯恩斯坦复盘德州仪器二季度业绩指出，营收54.63亿美元、每股收益2.14美元、毛利率61.4%均超市场预期，工业、数据中心与汽车业务分别实现约30%、翻倍及双位数同比增长，且营收指引59亿美元与利润率指引亦高于共识，资本开支维持20-30亿美元区间。伯恩斯坦据此上调盈利预估并将目标价由250美元升至290美元（对应约30倍远期市盈率），但维持“市场表现”评级，认为股价已充分估值。分析师建议投资者因估值偏高转向其他领域，并关注工业周期持续性、数据中心业务规模化及季节性预期偏差等风险。</p>
+      <ul class="findings"><li>二季度营收54.63亿美元、每股收益2.14美元、毛利率61.4%均超市场预期</li><li>工业、数据中心与汽车业务分别实现约30%、翻倍及双位数同比增长</li><li>营收指引59亿美元与利润率指引高于共识，资本开支维持20-30亿美元区间</li><li>目标价由250美元升至290美元，维持“市场表现”评级，认为股价已充分估值</li></ul>
+      <div class="path">Evidence: 工业、数据中心与汽车业务分别实现约30%、翻倍及双位数同比增长 / 营收指引59亿美元与利润率指引亦高于共识</div>
+      <div class="path">False-positive checks: 数据中心业务增长明确，但德州仪器主要提供模拟芯片，非AI服务器/GPU等核心硬件，故评为P1</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E5%A4%A7%E6%91%A9-%E7%89%B9%E6%96%AF%E6%8B%89%EF%BC%88%E5%8C%97%E7%BE%8E%E4%B8%9A%E5%8A%A1%EF%BC%89%EF%BC%9A%E5%9B%9E%E6%9C%AC%E4%B9%8B%E8%B7%AF%E5%B0%9A%E9%9C%80%E8%80%90%E5%BF%83%E7%AD%89%E5%BE%85-260723.pdf">打开本地 PDF</a></div>
+      <div class="path">IMA 文件: 伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E4%BC%AF%E6%81%A9%E6%96%AF%E5%9D%A6-%E5%BE%B7%E5%B7%9E%E4%BB%AA%E5%99%A8%EF%BC%88TXN.US%EF%BC%892026%E5%B9%B4%E7%AC%AC%E4%BA%8C%E5%AD%A3%E5%BA%A6%E4%B8%9A%E7%BB%A9%E5%A4%8D%E7%9B%98%EF%BC%9A%E4%B8%96%E7%95%8C%E5%B0%9A%E4%B8%8D%E8%B6%B3%E5%A4%9F%EF%BC%9F-260723.pdf">打开本地 PDF</a></div>
     </div>
   </article>
 <article class="item">
@@ -834,19 +872,20 @@
         <span class="badge p1">P1</span>
         <span class="badge tier">Watchlist</span>
         <span class="badge downloaded">本地已有</span>
-        <span>Other P0/P1</span>
-        <span>score 70</span>
-
+        <span>Power / Cooling / Energy</span>
+        <span>score 75</span>
       </div>
-      <h3 class="title">高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf</h3>
-      <div class="tags"><span class="tag">AI基础设施</span><span class="tag">工厂自动化</span><span class="tag">工业科技</span></div>
-      <p class="reason">正文明确提及AI基础设施和工厂自动化有望超预期，并作为行业二季度加速的驱动因素之一，但并非全文唯一主线，同时涉及个股估值纪律和行业轮动。</p>
-
-
+      <h3 class="title">高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf</h3>
+      <div class="tags"><span class="tag">电网升级</span><span class="tag">变压器</span><span class="tag">OLTC</span><span class="tag">新能源并网</span></div>
+      <p class="reason">华明装备是全球电网升级受益标的，正文明确提及全球电网投资增长由数据中心建设、老化基础设施和可再生能源整合驱动，属于AI基建的电力/电网配套，有明确需求传导。</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>高盛将华明装备评级由中性上调至买入，12个月目标价23.9元对应33%上行空间。股价自2026年初回调36%（峰值至谷底52%），当前18.1倍远期PE低于历史均值20.3倍。全球电网升级、老化改造及新能源并网驱动海外增长，预计2026E-30E净利润CAGR达17%，海外OLTC营收占比从41%升至59%，全球份额13%升至16%。</p>
+      <ul class="findings"><li>评级由中性上调至买入，12个月目标价23.9元（未变）对应33%上行空间</li><li>2026年初至今股价回调36%，峰值至谷底跌52%，当前18.1x 12个月远期PE低于历史均值20.3x</li><li>全球电网投资24-35E CAGR 7%，海外OLTC营收占比从41%(2026E)升至59%(2030E)，全球份额13%升至16%</li><li>预计2026E-30E营收CAGR 14%、净利润CAGR 17%，毛利率由56%升至57.5%；三大下行风险为海外份额、利润率、国内营收不及预期</li></ul>
+      <div class="path">Evidence: Siemens Energy/Hitachi Energy forecast global grid investment to grow at a 7% CAGR over 2024-35E, driven not only by data center build-out but also by aging infrastructure and renewable integration. / We expect export contribution within the OLTC business to rise from 41% in 2026E to 59% by 2030E.</div>
+      <div class="path">False-positive checks: 公司产品为变压器分接开关，直接受益于电网投资，包括数据中心电力需求，但非AI基建核心硬件（如服务器/GPU），属于强相关电力设备。</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E4%B8%AD%E5%9B%BD%E5%B7%A5%E4%B8%9A%E7%A7%91%E6%8A%80%E8%A1%8C%E4%B8%9A%EF%BC%9A%E4%B8%8B%E8%B0%83%E8%BF%87%E7%83%AD%E4%B8%AA%E8%82%A1%EF%BC%9A%E5%A4%A7%E6%97%8F%E6%BF%80%E5%85%89%E9%99%8D%E8%87%B3%E4%B8%AD%E6%80%A7%E3%80%81%E6%B1%9F%E6%B5%B7%E8%82%A1%E4%BB%BD%E9%99%8D%E8%87%B3%E5%8D%96%E5%87%BA%EF%BC%9B%E9%9D%92%E7%9D%90%E4%BC%B0%E5%80%BC%E5%90%88%E7%90%86%E7%9A%84%E7%A8%B3%E5%81%A5%E5%A2%9E%E9%95%BF%E8%82%A1%EF%BC%9B%E4%BA%8C%E5%AD%A3%E5%BA%A6%E8%A1%8C%E4%B8%9A%E5%89%8D%E7%9E%BB-260722.pdf">打开本地 PDF</a></div>
+      <div class="path">IMA 文件: 高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E5%8D%8E%E6%98%8E%E8%A3%85%E5%A4%87%EF%BC%88002270.SZ%EF%BC%89%EF%BC%9A%E5%9B%9E%E8%B0%83%E5%90%8E%E4%BC%B0%E5%80%BC%E5%85%B7%E5%A4%87%E5%90%B8%E5%BC%95%E5%8A%9B%EF%BC%8C%E5%85%A8%E7%90%83%E7%94%B5%E7%BD%91%E5%8D%87%E7%BA%A7%E9%A9%B1%E5%8A%A8%E6%B5%B7%E5%A4%96%E5%A2%9E%E9%95%BF%E9%9F%A7%E6%80%A7%E4%B8%8D%E5%8F%98%EF%BC%8C%E4%B8%8A%E8%B0%83%E8%87%B3%E2%80%9C%E4%B9%B0%E5%85%A5%E2%80%9D%E8%AF%84%E7%BA%A7-260722.pdf">打开本地 PDF</a></div>
     </div>
   </article>
 <article class="item">
@@ -860,14 +899,15 @@
         <span class="badge tier">Watchlist</span>
         <span class="badge downloaded">本地已有</span>
         <span>Semi Upstream / Packaging / Equipment</span>
-        <span>score 70</span>
-
+        <span>score 75</span>
       </div>
       <h3 class="title">美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf</h3>
-      <div class="tags"><span class="tag">半导体设备</span><span class="tag">晶圆制造设备</span></div>
-      <p class="reason">报告追踪中国半导体设备进口，包括前端和后端设备，这些设备用于芯片制造，间接支持AI芯片生产，但非直接以AI基建为投资主线。</p>
-
-
+      <div class="tags"><span class="tag">半导体设备进口</span><span class="tag">前端设备</span><span class="tag">光刻设备</span><span class="tag">线焊机</span><span class="tag">中国半导体设备市场</span></div>
+      <p class="reason">正文明确追踪中国半导体设备进口数据，涵盖前端设备、光刻、线焊机等，与AI基建所需半导体制造设备强相关；中国占全球WFE 33.5%，是最大区域市场，设备进口数据可追踪全球厂商中国销售，具有投资传导意义；但报告未直接提及AI数据中心资本开支或AI服务器/GPU等，而是聚焦半导体设备进口趋势，属于AI基建上游设备环节</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>美银全球研究追踪中国海关半导体设备进口数据，2026年6月进口额47亿美元，同比降1%、环比升45%，YTD降9%。前端设备6月同比微增1%、环比升57%；光刻机环比暴增184%，线焊机同比增153%。中国占2025年全球晶圆制造设备市场33.5%，是最大区域市场，多数设备商预计2026年中国销售正常化。</p>
+      <ul class="findings"><li>6月中国半导体设备进口额47亿美元，同比降1%、环比升45%，YTD降9%</li><li>前端设备6月进口34亿美元，同比增1%、环比增57%，热处理/其他前端/过程控制/光刻同比正增</li><li>线焊机6月进口同比大增153%，为后端唯一正增品类；组装封装同比降6%</li><li>前五大设备商披露中国销售额占中国前端进口额65%-85%，进口数据可追踪全球厂商中国销售</li></ul>
+      <div class="path">Evidence: China&#39;s semiconductor equipment imports were $4.7bn in June 2026... Import value was down 1% yoy and up 45% mom. / China accounted for 33.5% of global WFE in 2025, making it one of the most important regions for global semicaps. / China imported $3.4bn worth of front-end equipment in June. Front-end imports were up 1% yoy and up 57% mom... / The top 5 semicap suppliers disclosed China sales accounted for 65%-85% of China&#39;s front-end equipment imports...</div>
+      <div class="path">False-positive checks: 无假阳性：报告聚焦半导体设备进口，非地产/租赁/并购类数据中心</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
       <div class="path">IMA 文件: 美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf</div>
       <div class="path">本地路径: downloads/2026/7月/7.23/美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf</div>
@@ -885,18 +925,19 @@
         <span class="badge tier">Watchlist</span>
         <span class="badge downloaded">本地已有</span>
         <span>Other P0/P1</span>
-        <span>score 70</span>
-
+        <span>score 75</span>
       </div>
-      <h3 class="title">瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf</h3>
-      <div class="tags"><span class="tag">AI数据中心资本开支</span><span class="tag">云基础设施</span><span class="tag">AI服务器/TPU</span></div>
-      <p class="reason">正文提及资本支出上调至1950-2050亿美元，云积压订单达5100亿美元，反映AI基建需求；但报告核心是盈利下修与中性评级，AI基建并非唯一主线，且强调资本支出拖累利润率；目标价下调，风险回报偏中性，未积极推荐AI基建投资</p>
-
-
+      <h3 class="title">摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf</h3>
+      <div class="tags"><span class="tag">AI数据中心</span><span class="tag">超大规模云厂商</span><span class="tag">散户资金流</span></div>
+      <p class="reason">正文明确提及散户持续增持AI数据中心、超大规模云厂商及通信科技股，并关注hyperscaler财报中的AI货币化与回报。；散户净买入前五包含NVDA、GOOGL等AI基建相关标的，提供资金流证据。；报告并非全文唯一主线，还涉及动量因子回撤、迷因股风险等，但AI数据中心部分构成可投资的基建需求信号。</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>摩根大通报告指出上周散户资金流低于12个月均值，ETF流入疲软至4%分位而单股活动走强至71.8%分位，动量因子因极端拥挤出现回撤14%并频现极端负sigma事件。散户持续增持AI数据中心、超大规模云厂商及通信科技股，聚焦 hyperscaler 财报中AI货币化与回报等摇摆因素，并警惕高卖空仓位与散户买入并存的迷因股挤压风险。</p>
+      <ul class="findings"><li>散户资金流低于12个月均值，ETF流入疲软至4%分位、单股活动走强至71.8%分位</li><li>动量因子过去一月回撤14%，因极端拥挤频现极端负sigma事件（含-6 sigma日）</li><li>散户持续增持AI数据中心、超大规模云厂商及通信科技股，关注 hyperscaler 财报</li><li>警惕高卖空仓位与散户买入并存的迷因股挤压风险</li></ul>
+      <div class="path">Evidence: 散户持续增持AI数据中心、超大规模云厂商及通信科技股，关注 hyperscaler 财报 / the key swing factors are AI monetization and returns, where investors are looking for improved monetization across cloud, ads, and enterprise / 散户净买入前五股票：SPCX +5.14亿、NVDA +4.12亿、GOOGL/GOOG +3.28亿、TSLA +3.19亿、NU +3.08亿</div>
+      <div class="path">False-positive checks: 无假阳性风险：AI数据中心指物理基础设施，非地产租赁。</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%91%9E%E9%93%B6-Alphabet%EF%BC%88GOOG.US%EF%BC%89%EF%BC%9A%E8%90%A5%E6%94%B6%E5%A2%9E%E9%95%BF%E9%A2%84%E6%9C%9F%E6%97%A9%E5%B7%B2%E8%A2%AB%E5%B8%82%E5%9C%BA%E5%85%85%E5%88%86%E5%AE%9A%E4%BB%B7-260723.pdf">打开本地 PDF</a></div>
+      <div class="path">IMA 文件: 摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-%E6%95%A3%E6%88%B7%E9%9B%B7%E8%BE%BE%EF%BC%9A%E5%8A%A8%E9%87%8F%E9%99%8D%E6%B8%A9%EF%BC%8C%E5%85%B3%E6%B3%A8%E8%B6%85%E5%A4%A7%E8%A7%84%E6%A8%A1%E4%BA%91%E5%8E%82%E5%95%86%E8%B4%A2%E6%8A%A5-260722.pdf">打开本地 PDF</a></div>
     </div>
   </article>
 <article class="item">
@@ -910,18 +951,71 @@
         <span class="badge tier">Watchlist</span>
         <span class="badge downloaded">本地已有</span>
         <span>Other P0/P1</span>
-        <span>score 68</span>
-
+        <span>score 72</span>
       </div>
-      <h3 class="title">摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf</h3>
-      <div class="tags"><span class="tag">AI数据中心</span><span class="tag">超大规模云厂商</span><span class="tag">散户资金流</span></div>
-      <p class="reason">正文提及散户持续增持AI数据中心、超大规模云厂商及通信科技股，并关注hyperscaler财报中的AI货币化，有AI基建需求证据。；但报告主要为散户资金流和动量因子分析，AI基建不是唯一主线，且缺乏具体硬件或资本开支细节。</p>
-
-
+      <h3 class="title">汇丰-汉钟精机（002158.SZ）：增长可持续性获验证，维持“买入”评级-260721.pdf</h3>
+      <div class="tags"><span class="tag">半导体真空泵</span><span class="tag">AIDC磁悬浮压缩机</span><span class="tag">工业热泵</span><span class="tag">汉钟精机</span></div>
+      <p class="reason">正文明确提及AIDC（AI数据中心）磁悬浮压缩机业务，半导体真空泵用于半导体制造，均与AI基建直接相关；报告指出半导体业务将显著增长，AIDC和工业热泵后续释放，具有AI基建投资传导；但报告为公司个股分析，非纯AI基建主题，归为P1</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>汇丰维持汉钟精机买入评级及38.80元目标价，当前股价26.87元较目标价有44.4%上行空间。半导体真空泵业务将自低基数显著增长，AIDC磁悬浮压缩机与工业热泵逐步释放潜力。预计2026年增速不快但2027年起可见度提升，多赛道支撑未来10年连续增长。基于DCF估值，WACC 9.5%，历史PE均值19倍。</p>
+      <ul class="findings"><li>维持买入，TP 38.80元，上行空间44.4%</li><li>半导体真空泵收入从1亿增至2.02亿元（2025至2026e）</li><li>AIDC与工业热泵业务后续释放增长</li></ul>
+      <div class="path">Evidence: Semiconductor business will first register significant growth off a low base; AIDC and industrial heat pump to follow suit / We forecast Hanbell&#39;s semiconductor vacuum pump revenue to increase from an estimated RMB100m in 2025 to RMB202m in 2026e</div>
+      <div class="path">False-positive checks: AIDC明确为AI数据中心，非普通地产数据中心</div>
       <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
-      <div class="path">IMA 文件: 摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf</div>
-      <div class="path">本地路径: downloads/2026/7月/7.23/摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf</div>
-      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-%E6%95%A3%E6%88%B7%E9%9B%B7%E8%BE%BE%EF%BC%9A%E5%8A%A8%E9%87%8F%E9%99%8D%E6%B8%A9%EF%BC%8C%E5%85%B3%E6%B3%A8%E8%B6%85%E5%A4%A7%E8%A7%84%E6%A8%A1%E4%BA%91%E5%8E%82%E5%95%86%E8%B4%A2%E6%8A%A5-260722.pdf">打开本地 PDF</a></div>
+      <div class="path">IMA 文件: 汇丰-汉钟精机（002158.SZ）：增长可持续性获验证，维持“买入”评级-260721.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/汇丰-汉钟精机（002158.SZ）：增长可持续性获验证，维持“买入”评级-260721.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%B1%87%E4%B8%B0-%E6%B1%89%E9%92%9F%E7%B2%BE%E6%9C%BA%EF%BC%88002158.SZ%EF%BC%89%EF%BC%9A%E5%A2%9E%E9%95%BF%E5%8F%AF%E6%8C%81%E7%BB%AD%E6%80%A7%E8%8E%B7%E9%AA%8C%E8%AF%81%EF%BC%8C%E7%BB%B4%E6%8C%81%E2%80%9C%E4%B9%B0%E5%85%A5%E2%80%9D%E8%AF%84%E7%BA%A7-260721.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#19</div>
+      <div class="small">LLM #19</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p1">P1</span>
+        <span class="badge tier">Watchlist</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>AIDC / Cloud Capex</span>
+        <span>score 70</span>
+      </div>
+      <h3 class="title">巴克莱-IT硬件与通信设备：AT&amp;T资本开支及iPhone销售数据解读-260722.pdf</h3>
+      <div class="tags"><span class="tag">光通信</span><span class="tag">光纤扩张</span><span class="tag">电信资本开支</span></div>
+      <p class="reason">正文明确提及光通信支出优先级提升，看好Ciena增持，并指出光学支出将加速，属于数据中心光互联/网络范畴。；AT&amp;T资本开支57亿美元高于预期，全年指引维持230-240亿美元，光纤扩张逐步恢复，提供AI基建需求证据。；报告并非全文唯一主线，还涉及iPhone销售、苹果减持等消费电子内容，但光通信部分构成可投资的AI基建传导。</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>巴克莱解读AT&amp;T二季度财报，其智能手机销量与iPhone出货量均同比持平，设备升级率下滑至3.2%，季度资本开支57亿美元略高于市场预期55亿美元，全年指引维持230-240亿美元。对苹果影响中性偏谨慎，维持减持评级；光通信支出优先级提升，看好Ciena增持。报告认为北美电信运营商活动正常化，光纤扩张逐步恢复，光学支出将加速。</p>
+      <ul class="findings"><li>AT&amp;T二季度智能手机销量5.2M同比持平，iPhone出货量估3.4M同比持平、环比降个位数</li><li>设备升级率降至3.2%（前季3.5%），因补贴热情消退</li><li>二季度资本开支57亿美元高于预期55亿美元，全年指引维持230-240亿美元</li><li>维持苹果减持、Ciena增持、AT&amp;T/思科/康宁持平权重评级</li></ul>
+      <div class="path">Evidence: We continue to believe optical spend for capacity enhancements will be prioritized and expect CIEN&#39;s business with major US telcos to accelerate into next year. / 2Q26 capex came in at $5.7Bn vs. the Street expectation of $5.5Bn.</div>
+      <div class="path">False-positive checks: 无假阳性风险：光通信支出明确指向数据中心互联需求，非地产/租赁/并购。</div>
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
+      <div class="path">IMA 文件: 巴克莱-IT硬件与通信设备：AT&amp;T资本开支及iPhone销售数据解读-260722.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/巴克莱-IT硬件与通信设备：AT&amp;T资本开支及iPhone销售数据解读-260722.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E5%B7%B4%E5%85%8B%E8%8E%B1-IT%E7%A1%AC%E4%BB%B6%E4%B8%8E%E9%80%9A%E4%BF%A1%E8%AE%BE%E5%A4%87%EF%BC%9AAT&amp;T%E8%B5%84%E6%9C%AC%E5%BC%80%E6%94%AF%E5%8F%8AiPhone%E9%94%80%E5%94%AE%E6%95%B0%E6%8D%AE%E8%A7%A3%E8%AF%BB-260722.pdf">打开本地 PDF</a></div>
+    </div>
+  </article>
+<article class="item">
+    <div class="rankbox">
+      <div class="rank">#20</div>
+      <div class="small">LLM #20</div>
+    </div>
+    <div>
+      <div class="meta">
+        <span class="badge p1">P1</span>
+        <span class="badge tier">Watchlist</span>
+        <span class="badge downloaded">本地已有</span>
+        <span>Other P0/P1</span>
+        <span>score 70</span>
+      </div>
+      <h3 class="title">大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf</h3>
+      <div class="tags"><span class="tag">自动驾驶</span><span class="tag">人形机器人</span><span class="tag">资本开支</span></div>
+      <p class="reason">正文提及特斯拉加速资本开支以确立自动驾驶与机器人领导地位，但未明确指向AI数据中心基建；FSD北美附着率55%远超预估，Robotaxi与Optimus进展积极但受软件校准与供应链复杂度限制；资本开支增加导致自由现金流转负，但未具体说明用于AI服务器/GPU/ASIC等核心硬件</p>
+      <p class="ima-summary"><strong>IMA摘要：</strong>摩根士丹利报告指出，特斯拉正加速资本开支以确立自动驾驶与机器人领导地位，FSD北美附着率远超预估达55%，Robotaxi与Optimus虽进展积极但分别受限于软件校准与供应链复杂度。沉重资本开支令自由现金流进一步转负，目标价从417美元下调至400美元，维持Equal-weight评级。报告认为回报实现需耐心与持续执行，投资者应重点关注现有城市内Robotaxi密度与安全数据积累、Optimus商业化切实进展等证明点，以评估资本开支回报时机与容忍度。</p>
+      <ul class="findings"><li>FSD北美附着率在二季度达55%，远超此前预估的25-30%</li><li>重资本开支周期使自由现金流持续转负，2027年预计FCF burn达约14亿美元</li><li>Robotaxi与Optimus进展积极，但受限于软件校准与供应链复杂度</li><li>目标价从417美元下调至400美元，维持Equal-weight评级</li></ul>
+      <div class="path">Evidence: The capex step-up is a known trend, now confirmed and extended for the next 2-3 years, prolonging cash burn through the end of the decade on our estimates. / Cybercab production is scaling, but software recalibration limits near-term fleet entry. / Optimus SOP is expected soon. Supply chain complexities elongate the initial ramp.</div>
+      <div class="path">False-positive checks: 标题与正文均聚焦特斯拉自动驾驶与机器人，未涉及AI数据中心基础设施，但资本开支与AI相关，故评为P1</div>
+      <div class="path">IMA 目录: 环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23</div>
+      <div class="path">IMA 文件: 大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf</div>
+      <div class="path">本地路径: downloads/2026/7月/7.23/大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf</div>
+      <div class="small"><a href="file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E5%A4%A7%E6%91%A9-%E7%89%B9%E6%96%AF%E6%8B%89%EF%BC%88%E5%8C%97%E7%BE%8E%E4%B8%9A%E5%8A%A1%EF%BC%89%EF%BC%9A%E5%9B%9E%E6%9C%AC%E4%B9%8B%E8%B7%AF%E5%B0%9A%E9%9C%80%E8%80%90%E5%BF%83%E7%AD%89%E5%BE%85-260723.pdf">打开本地 PDF</a></div>
     </div>
   </article>
           </div>
@@ -930,7 +1024,7 @@
         <section class="panel" style="margin-top:18px">
           <div class="panel-head">
             <h2 class="panel-title">全部 P0/P1</h2>
-            <div class="small"><span id="result-count">18</span> 条匹配</div>
+            <div class="small"><span id="result-count">22</span> 条匹配</div>
           </div>
           <div id="list" class="top-list"></div>
           <div class="table-wrap">
@@ -952,10 +1046,10 @@
       </div>
     </div>
   </main>
-  <script id="records" type="application/json">[{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf","title":"摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf","local_relative_path":"2026/7月/7.23/摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf","priority":"P0","rank":6,"score":90,"topics":["先进封装","HBM","CoWoS"],"reasons":["ASMPT提供TCB等先进封装设备，直接用于AI芯片的CoWoS和HBM生产，属于AI基建的先进封装领域。"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf","local_directory":"2026/7月/7.23","local_file":"摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf","local_download_path":"downloads/2026/7月/7.23/摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf","manual_bucket":"Semi Upstream / Packaging / Equipment","manual_score":1102,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-ASMPT%EF%BC%880522.HK%EF%BC%89%EF%BC%9A%E6%96%B0%E4%BB%BBCEO%E5%B0%98%E5%9F%83%E8%90%BD%E5%AE%9A%EF%BC%8C%E5%85%88%E8%BF%9B%E5%B0%81%E8%A3%85%E6%88%98%E7%95%A5%E5%B0%86%E8%BF%9B%E4%B8%80%E6%AD%A5%E5%BC%BA%E5%8C%96-260721.pdf","manual_rank":1},{"indexed_at":"2026-07-23T13:02:00.175Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf","title":"瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf","local_relative_path":"2026/7月/7.23/瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf","priority":"P0","rank":7,"score":90,"topics":["AI基础设施","GPU","先进封装","数据中心","SuperPod"],"reasons":["正文直接涉及AI基础设施端需求，包括华为Atlas 950 SuperPod（1024芯片）、先进封装投资、数据中心营收指引","供应链对AI基础设施需求反馈积极，算力卡需求紧、ODM数据中心业务强劲","推荐半导体供应链（北方华创、长电科技）和硬件供应链，均为AI基建核心环节"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf","local_directory":"2026/7月/7.23","local_file":"瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf","local_download_path":"downloads/2026/7月/7.23/瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf","manual_bucket":"AI Server / GPU / ASIC / HBM","manual_score":1102,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%91%9E%E9%93%B6-%E4%B8%AD%E5%9B%BD%E7%A7%91%E6%8A%80%E8%A1%8C%E4%B8%9A%EF%BC%9A2026%E4%B8%96%E7%95%8C%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%A4%A7%E4%BC%9A%EF%BC%88WAIC%EF%BC%89%E7%A7%91%E6%8A%80%E8%B0%83%E7%A0%94%E7%BA%AA%E8%A6%81-260721.pdf","manual_rank":2},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf","title":"高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf","local_relative_path":"2026/7月/7.23/高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf","priority":"P0","rank":1,"score":95,"topics":["电网设备","数据中心","变压器","开关设备","日立能源"],"reasons":["正文明确以GE Vernova电网业务强劲需求为核心，强调数据中心相关订单超50亿美元，直接关联AI数据中心电力基础设施。","报告将GEV业绩映射至日立能源，形成AI基建电力设备投资逻辑，符合P0标准。"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf","local_directory":"2026/7月/7.23","local_file":"高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf","local_download_path":"downloads/2026/7月/7.23/高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf","manual_bucket":"Power / Cooling / Energy","manual_score":1095,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E6%97%A5%E6%9C%AC%E7%A7%91%E6%8A%80%E7%A1%AC%E4%BB%B6%EF%BD%9C%E5%B7%A5%E4%B8%9A%E7%94%B5%E5%AD%90%EF%BC%9AGEV%E4%BA%8C%E5%AD%A3%E5%BA%A6%E4%B8%9A%E7%BB%A9%E6%98%A0%E5%B0%84%EF%BC%9A%E7%94%B5%E7%BD%91%E9%9C%80%E6%B1%82%E5%BC%BA%E5%8A%B2%EF%BC%8C%E5%88%A9%E5%A5%BD%E6%97%A5%E7%AB%8B%E8%83%BD%E6%BA%90-260723.pdf","manual_rank":3},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf","title":"美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf","local_relative_path":"2026/7月/7.23/美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf","priority":"P0","rank":2,"score":95,"topics":["AI数据中心资本开支","云基础设施","AI服务器/TPU"],"reasons":["正文明确以AI数据中心资本开支为核心投资逻辑，资本开支上调至1950-2050亿美元，加速数据中心建设以满足云需求","云业务加速至82%增长，积压订单达5140亿美元，直接反映AI基建需求强劲","报告强调云需求强劲、AI差异化支撑长期增长，估值具吸引力，AI基建是主要驱动力"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf","local_directory":"2026/7月/7.23","local_file":"美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf","local_download_path":"downloads/2026/7月/7.23/美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf","manual_bucket":"AIDC / Cloud Capex","manual_score":1095,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-Alphabet%EF%BC%88GOOG.US%EF%BC%89%EF%BC%9A%E8%B5%84%E6%9C%AC%E5%BC%80%E6%94%AF%E4%B8%8A%E8%B0%83%E6%8A%A2%E8%B5%B0%E9%A3%8E%E5%A4%B4%EF%BC%8C%E4%BD%86%E4%BA%91%E4%B8%9A%E5%8A%A1%E5%8A%A0%E9%80%9F%E5%BC%BA%E5%8A%B2%EF%BC%9B%E9%87%8D%E7%94%B3%E2%80%9C%E4%B9%B0%E5%85%A5%E2%80%9D-260723.pdf","manual_rank":4},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf","title":"高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf","local_relative_path":"2026/7月/7.23/高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf","priority":"P0","rank":3,"score":92,"topics":["半导体设备","前端设备","HBM","先进逻辑","NAND"],"reasons":["正文以日本半导体设备强劲需求为核心，明确提及HBM、先进逻辑等AI相关芯片制造设备，直接属于AI基建上游硬件投资。","SEAJ数据及预测上调反映AI驱动的半导体资本开支，推荐买入Lasertec、Ebara、Disco、东京电子等设备股。"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf","local_directory":"2026/7月/7.23","local_file":"高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf","local_download_path":"downloads/2026/7月/7.23/高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf","manual_bucket":"Semi Upstream / Packaging / Equipment","manual_score":1092,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E6%97%A5%E6%9C%AC%E7%A7%91%E6%8A%80%E8%A1%8C%E4%B8%9A%EF%BD%9C%E5%8D%8A%E5%AF%BC%E4%BD%93%E8%AE%BE%E5%A4%87%EF%BC%9A6%E6%9C%88SEAJ%E6%95%B0%E6%8D%AE%EF%BC%9A%E5%89%8D%E7%AB%AF%E8%AE%BE%E5%A4%87%E5%BC%95%E9%A2%86%E5%BC%BA%E5%8A%B2%E9%9C%80%E6%B1%82%EF%BC%9B%E4%B8%8A%E8%B0%83%E7%9B%88%E5%88%A9%E9%A2%84%E6%B5%8B%EF%BC%9B%E6%8E%A8%E8%8D%90%E4%B9%B0%E5%85%A5Lasertec%E3%80%81Ebara%E3%80%81Disco%E3%80%81%E4%B8%9C%E4%BA%AC%E7%94%B5%E5%AD%90-260723.pdf","manual_rank":5},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf","title":"伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf","local_relative_path":"2026/7月/7.23/伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf","priority":"P0","rank":4,"score":90,"topics":["AI数据中心托管","第三方算力","电力基础设施"],"reasons":["正文明确以新兴AI基础设施提供商（前比特币矿工）为核心，通过签订超7.5GW、1500亿美元第三方算力托管合同，成为解决算力短缺关键力量","电力获取与交付能力为核心壁垒，三重净租赁带来近100%利润率，直接涉及AI数据中心电力与冷却基础设施","板块获整体超重配评级，建议聚焦执行兑现，AI基建是唯一主线"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf","local_directory":"2026/7月/7.23","local_file":"伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf","local_download_path":"downloads/2026/7月/7.23/伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf","manual_bucket":"Other P0/P1","manual_score":1090,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E4%BC%AF%E6%81%A9%E6%96%AF%E5%9D%A6-%E5%85%A8%E7%90%83%E6%95%B0%E5%AD%97%E8%B5%84%E4%BA%A7%EF%BD%9C%E6%96%B0%E5%85%B4AI%E5%9F%BA%E5%BB%BA%EF%BC%9A%E2%80%9C%E7%AC%AC%E4%B8%89%E6%96%B9%E7%AE%97%E5%8A%9B%E2%80%9D%E8%A1%8C%E6%83%85%E4%BB%8D%E6%9C%89%E6%94%AF%E6%92%91%EF%BC%8C%E6%8C%81%E7%BB%AD%E7%9C%8B%E5%A5%BD%E8%AE%A2%E5%8D%95%E8%90%BD%E5%9C%B0%E4%B8%8E%E6%89%A7%E8%A1%8C%E5%85%91%E7%8E%B0-260723.pdf","manual_rank":6},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf","title":"美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf","local_relative_path":"2026/7月/7.23/美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf","priority":"P0","rank":5,"score":90,"topics":["服务器CPU","代理式AI","英伟达","AMD","数据中心"],"reasons":["正文核心围绕英伟达与AMD在服务器CPU市场的路径之争，直接涉及AI数据中心核心硬件（CPU）架构和性能，属于AI基建投资逻辑。","明确讨论代理式AI工作负载对CPU设计的影响，以及机架级吞吐量优势，与AI服务器/GPU/ASIC等硬件投资高度相关。"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf","local_directory":"2026/7月/7.23","local_file":"美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf","local_download_path":"downloads/2026/7月/7.23/美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf","manual_bucket":"AI Server / GPU / ASIC / HBM","manual_score":1090,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-%E8%8B%B1%E4%BC%9F%E8%BE%BE%EF%BC%88NVDA.OQ%EF%BC%89%EF%BC%9A%E6%9B%B4%E5%A4%9A%E6%A0%B8%E5%BF%83%E8%BF%98%E6%98%AF%E6%9B%B4%E5%BF%AB%E6%A0%B8%E5%BF%83%EF%BC%9F%E8%8B%B1%E4%BC%9F%E8%BE%BE%E4%B8%8EAMD%E5%85%B3%E4%BA%8E%E4%BB%A3%E7%90%86%E5%BC%8FAI%20CPU%E7%9A%84%E8%B7%AF%E5%BE%84%E4%B9%8B%E4%BA%89-260722.pdf","manual_rank":7},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf","title":"杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf","local_relative_path":"2026/7月/7.23/杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf","priority":"P1","rank":8,"score":80,"topics":["光纤光缆","数据中心互联"],"reasons":["长飞光纤光缆受益于AI数据中心对光纤的需求增长，报告明确提及数据中心光纤需求占比大幅提升，属于AI基建的光互联/网络领域。"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf","local_directory":"2026/7月/7.23","local_file":"杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf","local_download_path":"downloads/2026/7月/7.23/杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf","manual_bucket":"Other P0/P1","manual_score":780,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%9D%B0%E5%AF%8C%E7%91%9E-%E9%95%BF%E9%A3%9E%E5%85%89%E7%BA%A4%E5%85%89%E7%BC%86%EF%BC%886869.HK%EF%BC%89%EF%BC%9A%E4%B8%AD%E5%9B%BD%E4%BA%A7%E8%83%BD%E6%89%A9%E5%BC%A0%E5%B0%86%E8%BF%85%E9%80%9F%E6%8A%B9%E5%B9%B3%E4%BE%9B%E7%BB%99%E7%BC%BA%E5%8F%A3%EF%BC%9B%E4%B8%8B%E8%B0%83%E8%AF%84%E7%BA%A7%E8%87%B3%E2%80%9C%E6%8C%81%E6%9C%89%E2%80%9D-260722.pdf","manual_rank":8},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf","title":"伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf","local_relative_path":"2026/7月/7.23/伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf","priority":"P1","rank":9,"score":75,"topics":["数据中心","模拟芯片","工业"],"reasons":["正文明确提及数据中心业务实现翻倍同比增长，德州仪器作为模拟芯片供应商，其数据中心业务增长直接反映AI基建需求","工业业务增长约30%，汽车业务双位数增长，但报告核心是业绩复盘与估值，AI基建并非唯一主线","资本开支维持20-30亿美元区间，但未详细说明与AI基建的直接关联"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf","local_directory":"2026/7月/7.23","local_file":"伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf","local_download_path":"downloads/2026/7月/7.23/伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf","manual_bucket":"Other P0/P1","manual_score":775,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E4%BC%AF%E6%81%A9%E6%96%AF%E5%9D%A6-%E5%BE%B7%E5%B7%9E%E4%BB%AA%E5%99%A8%EF%BC%88TXN.US%EF%BC%892026%E5%B9%B4%E7%AC%AC%E4%BA%8C%E5%AD%A3%E5%BA%A6%E4%B8%9A%E7%BB%A9%E5%A4%8D%E7%9B%98%EF%BC%9A%E4%B8%96%E7%95%8C%E5%B0%9A%E4%B8%8D%E8%B6%B3%E5%A4%9F%EF%BC%9F-260723.pdf","manual_rank":9},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf","title":"高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf","local_relative_path":"2026/7月/7.23/高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf","priority":"P1","rank":10,"score":75,"topics":["电网设备","电力基础设施"],"reasons":["华明装备生产变压器分接开关，受益于全球电网升级，包括数据中心建设驱动的电网投资增长，属于AI基建的电力/冷却相关设备。"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf","local_directory":"2026/7月/7.23","local_file":"高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf","local_download_path":"downloads/2026/7月/7.23/高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf","manual_bucket":"Power / Cooling / Energy","manual_score":775,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E5%8D%8E%E6%98%8E%E8%A3%85%E5%A4%87%EF%BC%88002270.SZ%EF%BC%89%EF%BC%9A%E5%9B%9E%E8%B0%83%E5%90%8E%E4%BC%B0%E5%80%BC%E5%85%B7%E5%A4%87%E5%90%B8%E5%BC%95%E5%8A%9B%EF%BC%8C%E5%85%A8%E7%90%83%E7%94%B5%E7%BD%91%E5%8D%87%E7%BA%A7%E9%A9%B1%E5%8A%A8%E6%B5%B7%E5%A4%96%E5%A2%9E%E9%95%BF%E9%9F%A7%E6%80%A7%E4%B8%8D%E5%8F%98%EF%BC%8C%E4%B8%8A%E8%B0%83%E8%87%B3%E2%80%9C%E4%B9%B0%E5%85%A5%E2%80%9D%E8%AF%84%E7%BA%A7-260722.pdf","manual_rank":10},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf","title":"美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf","local_relative_path":"2026/7月/7.23/美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf","priority":"P1","rank":11,"score":75,"topics":["云基础设施","AI服务器/芯片","资本开支"],"reasons":["正文明确上调AWS增速预期至33%，受AI合作驱动云需求，反映AI基建需求强劲","提及Anthropic相关营收及OpenAI模型推动Bedrock需求，涉及AI服务器/芯片（Trainium）","但报告为业绩前瞻，AI基建并非唯一主线，且提示资本开支上升风险"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf","local_directory":"2026/7月/7.23","local_file":"美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf","local_download_path":"downloads/2026/7月/7.23/美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf","manual_bucket":"Other P0/P1","manual_score":774,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-%E4%BA%9A%E9%A9%AC%E9%80%8A%EF%BC%88AMZN.US%EF%BC%89%E4%BA%8C%E5%AD%A3%E5%BA%A6%E4%B8%9A%E7%BB%A9%E5%89%8D%E7%9E%BB%EF%BC%9A%E4%B8%8A%E8%B0%83AWS%E5%A2%9E%E9%80%9F%E9%A2%84%E6%9C%9F%EF%BC%8C%E9%A2%84%E8%AE%A1%E4%B8%89%E5%AD%A3%E5%BA%A6%E6%8C%87%E5%BC%95%E4%B8%8E%E5%B8%82%E5%9C%BA%E5%85%B1%E8%AF%86%E5%9F%BA%E6%9C%AC%E6%8C%81%E5%B9%B3-260722.pdf","manual_rank":11},{"indexed_at":"2026-07-23T13:02:00.175Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf","title":"瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf","local_relative_path":"2026/7月/7.23/瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf","priority":"P1","rank":12,"score":75,"topics":["AI受益电子元件","基板","电容器","功率半导体"],"reasons":["正文明确AI利好开始实质影响基板、电容器、硬盘、功率半导体等子领域，属于AI基建上游电子元件","推荐已受益AI且估值合理的村田、Ibiden等，有明确投资逻辑"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf","local_directory":"2026/7月/7.23","local_file":"瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf","local_download_path":"downloads/2026/7月/7.23/瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf","manual_bucket":"Other P0/P1","manual_score":774,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%91%9E%E9%93%B6-%E6%97%A5%E6%9C%AC%E7%94%B5%E5%AD%90%E5%85%83%E4%BB%B6%E8%A1%8C%E4%B8%9A%EF%BC%9AAI%E6%B5%AA%E6%BD%AE%E2%80%9C%E6%9B%B4%E9%AB%98%E6%9B%B4%E4%B9%85%E2%80%9D%EF%BC%9F-260721.pdf","manual_rank":12},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 巴克莱-IT硬件与通信设备：AT&T资本开支及iPhone销售数据解读-260722.pdf","title":"巴克莱-IT硬件与通信设备：AT&T资本开支及iPhone销售数据解读-260722.pdf","local_relative_path":"2026/7月/7.23/巴克莱-IT硬件与通信设备：AT&T资本开支及iPhone销售数据解读-260722.pdf","priority":"P1","rank":13,"score":70,"topics":["光通信","光纤","资本开支","数据中心"],"reasons":["正文明确提及光通信支出优先级提升，看好Ciena增持，并指出光学支出将加速，与AI数据中心光互联/网络相关。","AT&T资本开支高于预期，全年指引维持，但报告主要围绕电信运营商设备升级和iPhone销售，AI基建不是唯一主线。"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"巴克莱-IT硬件与通信设备：AT&T资本开支及iPhone销售数据解读-260722.pdf","local_directory":"2026/7月/7.23","local_file":"巴克莱-IT硬件与通信设备：AT&T资本开支及iPhone销售数据解读-260722.pdf","local_download_path":"downloads/2026/7月/7.23/巴克莱-IT硬件与通信设备：AT&T资本开支及iPhone销售数据解读-260722.pdf","manual_bucket":"AIDC / Cloud Capex","manual_score":769,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E5%B7%B4%E5%85%8B%E8%8E%B1-IT%E7%A1%AC%E4%BB%B6%E4%B8%8E%E9%80%9A%E4%BF%A1%E8%AE%BE%E5%A4%87%EF%BC%9AAT&T%E8%B5%84%E6%9C%AC%E5%BC%80%E6%94%AF%E5%8F%8AiPhone%E9%94%80%E5%94%AE%E6%95%B0%E6%8D%AE%E8%A7%A3%E8%AF%BB-260722.pdf","manual_rank":13},{"indexed_at":"2026-07-23T13:02:00.173Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf","title":"大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf","local_relative_path":"2026/7月/7.23/大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf","priority":"P1","rank":14,"score":70,"topics":["自动驾驶","人形机器人","资本开支"],"reasons":["正文明确提及特斯拉加速资本开支以确立自动驾驶与机器人领导地位，但报告核心是财务与估值，AI基建并非唯一主线","FSD北美附着率55%远超预估，Robotaxi与Optimus进展积极，但受限于软件校准与供应链复杂度","资本开支增加导致自由现金流转负，目标价下调，但未深入分析AI数据中心基础设施"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf","local_directory":"2026/7月/7.23","local_file":"大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf","local_download_path":"downloads/2026/7月/7.23/大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf","manual_bucket":"Other P0/P1","manual_score":769,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E5%A4%A7%E6%91%A9-%E7%89%B9%E6%96%AF%E6%8B%89%EF%BC%88%E5%8C%97%E7%BE%8E%E4%B8%9A%E5%8A%A1%EF%BC%89%EF%BC%9A%E5%9B%9E%E6%9C%AC%E4%B9%8B%E8%B7%AF%E5%B0%9A%E9%9C%80%E8%80%90%E5%BF%83%E7%AD%89%E5%BE%85-260723.pdf","manual_rank":14},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf","title":"高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf","local_relative_path":"2026/7月/7.23/高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf","priority":"P1","rank":15,"score":70,"topics":["AI基础设施","工厂自动化","工业科技"],"reasons":["正文明确提及AI基础设施和工厂自动化有望超预期，并作为行业二季度加速的驱动因素之一，但并非全文唯一主线，同时涉及个股估值纪律和行业轮动。"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf","local_directory":"2026/7月/7.23","local_file":"高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf","local_download_path":"downloads/2026/7月/7.23/高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf","manual_bucket":"Other P0/P1","manual_score":769,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E4%B8%AD%E5%9B%BD%E5%B7%A5%E4%B8%9A%E7%A7%91%E6%8A%80%E8%A1%8C%E4%B8%9A%EF%BC%9A%E4%B8%8B%E8%B0%83%E8%BF%87%E7%83%AD%E4%B8%AA%E8%82%A1%EF%BC%9A%E5%A4%A7%E6%97%8F%E6%BF%80%E5%85%89%E9%99%8D%E8%87%B3%E4%B8%AD%E6%80%A7%E3%80%81%E6%B1%9F%E6%B5%B7%E8%82%A1%E4%BB%BD%E9%99%8D%E8%87%B3%E5%8D%96%E5%87%BA%EF%BC%9B%E9%9D%92%E7%9D%90%E4%BC%B0%E5%80%BC%E5%90%88%E7%90%86%E7%9A%84%E7%A8%B3%E5%81%A5%E5%A2%9E%E9%95%BF%E8%82%A1%EF%BC%9B%E4%BA%8C%E5%AD%A3%E5%BA%A6%E8%A1%8C%E4%B8%9A%E5%89%8D%E7%9E%BB-260722.pdf","manual_rank":15},{"indexed_at":"2026-07-23T13:02:00.175Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf","title":"美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf","local_relative_path":"2026/7月/7.23/美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf","priority":"P1","rank":16,"score":70,"topics":["半导体设备","晶圆制造设备"],"reasons":["报告追踪中国半导体设备进口，包括前端和后端设备，这些设备用于芯片制造，间接支持AI芯片生产，但非直接以AI基建为投资主线。"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf","local_directory":"2026/7月/7.23","local_file":"美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf","local_download_path":"downloads/2026/7月/7.23/美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf","manual_bucket":"Semi Upstream / Packaging / Equipment","manual_score":769,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-%E5%85%A8%E7%90%83%E5%8D%8A%E5%AF%BC%E4%BD%93%E8%A1%8C%E4%B8%9A%EF%BC%9A%E4%B8%AD%E5%9B%BD%E5%8D%8A%E5%AF%BC%E4%BD%93%E8%AE%BE%E5%A4%87%E8%BF%9B%E5%8F%A3%E8%BF%BD%E8%B8%AA%EF%BC%9A2026%E5%B9%B46%E6%9C%88%E5%90%8C%E6%AF%94%E5%BE%AE%E9%99%8D1%25-260721.pdf","manual_rank":16},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf","title":"瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf","local_relative_path":"2026/7月/7.23/瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf","priority":"P1","rank":17,"score":70,"topics":["AI数据中心资本开支","云基础设施","AI服务器/TPU"],"reasons":["正文提及资本支出上调至1950-2050亿美元，云积压订单达5100亿美元，反映AI基建需求","但报告核心是盈利下修与中性评级，AI基建并非唯一主线，且强调资本支出拖累利润率","目标价下调，风险回报偏中性，未积极推荐AI基建投资"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf","local_directory":"2026/7月/7.23","local_file":"瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf","local_download_path":"downloads/2026/7月/7.23/瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf","manual_bucket":"Other P0/P1","manual_score":769,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%91%9E%E9%93%B6-Alphabet%EF%BC%88GOOG.US%EF%BC%89%EF%BC%9A%E8%90%A5%E6%94%B6%E5%A2%9E%E9%95%BF%E9%A2%84%E6%9C%9F%E6%97%A9%E5%B7%B2%E8%A2%AB%E5%B8%82%E5%9C%BA%E5%85%85%E5%88%86%E5%AE%9A%E4%BB%B7-260723.pdf","manual_rank":17},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf","title":"摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf","local_relative_path":"2026/7月/7.23/摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf","priority":"P1","rank":18,"score":68,"topics":["AI数据中心","超大规模云厂商","散户资金流"],"reasons":["正文提及散户持续增持AI数据中心、超大规模云厂商及通信科技股，并关注hyperscaler财报中的AI货币化，有AI基建需求证据。","但报告主要为散户资金流和动量因子分析，AI基建不是唯一主线，且缺乏具体硬件或资本开支细节。"],"evidence_keywords":[],"evidence_level":"","downgrade_reasons":[],"rerank_changed":false,"recall_priority":"","recall_score":"","recall_topics":[],"recall_reasons":[],"llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T10:09:09.439Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf","local_directory":"2026/7月/7.23","local_file":"摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf","local_download_path":"downloads/2026/7月/7.23/摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf","manual_bucket":"Other P0/P1","manual_score":767,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-%E6%95%A3%E6%88%B7%E9%9B%B7%E8%BE%BE%EF%BC%9A%E5%8A%A8%E9%87%8F%E9%99%8D%E6%B8%A9%EF%BC%8C%E5%85%B3%E6%B3%A8%E8%B6%85%E5%A4%A7%E8%A7%84%E6%A8%A1%E4%BA%91%E5%8E%82%E5%95%86%E8%B4%A2%E6%8A%A5-260722.pdf","manual_rank":18}]</script>
+  <script id="records" type="application/json">[{"indexed_at":"2026-07-23T13:02:00.175Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf","title":"瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf","local_relative_path":"2026/7月/7.23/瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf","priority":"P0","rank":5,"score":95,"topics":["AI基础设施","GPU","网络","先进封装","数据中心"],"reasons":["正文明确以AI基础设施为核心，涵盖GPU、网络、先进封装、数据中心等，华为Atlas 950 SuperPod、长电科技先进封装投资、华勤数据中心营收指引等均为AI基建直接证据","报告推荐中国AI LLM、半导体供应链、硬件供应链，投资逻辑清晰围绕AI基建","WAIC调研显示供应链对AI基础设施端需求反馈积极，算力卡需求紧、ODM数据中心业务强劲"],"executive_summary":"瑞银WAIC 2026科技调研显示中国AI生态与科技供应链能力持续增强，大会超1100家参展商、40万以上参会者，中国牵头成立涉29国AI合作组织并签30亿美元海外合同。调研覆盖大模型、GPU、网络、先进封装等12家企业，各业务快速进展，供应链对AI基础设施端需求反馈积极。瑞银看好中国AI科技供应链企业2026年及后续增长，给出LLM、半导体供应链、硬件供应链重点推荐。","key_findings":["中国AI生态与科技供应链能力持续增强，WAIC 2026吸引超1100家参展商、40万以上参会者，中国成立WAICO涉及29国并签约30亿美元海外合同","国内AI基础设施供给演进，华为Atlas 950 SuperPod达1024芯片，多家厂商发布SuperPod方案，大模型迭代包括Kimi K3和Qwen 3.8-Max","供应链对AI基础设施端需求反馈积极，算力卡需求紧、ODM数据中心业务强劲，先进封装产能扩张明确","瑞银推荐中国AI LLM（智谱、MiniMax）、半导体供应链（北方华创、长电科技、大族激光）、硬件供应链（立讯、蓝思、瑞声）"],"ranking_evidence":["Huawei brought its Atlas 950 SuperPod with 1,024 chips.","JCET recently announced it would build an advanced packaging fab in Shanghai with a total investment of Rmb7.8 bn","Management guided data centre revenue to reach Rmb70bn in 2026 (+50% YoY)","Strengthening AI ecosystem and tech supply chain capability"],"false_positive_checks":["无假阳性：数据中心为AI算力基础设施，非地产租赁"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf","local_directory":"2026/7月/7.23","local_file":"瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf","local_download_path":"downloads/2026/7月/7.23/瑞银-中国科技行业：2026世界人工智能大会（WAIC）科技调研纪要-260721.pdf","manual_bucket":"AI Server / GPU / ASIC / HBM","manual_score":1107,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%91%9E%E9%93%B6-%E4%B8%AD%E5%9B%BD%E7%A7%91%E6%8A%80%E8%A1%8C%E4%B8%9A%EF%BC%9A2026%E4%B8%96%E7%95%8C%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%A4%A7%E4%BC%9A%EF%BC%88WAIC%EF%BC%89%E7%A7%91%E6%8A%80%E8%B0%83%E7%A0%94%E7%BA%AA%E8%A6%81-260721.pdf","manual_rank":1},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf","title":"高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf","local_relative_path":"2026/7月/7.23/高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf","priority":"P0","rank":1,"score":98,"topics":["半导体设备","前端设备","HBM","先进逻辑"],"reasons":["正文以日本半导体生产设备为核心，明确前端设备需求强劲，覆盖HBM、先进逻辑等AI芯片制造关键环节。","SEAJ数据与预测显示销售持续增长，需求预测几乎每月上调，直接关联AI数据中心芯片扩产。","报告推荐买入Lasertec、Ebara、Disco、东京电子，均为半导体设备龙头，构成AI基建上游投资逻辑。"],"executive_summary":"高盛基于SEAJ于7月21日收盘后发布的2026年6月数据，指出日本半导体生产设备4-6月月均销售5136亿日元（同比+27%、环比+7.0%），FY3/27需求预测上调至6.55万亿日元（+26% yoy）。前端设备需求成为增长核心，应用广泛。高盛上调盈利预测，维持Lasertec、Ebara、Disco、东京电子买入评级，并因日元假设调整由155升至160。","key_findings":["日本半导体生产设备4-6月平均月销售5136亿日元，同比+27%、环比+7.0%","SEAJ于7月2日更新预测：FY3/27销售6.55万亿日元（+26% yoy）、FY3/28销售7.40万亿日元（+13% yoy）","前端设备需求强劲，覆盖HBM、先进逻辑、商品DRAM及SSD(NAND)等广泛应用，需求预测几乎每月上调","高盛维持Lasertec、Ebara、Disco、东京电子买入评级，因日元假设由155调至160上调盈利预测"],"ranking_evidence":["According to June 2026 data released after the July 21 close by the Semiconductor Equipment Association of Japan (SEAJ), monthly sales of Japanese semiconductor production equipment in April-June averaged ¥513.6 bn (+27% yoy, +7.0% qoq).","Per SEAJ, whereas back-end equipment demand (centered on inspection equipment) was strong until FY3/26, front-end equipment demand is driving growth thus far in FY3/27, with strong demand across a broad range of applications, including HBM and leading-edge logic as well as commodity DRAM and SSD (NAND).","The SEAJ noted that the demand outlook is currently being revised upward almost every month, suggesting that customer requests for accelerated delivery of ordered equipment are continuing."],"false_positive_checks":["无假阳性风险：半导体设备直接用于AI芯片制造，非地产/租赁。"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf","local_directory":"2026/7月/7.23","local_file":"高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf","local_download_path":"downloads/2026/7月/7.23/高盛-日本科技行业｜半导体设备：6月SEAJ数据：前端设备引领强劲需求；上调盈利预测；推荐买入Lasertec、Ebara、Disco、东京电子-260723.pdf","manual_bucket":"Semi Upstream / Packaging / Equipment","manual_score":1098,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E6%97%A5%E6%9C%AC%E7%A7%91%E6%8A%80%E8%A1%8C%E4%B8%9A%EF%BD%9C%E5%8D%8A%E5%AF%BC%E4%BD%93%E8%AE%BE%E5%A4%87%EF%BC%9A6%E6%9C%88SEAJ%E6%95%B0%E6%8D%AE%EF%BC%9A%E5%89%8D%E7%AB%AF%E8%AE%BE%E5%A4%87%E5%BC%95%E9%A2%86%E5%BC%BA%E5%8A%B2%E9%9C%80%E6%B1%82%EF%BC%9B%E4%B8%8A%E8%B0%83%E7%9B%88%E5%88%A9%E9%A2%84%E6%B5%8B%EF%BC%9B%E6%8E%A8%E8%8D%90%E4%B9%B0%E5%85%A5Lasertec%E3%80%81Ebara%E3%80%81Disco%E3%80%81%E4%B8%9C%E4%BA%AC%E7%94%B5%E5%AD%90-260723.pdf","manual_rank":2},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf","title":"高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf","local_relative_path":"2026/7月/7.23/高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf","priority":"P0","rank":2,"score":95,"topics":["电网设备","数据中心订单","变压器","开关设备"],"reasons":["正文明确以数据中心电力/冷却相关基建为核心：GE Vernova电气化业务订单同比增93%，数据中心相关订单上半年超50亿美元。","电网产品如变压器、开关设备直接服务于AI数据中心电力需求，构成AI基建投资逻辑。","报告将强劲需求映射至日立能源，维持买入评级，提供明确投资建议。"],"executive_summary":"高盛指出GE Vernova二季度电气化业务销售额36.37亿美元、EBITDA 6.71亿美元均超预期，订单同比增93%至63.47亿美元，上调全年销售指引至145-150亿美元。电网产品需求强劲且数据中心相关订单上半年超50亿美元，对相似业务的日立能源形成利好。高盛对日立维持买入评级，12个月目标价6300日元，基于13倍EV/EBITDA。","key_findings":["GEV二季度电气化业务销售36.37亿美元（共识34.37亿）、EBITDA 6.71亿美元（共识6.30亿）均超预期","GEV二季度订单63.47亿美元，有机增长+66% yoy；上调全年销售指引至145-150亿美元","电网设备需求强劲，1H FY26数据中心相关订单超50亿美元，超FY25全年水平","高盛对日立维持买入评级，12个月目标价6300日元，基于13倍EV/EBITDA"],"ranking_evidence":["2Q orders for the business were $6,347 mn, up 93% yoy.","Data center-related orders in 1H FY26 exceeded $5 bn, already surpassing the full-year FY25 level","The results confirmed that the demand environment for power grid products such as transformers and switchgear remains strong."],"false_positive_checks":["无假阳性风险：电网设备直接关联数据中心电力基础设施，非地产/租赁。"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf","local_directory":"2026/7月/7.23","local_file":"高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf","local_download_path":"downloads/2026/7月/7.23/高盛-日本科技硬件｜工业电子：GEV二季度业绩映射：电网需求强劲，利好日立能源-260723.pdf","manual_bucket":"Power / Cooling / Energy","manual_score":1095,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E6%97%A5%E6%9C%AC%E7%A7%91%E6%8A%80%E7%A1%AC%E4%BB%B6%EF%BD%9C%E5%B7%A5%E4%B8%9A%E7%94%B5%E5%AD%90%EF%BC%9AGEV%E4%BA%8C%E5%AD%A3%E5%BA%A6%E4%B8%9A%E7%BB%A9%E6%98%A0%E5%B0%84%EF%BC%9A%E7%94%B5%E7%BD%91%E9%9C%80%E6%B1%82%E5%BC%BA%E5%8A%B2%EF%BC%8C%E5%88%A9%E5%A5%BD%E6%97%A5%E7%AB%8B%E8%83%BD%E6%BA%90-260723.pdf","manual_rank":3},{"indexed_at":"2026-07-23T13:02:00.175Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 杰富瑞-日本科技行业：半导体后道工艺与封装趋势-260721.pdf","title":"杰富瑞-日本科技行业：半导体后道工艺与封装趋势-260721.pdf","local_relative_path":"2026/7月/7.23/杰富瑞-日本科技行业：半导体后道工艺与封装趋势-260721.pdf","priority":"P0","rank":3,"score":95,"topics":["先进封装","AI半导体市场","Chiplets","共封装光学","混合键合"],"reasons":["正文明确以AI半导体市场扩张和先进封装为核心投资逻辑，提供具体市场规模数据（2025年2360亿美元，2028年3710亿美元）","讨论Chiplets、共封装光学、混合键合等AI基础设施关键技术，直接关联AI数据中心硬件需求"],"executive_summary":"杰富瑞指出AI应用扩张推动先进封装市场发展，Chiplets、共封装光学、边缘AI、混合键合为核心方向。2025年AI半导体市场达2360亿美元，预计2028年扩至3710亿美元。日本企业在材料零部件领先，但系统搭建、封装量产及光电热协同设计落后全球量产节奏。建议材料厂商转向“工艺+评估+设计”整体方案并搭建海外后道共创平台。","key_findings":["AI半导体市场2025年2360亿美元，2028年预计3710亿美元","日本企业材料领先但封装系统弱，落后于全球量产化","材料厂商需从卖材料转向提供工艺+评估+设计整体方案"],"ranking_evidence":["AI application has significantly expanded the market for advanced packages. The AI semiconductor market was worth US$236bn in 2025 (including cloud AI at roughly US$160bn and edge AI at about US$80bn). According to the VLSI forecast, this should expand to US$371bn in 2028 with cloud AI at US$250bn and edge AI at US$120bn."],"false_positive_checks":["无假阳性风险：正文聚焦AI半导体和先进封装，非地产或租赁"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"杰富瑞-日本科技行业：半导体后道工艺与封装趋势-260721.pdf","local_directory":"2026/7月/7.23","local_file":"杰富瑞-日本科技行业：半导体后道工艺与封装趋势-260721.pdf","local_download_path":"downloads/2026/7月/7.23/杰富瑞-日本科技行业：半导体后道工艺与封装趋势-260721.pdf","manual_bucket":"Semi Upstream / Packaging / Equipment","manual_score":1095,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%9D%B0%E5%AF%8C%E7%91%9E-%E6%97%A5%E6%9C%AC%E7%A7%91%E6%8A%80%E8%A1%8C%E4%B8%9A%EF%BC%9A%E5%8D%8A%E5%AF%BC%E4%BD%93%E5%90%8E%E9%81%93%E5%B7%A5%E8%89%BA%E4%B8%8E%E5%B0%81%E8%A3%85%E8%B6%8B%E5%8A%BF-260721.pdf","manual_rank":4},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf","title":"美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf","local_relative_path":"2026/7月/7.23/美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf","priority":"P0","rank":4,"score":95,"topics":["云基础设施","资本开支","数据中心"],"reasons":["正文明确以AI数据中心资本开支为核心，云业务加速82%增长，积压订单5140亿美元","资本开支上调至1950-2050亿美元，因加速数据中心建设以满足AI需求","云基础设施是AI基建的直接组成部分，且报告强调云需求强劲、AI差异化"],"executive_summary":"美银指出Alphabet二季度净营收1036亿美元超市场预期，云业务加速至82%增长，积压订单达5140亿美元，但资本开支上调至1950-2050亿美元引发短期股价承压。美银上调2027年净营收3%至5530亿美元、EPS 2%至15.01美元，维持买入评级及430美元目标价。认为云需求强劲、搜索稳健及AI差异化支撑长期增长，估值具吸引力。","key_findings":["云业务二季度增长82%远超市场预期65%，积压订单环比增11%至5140亿美元","资本开支上调约8%至1950-2050亿美元，预计2026年自由现金流为负160亿美元","上调2027年净营收3%至5530亿美元、EPS 2%至15.01美元","维持买入评级及430美元目标价，认为估值约22倍2027年GAAP EPS具吸引力"],"ranking_evidence":["2Q Cloud revenue at $24.8bn (up 82% y/y) was above Street at $22.5bn (up 65% y/y).","To meet capacity demand, Google is accelerating capacity deployment and increased its FY26 capex guide by $15bn (~8%) to $195bn-$205bn."],"false_positive_checks":["标题提及资本开支上调，正文明确为数据中心建设，属于AI基建核心"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf","local_directory":"2026/7月/7.23","local_file":"美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf","local_download_path":"downloads/2026/7月/7.23/美银-Alphabet（GOOG.US）：资本开支上调抢走风头，但云业务加速强劲；重申“买入”-260723.pdf","manual_bucket":"AIDC / Cloud Capex","manual_score":1095,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-Alphabet%EF%BC%88GOOG.US%EF%BC%89%EF%BC%9A%E8%B5%84%E6%9C%AC%E5%BC%80%E6%94%AF%E4%B8%8A%E8%B0%83%E6%8A%A2%E8%B5%B0%E9%A3%8E%E5%A4%B4%EF%BC%8C%E4%BD%86%E4%BA%91%E4%B8%9A%E5%8A%A1%E5%8A%A0%E9%80%9F%E5%BC%BA%E5%8A%B2%EF%BC%9B%E9%87%8D%E7%94%B3%E2%80%9C%E4%B9%B0%E5%85%A5%E2%80%9D-260723.pdf","manual_rank":5},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf","title":"伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf","local_relative_path":"2026/7月/7.23/伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf","priority":"P0","rank":6,"score":90,"topics":["第三方算力","数据中心","电力"],"reasons":["正文聚焦新兴AI基础设施提供商（前比特币矿工）签订超7.5GW、1500亿美元第三方算力托管合同","明确涉及数据中心托管、电力获取与交付，是AI基建的关键环节","三重净租赁、合同延至15-20年，经济效益改善，交付按时推进"],"executive_summary":"伯恩斯坦指出新兴AI基础设施提供商（前比特币矿工）通过签订超7.5GW、1500亿美元第三方算力托管合同成为解决算力短缺关键力量，电力获取与交付能力为核心壁垒。行业订单势头强劲、经济效益改善（三重净租赁近100%利润率、合同延至15-20年），多家企业已按时启动初期交付。板块获整体超重配评级，建议聚焦具备执行兑现与稳定客户关系的头部企业，并关注监管与电网约束。","key_findings":["新兴AI基建商已签约约7.5GW、超1500亿美元第三方算力合同，7月每周有新交易","三重净租赁带来近100%利润率，近期合同期限延长至15-20年","WULF、IREN等已按时启动初期容量交付，预计H2'26交付加速","板块获伯恩斯坦整体超重配评级，看好奇迹WULF、IREN等头部企业"],"ranking_evidence":["Emerging AI Infra stocks (former crypto miners) continue to see strong investor interest with a series of new deals announced in recent weeks. Our industry deals tracker for miners has seen a new deal every week in July, with combined deals standing at over 7.5GW contracted equivalent to $150Bn multi-year contracts.","Under triple net leases, tenant bears power, operating costs, taxes and insurance, effectively generating ~100% NOI margin for the landlord."],"false_positive_checks":["标题明确为新兴AI基建，正文涉及算力托管与电力，属于AI基建核心"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf","local_directory":"2026/7月/7.23","local_file":"伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf","local_download_path":"downloads/2026/7月/7.23/伯恩斯坦-全球数字资产｜新兴AI基建：“第三方算力”行情仍有支撑，持续看好订单落地与执行兑现-260723.pdf","manual_bucket":"Other P0/P1","manual_score":1090,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E4%BC%AF%E6%81%A9%E6%96%AF%E5%9D%A6-%E5%85%A8%E7%90%83%E6%95%B0%E5%AD%97%E8%B5%84%E4%BA%A7%EF%BD%9C%E6%96%B0%E5%85%B4AI%E5%9F%BA%E5%BB%BA%EF%BC%9A%E2%80%9C%E7%AC%AC%E4%B8%89%E6%96%B9%E7%AE%97%E5%8A%9B%E2%80%9D%E8%A1%8C%E6%83%85%E4%BB%8D%E6%9C%89%E6%94%AF%E6%92%91%EF%BC%8C%E6%8C%81%E7%BB%AD%E7%9C%8B%E5%A5%BD%E8%AE%A2%E5%8D%95%E8%90%BD%E5%9C%B0%E4%B8%8E%E6%89%A7%E8%A1%8C%E5%85%91%E7%8E%B0-260723.pdf","manual_rank":6},{"indexed_at":"2026-07-23T13:02:00.175Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 大摩-大中华区半导体行业：2026上海人工智能大会（WAIC）要点：中国规模化互联技术赋能超节点集群-260721.pdf","title":"大摩-大中华区半导体行业：2026上海人工智能大会（WAIC）要点：中国规模化互联技术赋能超节点集群-260721.pdf","local_relative_path":"2026/7月/7.23/大摩-大中华区半导体行业：2026上海人工智能大会（WAIC）要点：中国规模化互联技术赋能超节点集群-260721.pdf","priority":"P0","rank":7,"score":90,"topics":["AI超节点集群","华为Atlas 950","NPU互联","SuperPod","P/D解耦推理"],"reasons":["正文明确以AI算力基础设施为核心，讨论华为Atlas 950超节点（1024颗NPU）和64-128卡SuperPod方案","涉及AI服务器/GPU互联、系统级集群，直接对应AI数据中心硬件投资逻辑"],"executive_summary":"2026 WAIC显示中国AI竞争从单芯片转向系统级超节点集群互联，华为发布支持1024颗NPU的Atlas 950超节点，国内多家厂商推出64-128卡SuperPod方案。P/D解耦推理架构、3D堆叠芯片成关注方向。大摩认为国内AI算力产业链具投资价值，推荐寒武纪、燧原科技、海光信息等芯片厂及中微公司、北方华创等设备厂。","key_findings":["华为Atlas 950 SuperPod扩展至1024 NPUs，含16计算柜与4 UnifiedBus柜","64-128加速器规模up配置渐普及，差异化靠互联等性能","P/D解耦成新推理主题，Attention/FFN解耦为下一阶段"],"ranking_evidence":["Huawei unveiled its next-generation Atlas 950 SuperPod at WAIC, marking another significant step-up in its scale-up architecture: Based on our checks at the event, the new system is primarily designed for Huawei's next-generation Ascend 950DT series, rather than the currently shipping 950PR series."],"false_positive_checks":["无假阳性：聚焦AI算力集群，非地产或租赁"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"大摩-大中华区半导体行业：2026上海人工智能大会（WAIC）要点：中国规模化互联技术赋能超节点集群-260721.pdf","local_directory":"2026/7月/7.23","local_file":"大摩-大中华区半导体行业：2026上海人工智能大会（WAIC）要点：中国规模化互联技术赋能超节点集群-260721.pdf","local_download_path":"downloads/2026/7月/7.23/大摩-大中华区半导体行业：2026上海人工智能大会（WAIC）要点：中国规模化互联技术赋能超节点集群-260721.pdf","manual_bucket":"Semi Upstream / Packaging / Equipment","manual_score":1090,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E5%A4%A7%E6%91%A9-%E5%A4%A7%E4%B8%AD%E5%8D%8E%E5%8C%BA%E5%8D%8A%E5%AF%BC%E4%BD%93%E8%A1%8C%E4%B8%9A%EF%BC%9A2026%E4%B8%8A%E6%B5%B7%E4%BA%BA%E5%B7%A5%E6%99%BA%E8%83%BD%E5%A4%A7%E4%BC%9A%EF%BC%88WAIC%EF%BC%89%E8%A6%81%E7%82%B9%EF%BC%9A%E4%B8%AD%E5%9B%BD%E8%A7%84%E6%A8%A1%E5%8C%96%E4%BA%92%E8%81%94%E6%8A%80%E6%9C%AF%E8%B5%8B%E8%83%BD%E8%B6%85%E8%8A%82%E7%82%B9%E9%9B%86%E7%BE%A4-260721.pdf","manual_rank":7},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf","title":"美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf","local_relative_path":"2026/7月/7.23/美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf","priority":"P0","rank":8,"score":90,"topics":["服务器CPU","代理式AI","英伟达Vera","AMD EPYC"],"reasons":["正文明确以AI数据中心核心硬件——服务器CPU为投资主线，讨论英伟达与AMD在代理式AI CPU路径上的分歧。","涉及1700亿美元服务器CPU市场，直接关联AI服务器/GPU/ASIC等核心基建，并提供具体技术细节与性能对比。","报告维持英伟达买入评级，建议关注CPU关键性能指标，构成明确的AI基建投资逻辑。"],"executive_summary":"美银指出英伟达与AMD在1700亿美元服务器CPU市场上就代理式AI发展路径产生分歧：英伟达Vera CPU采用88个定制ARM核心与单片设计强调高单线程性能，AMD则依托EPYC芯片粒架构主张在固定功耗下通过更多核心实现更高并发。争论延伸至x86与ARM生态差异。美银维持英伟达买入评级与350美元目标价，建议关注CPU关键性能指标定义权归属及架构长期演化。","key_findings":["英伟达Vera CPU采用88个定制ARM核心与单片设计，强调高单线程性能以优化延迟与GPU利用率","AMD依托EPYC芯片粒架构主张在固定功耗下通过更多核心实现更高并发，建模显示2.4至3.3倍机架级优势","争论延伸至x86与ARM企业软件生态差异，投资者需判断代理式AI受限于任务完成时间还是每机架代理数量","美银维持英伟达买入评级与350美元目标价，AMD公开技术回应预计侧重建立行业首选性能指标"],"ranking_evidence":["英伟达与AMD在预期规模达1700亿美元的服务器CPU市场上就代理式AI发展路径产生核心分歧：英伟达Vera CPU采用88个定制ARM核心与单片设计强调高单线程性能以优化延迟与GPU利用率，AMD则依托EPYC芯片粒架构主张在固定功耗下通过更多核心实现更高并发吞吐量（建模显示2.4至3.3倍机架级优势）。","NVDA's core argument is that agentic AI consists of repeated CPU → GPU loops involving tool calls, code execution, retrieval and orchestration, where each step depends on completion of the previous one. In this framework, faster per-core performance directly improves agent response times, GPU utilization and overall AI-factory productivity."],"false_positive_checks":["无假阳性风险：服务器CPU是AI数据中心核心组件，非地产/租赁/并购。"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf","local_directory":"2026/7月/7.23","local_file":"美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf","local_download_path":"downloads/2026/7月/7.23/美银-英伟达（NVDA.OQ）：更多核心还是更快核心？英伟达与AMD关于代理式AI CPU的路径之争-260722.pdf","manual_bucket":"AI Server / GPU / ASIC / HBM","manual_score":1090,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-%E8%8B%B1%E4%BC%9F%E8%BE%BE%EF%BC%88NVDA.OQ%EF%BC%89%EF%BC%9A%E6%9B%B4%E5%A4%9A%E6%A0%B8%E5%BF%83%E8%BF%98%E6%98%AF%E6%9B%B4%E5%BF%AB%E6%A0%B8%E5%BF%83%EF%BC%9F%E8%8B%B1%E4%BC%9F%E8%BE%BE%E4%B8%8EAMD%E5%85%B3%E4%BA%8E%E4%BB%A3%E7%90%86%E5%BC%8FAI%20CPU%E7%9A%84%E8%B7%AF%E5%BE%84%E4%B9%8B%E4%BA%89-260722.pdf","manual_rank":8},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf","title":"美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf","local_relative_path":"2026/7月/7.23/美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf","priority":"P0","rank":9,"score":88,"topics":["云基础设施","AWS","资本开支"],"reasons":["正文上调AWS增速预期至33%，因AI合作驱动云需求，明确涉及AI基建","提及Anthropic相关营收及OpenAI模型推动Bedrock需求，云基础设施是AI基建核心","预计资本开支上升，与AI数据中心建设相关"],"executive_summary":"美银证券发布亚马逊业绩前瞻，将AWS营收增速预期上调至33%（原31%），预计二季度总营收1988亿美元、营业利润241亿美元均高于市场共识，主因AI合作驱动云需求。零售预期与共识一致，AWS超预期。预计三季度营收指引2005-2055亿美元、营业利润215-265亿美元，与共识基本持平。重申买入评级，目标价310美元，提示资本开支上升与利润率压力等风险。","key_findings":["上调AWS二季度增速预期至33%（原31%），预计营收409.99亿美元","预计二季度总营收1988.16亿美元、GAAP营业利润241.49亿美元，均高于Street","预计三季度营收指引2005-2055亿美元，营业利润215-265亿美元，与Street基本持平","重申买入评级，目标价310美元，潜在风险为更高2026 capex及2Q margin压力"],"ranking_evidence":["we now estimate 2Q revenue/EBIT of $198.8bn/$24.1bn, above Street at $196.8bn/$23.6bn. We are raising our AWS growth est. to 33% y/y from 31%","We remain constructive on AWS's improving AI positioning, which should be apparent in results that show AWS growth acceleration, backlog expansion ($100bn of Anthropic backlog in 2Q)"],"false_positive_checks":["标题提及AWS增速上调，正文明确AI驱动云需求，属于AI基建"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf","local_directory":"2026/7月/7.23","local_file":"美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf","local_download_path":"downloads/2026/7月/7.23/美银-亚马逊（AMZN.US）二季度业绩前瞻：上调AWS增速预期，预计三季度指引与市场共识基本持平-260722.pdf","manual_bucket":"Other P0/P1","manual_score":1088,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-%E4%BA%9A%E9%A9%AC%E9%80%8A%EF%BC%88AMZN.US%EF%BC%89%E4%BA%8C%E5%AD%A3%E5%BA%A6%E4%B8%9A%E7%BB%A9%E5%89%8D%E7%9E%BB%EF%BC%9A%E4%B8%8A%E8%B0%83AWS%E5%A2%9E%E9%80%9F%E9%A2%84%E6%9C%9F%EF%BC%8C%E9%A2%84%E8%AE%A1%E4%B8%89%E5%AD%A3%E5%BA%A6%E6%8C%87%E5%BC%95%E4%B8%8E%E5%B8%82%E5%9C%BA%E5%85%B1%E8%AF%86%E5%9F%BA%E6%9C%AC%E6%8C%81%E5%B9%B3-260722.pdf","manual_rank":9},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf","title":"瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf","local_relative_path":"2026/7月/7.23/瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf","priority":"P0","rank":10,"score":85,"topics":["云基础设施","资本开支","数据中心"],"reasons":["正文提及云积压订单达5100亿美元，资本支出指引上调至1950-2050亿美元","资本开支上调因加速数据中心建设，与AI基建直接相关","虽然报告偏中性，但明确涉及AI基建资本开支"],"executive_summary":"瑞银称Alphabet搜索与云增长符合预期、云积压订单达5100亿美元且YouTube广告超预期，但资本支出与薪酬成本上升拖累利润率，近期每股收益受股权重估提振。瑞银微修营收预测但上调成本假设，下调未来三年EPS预期，并将目标价从400美元降至379美元维持中性。鉴于近峰值倍数、盈利下修可能及生成式AI竞争威胁，认为风险回报偏中性。","key_findings":["云积压订单达5100亿美元，高于瑞银预测的4820亿美元","资本支出指引上调至1950-2050亿美元，高于共识1865亿美元","下调2026-2028年EPS预期，目标价从400美元降至379美元","维持中性评级，认为近峰值倍数与盈利下修风险使风险回报偏中性"],"ranking_evidence":["Google reported better-than-expected Cloud backlog, which hit about $510B as of 2Q26 close vs ~$462B at 1Q26 close.","Google guided CapEx at $195B-$205B versus $180B-$190B earlier and compared to consensus at $186.5B and UBSe at $196.2B."],"false_positive_checks":["标题提及资本开支上调，正文明确为数据中心建设，属于AI基建核心"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf","local_directory":"2026/7月/7.23","local_file":"瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf","local_download_path":"downloads/2026/7月/7.23/瑞银-Alphabet（GOOG.US）：营收增长预期早已被市场充分定价-260723.pdf","manual_bucket":"Other P0/P1","manual_score":1085,"manual_tier":"Core","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%91%9E%E9%93%B6-Alphabet%EF%BC%88GOOG.US%EF%BC%89%EF%BC%9A%E8%90%A5%E6%94%B6%E5%A2%9E%E9%95%BF%E9%A2%84%E6%9C%9F%E6%97%A9%E5%B7%B2%E8%A2%AB%E5%B8%82%E5%9C%BA%E5%85%85%E5%88%86%E5%AE%9A%E4%BB%B7-260723.pdf","manual_rank":10},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf","title":"摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf","local_relative_path":"2026/7月/7.23/摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf","priority":"P1","rank":11,"score":85,"topics":["先进封装","TCB","HBM","CoWoS","AI服务器"],"reasons":["ASMPT是先进封装设备龙头，正文明确TCB业务受CoWoS与HBM驱动增长强劲，直接受益于AI数据中心对高带宽内存和先进封装的需求，属于AI基建核心硬件（HBM/先进封装）的投资逻辑。"],"executive_summary":"摩根大通指出ASMPT新任CEO Bassel Haddad将于8月就职，公司继续聚焦先进封装并退出SMT业务，短期运营不受影响。TCB业务受CoWoS与HBM驱动增长强劲，有望在韩客户获30-35%份额。报告给予增持评级，目标价225港元，基于12个月远期EPS的30倍估值，关键下行风险为宏观走弱影响主流半导体复苏。","key_findings":["新CEO Bassel Haddad 8月就职，战略聚焦先进封装并推进SMT退出，短期运营无影响","TCB业务势头强劲，有望在韩国客户获30-35%份额，HBM4订单加速","多催化剂包括中国先进封装产能注入、汽车/工业主流复苏、光子学增长","摩根大通给予增持评级，目标价225港元，基于12个月远期EPS的30倍"],"ranking_evidence":["With its leadership in Fluxless TCB technology, we believe ASMPT could take up 30-35% share in its Korean customers, with an upside pointing to new customer expansion (likely breakthrough in SEC, besides SKH and MU).","We are OW on ASMPT, given we expect continued growth in Advanced Packaging and a strong recovery in mainstream SEMI and SMT solutions, driven by AI server boards and PMICs."],"false_positive_checks":["TCB设备用于HBM和CoWoS先进封装，是AI服务器GPU/HBM制造的关键环节，属于AI基建核心硬件供应链，故为P0/P1边界，因明确提及AI服务器板卡驱动，给予P1高分。"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf","local_directory":"2026/7月/7.23","local_file":"摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf","local_download_path":"downloads/2026/7月/7.23/摩根大通-ASMPT（0522.HK）：新任CEO尘埃落定，先进封装战略将进一步强化-260721.pdf","manual_bucket":"Semi Upstream / Packaging / Equipment","manual_score":796,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-ASMPT%EF%BC%880522.HK%EF%BC%89%EF%BC%9A%E6%96%B0%E4%BB%BBCEO%E5%B0%98%E5%9F%83%E8%90%BD%E5%AE%9A%EF%BC%8C%E5%85%88%E8%BF%9B%E5%B0%81%E8%A3%85%E6%88%98%E7%95%A5%E5%B0%86%E8%BF%9B%E4%B8%80%E6%AD%A5%E5%BC%BA%E5%8C%96-260721.pdf","manual_rank":11},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf","title":"杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf","local_relative_path":"2026/7月/7.23/杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf","priority":"P1","rank":12,"score":80,"topics":["光纤光缆","AI需求","数据中心","产能扩张"],"reasons":["长飞光纤光缆受益于AI驱动的数据中心光纤需求，正文明确数据中心光纤需求占比从10%升至43%，并驱动ASP和毛利率飙升，属于AI基建中的光互联/网络环节，有明确需求、价格和产能证据。"],"executive_summary":"杰富瑞指出AI及军事冲突带动光纤需求上涨，长飞光纤光缆光纤ASP及毛利率将大幅提升，2026年EPS预计同比涨10倍，但中国及全球产能大幅扩张将快速抹平供给缺口，2026年或成ASP峰值。基于SOTP估值法得出目标价142港元，较此前上调8%但上行空间仅9%，因此将评级由买入下调至持有。","key_findings":["AI需求及军事冲突带动光纤需求，公司光纤ASP及毛利率将大幅提升，2026年EPS预计同比涨10倍","中国及全球产能大幅扩张将快速抹平供给缺口，2026年或成ASP峰值，全球产能2028年增69%（中国翻倍）","基于SOTP估值法目标价142港元，较此前上调8%但上行空间仅9%，评级由买入下调至持有","公司是唯一未讨论扩产计划的主要玩家，或面临份额流失风险，但出口与光模块多元化策略稳健"],"ranking_evidence":["YOFC has risen ~14x in the past 12 months due to AI-driven growth in demand for OF and optical modules.","Datacom had been 10% of OF demand (80% telecom) until 2024. We est datacom will be 43% of demand in 2026 rising to 55% in 2027, implying 131%/65% YoY growth.","We estimate its OF ASP will rise 203% in 2026 to Rmb146/fkm, ~18% above the previous peak in 2018."],"false_positive_checks":["光纤光缆属于数据中心互联基础设施，直接受AI基建拉动，但非服务器/GPU等核心算力硬件，且报告提示产能扩张可能抹平缺口，故为P1。"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf","local_directory":"2026/7月/7.23","local_file":"杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf","local_download_path":"downloads/2026/7月/7.23/杰富瑞-长飞光纤光缆（6869.HK）：中国产能扩张将迅速抹平供给缺口；下调评级至“持有”-260722.pdf","manual_bucket":"Other P0/P1","manual_score":779,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%9D%B0%E5%AF%8C%E7%91%9E-%E9%95%BF%E9%A3%9E%E5%85%89%E7%BA%A4%E5%85%89%E7%BC%86%EF%BC%886869.HK%EF%BC%89%EF%BC%9A%E4%B8%AD%E5%9B%BD%E4%BA%A7%E8%83%BD%E6%89%A9%E5%BC%A0%E5%B0%86%E8%BF%85%E9%80%9F%E6%8A%B9%E5%B9%B3%E4%BE%9B%E7%BB%99%E7%BC%BA%E5%8F%A3%EF%BC%9B%E4%B8%8B%E8%B0%83%E8%AF%84%E7%BA%A7%E8%87%B3%E2%80%9C%E6%8C%81%E6%9C%89%E2%80%9D-260722.pdf","manual_rank":12},{"indexed_at":"2026-07-23T13:02:00.175Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf","title":"瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf","local_relative_path":"2026/7月/7.23/瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf","priority":"P1","rank":13,"score":80,"topics":["日本电子元件","AI受益","基板","电容器","功率半导体"],"reasons":["正文明确2026年是日本电子元件行业从传统应用转向AI受益领域的转型拐点，AI利好实质影响基板、电容器、硬盘、功率半导体等子领域","这些子领域直接服务于AI服务器和数据中心，属于AI基建核心硬件供应链","报告推荐已受益AI且估值合理的村田、Ibiden等，具有明确投资传导"],"executive_summary":"瑞银指出2026年是日本电子元件行业从传统应用转向AI受益领域的转型拐点，此前行业与智能手机、PC、汽车等传统应用关联度高，AI利好正实质性影响基板、电容器、硬盘、功率半导体等细分领域。内存价格上涨压制中低端传统应用需求，高端应用保持稳健。行业市值占比与估值均处低位，推荐村田、Ibiden等已受益AI且估值合理的企业，对京瓷、广濑电机等持中性。","key_findings":["2026年为行业转型拐点，从传统应用导向转向AI受益领域，AI利好开始实质影响基板、电容器、硬盘、功率半导体等子领域","内存价格上涨压制中低端传统应用需求，高端应用需求相对稳健","行业市值占比与估值均处于低位，偏好已受益于AI且估值合理的村田、Ibiden等","推荐买入Murata、Ibiden、Rohm、Minebea Mitsumi、TDK、Nidec；京瓷、广濑电机、Niterra、Taiyo Yuden、Mabuchi Motor、Alps Alpine为中性"],"ranking_evidence":["2026 is inflection for the sector to transform into AI beneficiary, shifting from legacy application","AI benefit finally starting to have meaningful impact on certain subvectors such as substrates, capacitors (MLCC, aluminum), HDDs, and power semiconductors.","We prefer names that have started to benefit from AI with undemanding valuations such as Murata, Ibiden."],"false_positive_checks":["无假阳性：直接涉及AI服务器相关电子元件"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf","local_directory":"2026/7月/7.23","local_file":"瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf","local_download_path":"downloads/2026/7月/7.23/瑞银-日本电子元件行业：AI浪潮“更高更久”？-260721.pdf","manual_bucket":"Other P0/P1","manual_score":779,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%91%9E%E9%93%B6-%E6%97%A5%E6%9C%AC%E7%94%B5%E5%AD%90%E5%85%83%E4%BB%B6%E8%A1%8C%E4%B8%9A%EF%BC%9AAI%E6%B5%AA%E6%BD%AE%E2%80%9C%E6%9B%B4%E9%AB%98%E6%9B%B4%E4%B9%85%E2%80%9D%EF%BC%9F-260721.pdf","manual_rank":13},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf","title":"伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf","local_relative_path":"2026/7月/7.23/伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf","priority":"P1","rank":14,"score":75,"topics":["数据中心","模拟芯片","工业"],"reasons":["正文明确提及数据中心业务翻倍增长，德州仪器作为模拟芯片供应商受益于AI基建需求","工业、数据中心与汽车业务分别实现约30%、翻倍及双位数同比增长，数据中心是明确增长点","资本开支维持20-30亿美元，但未详细说明用于AI基建"],"executive_summary":"伯恩斯坦复盘德州仪器二季度业绩指出，营收54.63亿美元、每股收益2.14美元、毛利率61.4%均超市场预期，工业、数据中心与汽车业务分别实现约30%、翻倍及双位数同比增长，且营收指引59亿美元与利润率指引亦高于共识，资本开支维持20-30亿美元区间。伯恩斯坦据此上调盈利预估并将目标价由250美元升至290美元（对应约30倍远期市盈率），但维持“市场表现”评级，认为股价已充分估值。分析师建议投资者因估值偏高转向其他领域，并关注工业周期持续性、数据中心业务规模化及季节性预期偏差等风险。","key_findings":["二季度营收54.63亿美元、每股收益2.14美元、毛利率61.4%均超市场预期","工业、数据中心与汽车业务分别实现约30%、翻倍及双位数同比增长","营收指引59亿美元与利润率指引高于共识，资本开支维持20-30亿美元区间","目标价由250美元升至290美元，维持“市场表现”评级，认为股价已充分估值"],"ranking_evidence":["工业、数据中心与汽车业务分别实现约30%、翻倍及双位数同比增长","营收指引59亿美元与利润率指引亦高于共识"],"false_positive_checks":["数据中心业务增长明确，但德州仪器主要提供模拟芯片，非AI服务器/GPU等核心硬件，故评为P1"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf","local_directory":"2026/7月/7.23","local_file":"伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf","local_download_path":"downloads/2026/7月/7.23/伯恩斯坦-德州仪器（TXN.US）2026年第二季度业绩复盘：世界尚不足够？-260723.pdf","manual_bucket":"Other P0/P1","manual_score":774,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E4%BC%AF%E6%81%A9%E6%96%AF%E5%9D%A6-%E5%BE%B7%E5%B7%9E%E4%BB%AA%E5%99%A8%EF%BC%88TXN.US%EF%BC%892026%E5%B9%B4%E7%AC%AC%E4%BA%8C%E5%AD%A3%E5%BA%A6%E4%B8%9A%E7%BB%A9%E5%A4%8D%E7%9B%98%EF%BC%9A%E4%B8%96%E7%95%8C%E5%B0%9A%E4%B8%8D%E8%B6%B3%E5%A4%9F%EF%BC%9F-260723.pdf","manual_rank":14},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf","title":"高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf","local_relative_path":"2026/7月/7.23/高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf","priority":"P1","rank":15,"score":75,"topics":["电网升级","变压器","OLTC","新能源并网"],"reasons":["华明装备是全球电网升级受益标的，正文明确提及全球电网投资增长由数据中心建设、老化基础设施和可再生能源整合驱动，属于AI基建的电力/电网配套，有明确需求传导。"],"executive_summary":"高盛将华明装备评级由中性上调至买入，12个月目标价23.9元对应33%上行空间。股价自2026年初回调36%（峰值至谷底52%），当前18.1倍远期PE低于历史均值20.3倍。全球电网升级、老化改造及新能源并网驱动海外增长，预计2026E-30E净利润CAGR达17%，海外OLTC营收占比从41%升至59%，全球份额13%升至16%。","key_findings":["评级由中性上调至买入，12个月目标价23.9元（未变）对应33%上行空间","2026年初至今股价回调36%，峰值至谷底跌52%，当前18.1x 12个月远期PE低于历史均值20.3x","全球电网投资24-35E CAGR 7%，海外OLTC营收占比从41%(2026E)升至59%(2030E)，全球份额13%升至16%","预计2026E-30E营收CAGR 14%、净利润CAGR 17%，毛利率由56%升至57.5%；三大下行风险为海外份额、利润率、国内营收不及预期"],"ranking_evidence":["Siemens Energy/Hitachi Energy forecast global grid investment to grow at a 7% CAGR over 2024-35E, driven not only by data center build-out but also by aging infrastructure and renewable integration.","We expect export contribution within the OLTC business to rise from 41% in 2026E to 59% by 2030E."],"false_positive_checks":["公司产品为变压器分接开关，直接受益于电网投资，包括数据中心电力需求，但非AI基建核心硬件（如服务器/GPU），属于强相关电力设备。"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf","local_directory":"2026/7月/7.23","local_file":"高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf","local_download_path":"downloads/2026/7月/7.23/高盛-华明装备（002270.SZ）：回调后估值具备吸引力，全球电网升级驱动海外增长韧性不变，上调至“买入”评级-260722.pdf","manual_bucket":"Power / Cooling / Energy","manual_score":774,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E5%8D%8E%E6%98%8E%E8%A3%85%E5%A4%87%EF%BC%88002270.SZ%EF%BC%89%EF%BC%9A%E5%9B%9E%E8%B0%83%E5%90%8E%E4%BC%B0%E5%80%BC%E5%85%B7%E5%A4%87%E5%90%B8%E5%BC%95%E5%8A%9B%EF%BC%8C%E5%85%A8%E7%90%83%E7%94%B5%E7%BD%91%E5%8D%87%E7%BA%A7%E9%A9%B1%E5%8A%A8%E6%B5%B7%E5%A4%96%E5%A2%9E%E9%95%BF%E9%9F%A7%E6%80%A7%E4%B8%8D%E5%8F%98%EF%BC%8C%E4%B8%8A%E8%B0%83%E8%87%B3%E2%80%9C%E4%B9%B0%E5%85%A5%E2%80%9D%E8%AF%84%E7%BA%A7-260722.pdf","manual_rank":15},{"indexed_at":"2026-07-23T13:02:00.175Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf","title":"美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf","local_relative_path":"2026/7月/7.23/美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf","priority":"P1","rank":16,"score":75,"topics":["半导体设备进口","前端设备","光刻设备","线焊机","中国半导体设备市场"],"reasons":["正文明确追踪中国半导体设备进口数据，涵盖前端设备、光刻、线焊机等，与AI基建所需半导体制造设备强相关","中国占全球WFE 33.5%，是最大区域市场，设备进口数据可追踪全球厂商中国销售，具有投资传导意义","但报告未直接提及AI数据中心资本开支或AI服务器/GPU等，而是聚焦半导体设备进口趋势，属于AI基建上游设备环节"],"executive_summary":"美银全球研究追踪中国海关半导体设备进口数据，2026年6月进口额47亿美元，同比降1%、环比升45%，YTD降9%。前端设备6月同比微增1%、环比升57%；光刻机环比暴增184%，线焊机同比增153%。中国占2025年全球晶圆制造设备市场33.5%，是最大区域市场，多数设备商预计2026年中国销售正常化。","key_findings":["6月中国半导体设备进口额47亿美元，同比降1%、环比升45%，YTD降9%","前端设备6月进口34亿美元，同比增1%、环比增57%，热处理/其他前端/过程控制/光刻同比正增","线焊机6月进口同比大增153%，为后端唯一正增品类；组装封装同比降6%","前五大设备商披露中国销售额占中国前端进口额65%-85%，进口数据可追踪全球厂商中国销售"],"ranking_evidence":["China's semiconductor equipment imports were $4.7bn in June 2026... Import value was down 1% yoy and up 45% mom.","China accounted for 33.5% of global WFE in 2025, making it one of the most important regions for global semicaps.","China imported $3.4bn worth of front-end equipment in June. Front-end imports were up 1% yoy and up 57% mom...","The top 5 semicap suppliers disclosed China sales accounted for 65%-85% of China's front-end equipment imports..."],"false_positive_checks":["无假阳性：报告聚焦半导体设备进口，非地产/租赁/并购类数据中心"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf","local_directory":"2026/7月/7.23","local_file":"美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf","local_download_path":"downloads/2026/7月/7.23/美银-全球半导体行业：中国半导体设备进口追踪：2026年6月同比微降1%-260721.pdf","manual_bucket":"Semi Upstream / Packaging / Equipment","manual_score":774,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E7%BE%8E%E9%93%B6-%E5%85%A8%E7%90%83%E5%8D%8A%E5%AF%BC%E4%BD%93%E8%A1%8C%E4%B8%9A%EF%BC%9A%E4%B8%AD%E5%9B%BD%E5%8D%8A%E5%AF%BC%E4%BD%93%E8%AE%BE%E5%A4%87%E8%BF%9B%E5%8F%A3%E8%BF%BD%E8%B8%AA%EF%BC%9A2026%E5%B9%B46%E6%9C%88%E5%90%8C%E6%AF%94%E5%BE%AE%E9%99%8D1%25-260721.pdf","manual_rank":16},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf","title":"摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf","local_relative_path":"2026/7月/7.23/摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf","priority":"P1","rank":17,"score":75,"topics":["AI数据中心","超大规模云厂商","散户资金流"],"reasons":["正文明确提及散户持续增持AI数据中心、超大规模云厂商及通信科技股，并关注hyperscaler财报中的AI货币化与回报。","散户净买入前五包含NVDA、GOOGL等AI基建相关标的，提供资金流证据。","报告并非全文唯一主线，还涉及动量因子回撤、迷因股风险等，但AI数据中心部分构成可投资的基建需求信号。"],"executive_summary":"摩根大通报告指出上周散户资金流低于12个月均值，ETF流入疲软至4%分位而单股活动走强至71.8%分位，动量因子因极端拥挤出现回撤14%并频现极端负sigma事件。散户持续增持AI数据中心、超大规模云厂商及通信科技股，聚焦 hyperscaler 财报中AI货币化与回报等摇摆因素，并警惕高卖空仓位与散户买入并存的迷因股挤压风险。","key_findings":["散户资金流低于12个月均值，ETF流入疲软至4%分位、单股活动走强至71.8%分位","动量因子过去一月回撤14%，因极端拥挤频现极端负sigma事件（含-6 sigma日）","散户持续增持AI数据中心、超大规模云厂商及通信科技股，关注 hyperscaler 财报","警惕高卖空仓位与散户买入并存的迷因股挤压风险"],"ranking_evidence":["散户持续增持AI数据中心、超大规模云厂商及通信科技股，关注 hyperscaler 财报","the key swing factors are AI monetization and returns, where investors are looking for improved monetization across cloud, ads, and enterprise","散户净买入前五股票：SPCX +5.14亿、NVDA +4.12亿、GOOGL/GOOG +3.28亿、TSLA +3.19亿、NU +3.08亿"],"false_positive_checks":["无假阳性风险：AI数据中心指物理基础设施，非地产租赁。"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf","local_directory":"2026/7月/7.23","local_file":"摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf","local_download_path":"downloads/2026/7月/7.23/摩根大通-散户雷达：动量降温，关注超大规模云厂商财报-260722.pdf","manual_bucket":"Other P0/P1","manual_score":774,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%91%A9%E6%A0%B9%E5%A4%A7%E9%80%9A-%E6%95%A3%E6%88%B7%E9%9B%B7%E8%BE%BE%EF%BC%9A%E5%8A%A8%E9%87%8F%E9%99%8D%E6%B8%A9%EF%BC%8C%E5%85%B3%E6%B3%A8%E8%B6%85%E5%A4%A7%E8%A7%84%E6%A8%A1%E4%BA%91%E5%8E%82%E5%95%86%E8%B4%A2%E6%8A%A5-260722.pdf","manual_rank":17},{"indexed_at":"2026-07-23T13:02:00.175Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 汇丰-汉钟精机（002158.SZ）：增长可持续性获验证，维持“买入”评级-260721.pdf","title":"汇丰-汉钟精机（002158.SZ）：增长可持续性获验证，维持“买入”评级-260721.pdf","local_relative_path":"2026/7月/7.23/汇丰-汉钟精机（002158.SZ）：增长可持续性获验证，维持“买入”评级-260721.pdf","priority":"P1","rank":18,"score":72,"topics":["半导体真空泵","AIDC磁悬浮压缩机","工业热泵","汉钟精机"],"reasons":["正文明确提及AIDC（AI数据中心）磁悬浮压缩机业务，半导体真空泵用于半导体制造，均与AI基建直接相关","报告指出半导体业务将显著增长，AIDC和工业热泵后续释放，具有AI基建投资传导","但报告为公司个股分析，非纯AI基建主题，归为P1"],"executive_summary":"汇丰维持汉钟精机买入评级及38.80元目标价，当前股价26.87元较目标价有44.4%上行空间。半导体真空泵业务将自低基数显著增长，AIDC磁悬浮压缩机与工业热泵逐步释放潜力。预计2026年增速不快但2027年起可见度提升，多赛道支撑未来10年连续增长。基于DCF估值，WACC 9.5%，历史PE均值19倍。","key_findings":["维持买入，TP 38.80元，上行空间44.4%","半导体真空泵收入从1亿增至2.02亿元（2025至2026e）","AIDC与工业热泵业务后续释放增长"],"ranking_evidence":["Semiconductor business will first register significant growth off a low base; AIDC and industrial heat pump to follow suit","We forecast Hanbell's semiconductor vacuum pump revenue to increase from an estimated RMB100m in 2025 to RMB202m in 2026e"],"false_positive_checks":["AIDC明确为AI数据中心，非普通地产数据中心"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"汇丰-汉钟精机（002158.SZ）：增长可持续性获验证，维持“买入”评级-260721.pdf","local_directory":"2026/7月/7.23","local_file":"汇丰-汉钟精机（002158.SZ）：增长可持续性获验证，维持“买入”评级-260721.pdf","local_download_path":"downloads/2026/7月/7.23/汇丰-汉钟精机（002158.SZ）：增长可持续性获验证，维持“买入”评级-260721.pdf","manual_bucket":"Other P0/P1","manual_score":771,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E6%B1%87%E4%B8%B0-%E6%B1%89%E9%92%9F%E7%B2%BE%E6%9C%BA%EF%BC%88002158.SZ%EF%BC%89%EF%BC%9A%E5%A2%9E%E9%95%BF%E5%8F%AF%E6%8C%81%E7%BB%AD%E6%80%A7%E8%8E%B7%E9%AA%8C%E8%AF%81%EF%BC%8C%E7%BB%B4%E6%8C%81%E2%80%9C%E4%B9%B0%E5%85%A5%E2%80%9D%E8%AF%84%E7%BA%A7-260721.pdf","manual_rank":18},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 巴克莱-IT硬件与通信设备：AT&T资本开支及iPhone销售数据解读-260722.pdf","title":"巴克莱-IT硬件与通信设备：AT&T资本开支及iPhone销售数据解读-260722.pdf","local_relative_path":"2026/7月/7.23/巴克莱-IT硬件与通信设备：AT&T资本开支及iPhone销售数据解读-260722.pdf","priority":"P1","rank":19,"score":70,"topics":["光通信","光纤扩张","电信资本开支"],"reasons":["正文明确提及光通信支出优先级提升，看好Ciena增持，并指出光学支出将加速，属于数据中心光互联/网络范畴。","AT&T资本开支57亿美元高于预期，全年指引维持230-240亿美元，光纤扩张逐步恢复，提供AI基建需求证据。","报告并非全文唯一主线，还涉及iPhone销售、苹果减持等消费电子内容，但光通信部分构成可投资的AI基建传导。"],"executive_summary":"巴克莱解读AT&T二季度财报，其智能手机销量与iPhone出货量均同比持平，设备升级率下滑至3.2%，季度资本开支57亿美元略高于市场预期55亿美元，全年指引维持230-240亿美元。对苹果影响中性偏谨慎，维持减持评级；光通信支出优先级提升，看好Ciena增持。报告认为北美电信运营商活动正常化，光纤扩张逐步恢复，光学支出将加速。","key_findings":["AT&T二季度智能手机销量5.2M同比持平，iPhone出货量估3.4M同比持平、环比降个位数","设备升级率降至3.2%（前季3.5%），因补贴热情消退","二季度资本开支57亿美元高于预期55亿美元，全年指引维持230-240亿美元","维持苹果减持、Ciena增持、AT&T/思科/康宁持平权重评级"],"ranking_evidence":["We continue to believe optical spend for capacity enhancements will be prioritized and expect CIEN's business with major US telcos to accelerate into next year.","2Q26 capex came in at $5.7Bn vs. the Street expectation of $5.5Bn."],"false_positive_checks":["无假阳性风险：光通信支出明确指向数据中心互联需求，非地产/租赁/并购。"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"巴克莱-IT硬件与通信设备：AT&T资本开支及iPhone销售数据解读-260722.pdf","local_directory":"2026/7月/7.23","local_file":"巴克莱-IT硬件与通信设备：AT&T资本开支及iPhone销售数据解读-260722.pdf","local_download_path":"downloads/2026/7月/7.23/巴克莱-IT硬件与通信设备：AT&T资本开支及iPhone销售数据解读-260722.pdf","manual_bucket":"AIDC / Cloud Capex","manual_score":769,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E5%B7%B4%E5%85%8B%E8%8E%B1-IT%E7%A1%AC%E4%BB%B6%E4%B8%8E%E9%80%9A%E4%BF%A1%E8%AE%BE%E5%A4%87%EF%BC%9AAT&T%E8%B5%84%E6%9C%AC%E5%BC%80%E6%94%AF%E5%8F%8AiPhone%E9%94%80%E5%94%AE%E6%95%B0%E6%8D%AE%E8%A7%A3%E8%AF%BB-260722.pdf","manual_rank":19},{"indexed_at":"2026-07-23T13:02:00.173Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf","title":"大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf","local_relative_path":"2026/7月/7.23/大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf","priority":"P1","rank":20,"score":70,"topics":["自动驾驶","人形机器人","资本开支"],"reasons":["正文提及特斯拉加速资本开支以确立自动驾驶与机器人领导地位，但未明确指向AI数据中心基建","FSD北美附着率55%远超预估，Robotaxi与Optimus进展积极但受软件校准与供应链复杂度限制","资本开支增加导致自由现金流转负，但未具体说明用于AI服务器/GPU/ASIC等核心硬件"],"executive_summary":"摩根士丹利报告指出，特斯拉正加速资本开支以确立自动驾驶与机器人领导地位，FSD北美附着率远超预估达55%，Robotaxi与Optimus虽进展积极但分别受限于软件校准与供应链复杂度。沉重资本开支令自由现金流进一步转负，目标价从417美元下调至400美元，维持Equal-weight评级。报告认为回报实现需耐心与持续执行，投资者应重点关注现有城市内Robotaxi密度与安全数据积累、Optimus商业化切实进展等证明点，以评估资本开支回报时机与容忍度。","key_findings":["FSD北美附着率在二季度达55%，远超此前预估的25-30%","重资本开支周期使自由现金流持续转负，2027年预计FCF burn达约14亿美元","Robotaxi与Optimus进展积极，但受限于软件校准与供应链复杂度","目标价从417美元下调至400美元，维持Equal-weight评级"],"ranking_evidence":["The capex step-up is a known trend, now confirmed and extended for the next 2-3 years, prolonging cash burn through the end of the decade on our estimates.","Cybercab production is scaling, but software recalibration limits near-term fleet entry.","Optimus SOP is expected soon. Supply chain complexities elongate the initial ramp."],"false_positive_checks":["标题与正文均聚焦特斯拉自动驾驶与机器人，未涉及AI数据中心基础设施，但资本开支与AI相关，故评为P1"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf","local_directory":"2026/7月/7.23","local_file":"大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf","local_download_path":"downloads/2026/7月/7.23/大摩-特斯拉（北美业务）：回本之路尚需耐心等待-260723.pdf","manual_bucket":"Other P0/P1","manual_score":769,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E5%A4%A7%E6%91%A9-%E7%89%B9%E6%96%AF%E6%8B%89%EF%BC%88%E5%8C%97%E7%BE%8E%E4%B8%9A%E5%8A%A1%EF%BC%89%EF%BC%9A%E5%9B%9E%E6%9C%AC%E4%B9%8B%E8%B7%AF%E5%B0%9A%E9%9C%80%E8%80%90%E5%BF%83%E7%AD%89%E5%BE%85-260723.pdf","manual_rank":20},{"indexed_at":"2026-07-23T13:02:00.174Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf","title":"高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf","local_relative_path":"2026/7月/7.23/高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf","priority":"P1","rank":21,"score":70,"topics":["AI基础设施","工厂自动化","工业科技"],"reasons":["正文明确提及AI基础设施和工厂自动化有望超预期，并作为行业二季度业绩加速的驱动因素之一，但并非全文唯一主线，还涉及个股评级调整和估值纪律。"],"executive_summary":"高盛预期中国工业科技行业二季度营收和EPS同比加速增长至18%、12%，AI基础设施和工厂自动化有望超预期。将大族激光由买入降至中性、江海股份由买入降至卖出，杭可科技升至中性，青睐汇川技术、宏发股份、创科实业等估值合理的稳健增长股。部分个股涨幅已透支基本面，需重视估值纪律，目标价调整区间-17%至+40%。","key_findings":["预期行业二季度营收和EPS同比加速至+18%/+12%（vs 1Q +16%/+5%），AI基础设施和工厂自动化或超预期","大族激光由买入降至中性（YTD +145%，PCB/消费电子设备增长已计价），12个月目标价113.0元","江海股份由买入降至卖出（隐含AIDC超级电容及铝电解电容份额过高），12个月目标价54.7元","杭可科技由卖出升至中性，青睐汇川技术、宏发股份、创科实业等稳健增长股"],"ranking_evidence":["We preview the sector 2Q results, overall expecting slightly better performance than 1Q, with average sector revenue and EPS yoy growth projected to accelerate to +18%/+12% respectively (vs. +16%/+5% yoy in 1Q).","AI infrastructure and factory automation could beat expectations."],"false_positive_checks":["AI基础设施是行业业绩驱动之一，但报告主要内容为个股评级调整，非以AI基建为核心投资逻辑。"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf","local_directory":"2026/7月/7.23","local_file":"高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf","local_download_path":"downloads/2026/7月/7.23/高盛-中国工业科技行业：下调过热个股：大族激光降至中性、江海股份降至卖出；青睐估值合理的稳健增长股；二季度行业前瞻-260722.pdf","manual_bucket":"Other P0/P1","manual_score":769,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E9%AB%98%E7%9B%9B-%E4%B8%AD%E5%9B%BD%E5%B7%A5%E4%B8%9A%E7%A7%91%E6%8A%80%E8%A1%8C%E4%B8%9A%EF%BC%9A%E4%B8%8B%E8%B0%83%E8%BF%87%E7%83%AD%E4%B8%AA%E8%82%A1%EF%BC%9A%E5%A4%A7%E6%97%8F%E6%BF%80%E5%85%89%E9%99%8D%E8%87%B3%E4%B8%AD%E6%80%A7%E3%80%81%E6%B1%9F%E6%B5%B7%E8%82%A1%E4%BB%BD%E9%99%8D%E8%87%B3%E5%8D%96%E5%87%BA%EF%BC%9B%E9%9D%92%E7%9D%90%E4%BC%B0%E5%80%BC%E5%90%88%E7%90%86%E7%9A%84%E7%A8%B3%E5%81%A5%E5%A2%9E%E9%95%BF%E8%82%A1%EF%BC%9B%E4%BA%8C%E5%AD%A3%E5%BA%A6%E8%A1%8C%E4%B8%9A%E5%89%8D%E7%9E%BB-260722.pdf","manual_rank":21},{"indexed_at":"2026-07-23T13:02:00.175Z","knowledge_base":"环球研报直通车","source_path":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23 / 花旗-埃斯顿（002747.SZ）：业绩交流会纪要：降本驱动毛利率扩张，库卡或成潜在威胁-260721.pdf","title":"花旗-埃斯顿（002747.SZ）：业绩交流会纪要：降本驱动毛利率扩张，库卡或成潜在威胁-260721.pdf","local_relative_path":"2026/7月/7.23/花旗-埃斯顿（002747.SZ）：业绩交流会纪要：降本驱动毛利率扩张，库卡或成潜在威胁-260721.pdf","priority":"P1","rank":22,"score":70,"topics":["工业机器人","减速器","库卡","零部件国产化","毛利率扩张"],"reasons":["正文涉及工业机器人毛利率改善、零部件国产化、库卡竞争威胁，工业机器人与AI基建中的自动化、智能制造相关","但报告主要聚焦埃斯顿公司层面竞争格局和盈利，未直接涉及AI数据中心或AI服务器等核心基建","工业机器人属于AI基建的间接相关领域（自动化设备），可归为P1"],"executive_summary":"花旗举办埃斯顿业绩交流会，董事会秘书肖婷婷指出2Q26工业机器人毛利率升至33%-34%，主要由零部件国产化、设计降本等成本优化驱动而非客户多元化。公司预计2026年营收60亿元、毛利率31%、净利率5%、出货量4.5万台指引可达成。库卡通过核心部件国产化成潜在威胁，花旗更看好减速器厂商，给予埃斯顿卖出评级，目标股价28元。","key_findings":["2Q26工业机器人毛利率改善至33%-34%，主因成本降低（零部件国产化、设计降本）而非客户多元化","公司预计2026年指引（营收60亿元、毛利率31%、净利率5%、出货量4.5万台）可达成","库卡被收购后积极本土化部件供应，成埃斯顿 imminent threat，绿的谐波、双环传动已进入其供应链","花旗偏好减速器厂商绿的谐波、双环传动，给予埃斯顿卖出评级，目标股价28元"],"ranking_evidence":["Ms. Xiao indicated that cost reduction was the key reason leading to GPM expansion.","the imminent threat on the industrial robot side could be from KUKA... which has been aggressively localizing its component supplies...","we prefer reducer makers Leader Drive... and Shuanghuan Drive... over Estun..."],"false_positive_checks":["无假阳性：工业机器人非数据中心，但属于AI基建相关自动化设备"],"ranking_mode":"summary","llm_provider":"deepseek","llm_model":"deepseek-v4-pro","ranked_at":"2026-07-24T11:46:07.543Z","month":"2026/7月","day_label":"2026/7月/7.23","day_sort_key":"2026-07-23","day_folder":"7.23","ima_directory":"环球研报直通车 / 2026年国际顶级投行研报 / 7月 / 7.23","ima_file":"花旗-埃斯顿（002747.SZ）：业绩交流会纪要：降本驱动毛利率扩张，库卡或成潜在威胁-260721.pdf","local_directory":"2026/7月/7.23","local_file":"花旗-埃斯顿（002747.SZ）：业绩交流会纪要：降本驱动毛利率扩张，库卡或成潜在威胁-260721.pdf","local_download_path":"downloads/2026/7月/7.23/花旗-埃斯顿（002747.SZ）：业绩交流会纪要：降本驱动毛利率扩张，库卡或成潜在威胁-260721.pdf","manual_bucket":"Other P0/P1","manual_score":769,"manual_tier":"Watchlist","downloaded":true,"download_href":"file:///Users/leon/Stock/investment-research-reports/downloads/2026/7%E6%9C%88/7.23/%E8%8A%B1%E6%97%97-%E5%9F%83%E6%96%AF%E9%A1%BF%EF%BC%88002747.SZ%EF%BC%89%EF%BC%9A%E4%B8%9A%E7%BB%A9%E4%BA%A4%E6%B5%81%E4%BC%9A%E7%BA%AA%E8%A6%81%EF%BC%9A%E9%99%8D%E6%9C%AC%E9%A9%B1%E5%8A%A8%E6%AF%9B%E5%88%A9%E7%8E%87%E6%89%A9%E5%BC%A0%EF%BC%8C%E5%BA%93%E5%8D%A1%E6%88%96%E6%88%90%E6%BD%9C%E5%9C%A8%E5%A8%81%E8%83%81-260721.pdf","manual_rank":22}]</script>
   <script>
     const records = JSON.parse(document.getElementById('records').textContent);
-    const state = { search: '', priority: '', bucket: '', topic: '', month: '', dayFolder: '' };
+    const state = { search: '', priority: '', bucket: '', topic: '', month: '', dayFolder: '', localStatus: '' };
     const els = {
       search: document.getElementById('search'),
       priority: document.getElementById('priority'),
@@ -963,6 +1057,7 @@
       topic: document.getElementById('topic'),
       month: document.getElementById('month'),
       dayFolder: document.getElementById('dayFolder'),
+      localStatus: document.getElementById('localStatus'),
       dailyGroups: document.getElementById('daily-groups'),
       dailyCount: document.getElementById('daily-count'),
       rows: document.getElementById('rows'),
@@ -1012,10 +1107,12 @@
         record.local_download_path,
         record.manual_bucket,
         record.day_label,
+        record.executive_summary,
         ...(record.topics || []),
         ...(record.reasons || []),
-        ...(record.evidence_keywords || []),
-        ...(record.downgrade_reasons || []),
+        ...(record.key_findings || []),
+        ...(record.ranking_evidence || []),
+        ...(record.false_positive_checks || []),
       ].join(' ').toLowerCase();
     }
     function filtered() {
@@ -1026,6 +1123,8 @@
         if (state.topic && !(record.topics || []).includes(state.topic)) return false;
         if (state.month && record.month !== state.month) return false;
         if (state.dayFolder && record.day_label !== state.dayFolder) return false;
+        if (state.localStatus === 'downloaded' && !record.downloaded) return false;
+        if (state.localStatus === 'missing' && record.downloaded) return false;
         if (q && !textBlob(record).includes(q)) return false;
         return true;
       });
@@ -1046,16 +1145,20 @@
       const tags = (record.topics || []).slice(0, 8).map((topic) => '<span class="tag">' + escapeHtml(topic) + '</span>').join('');
       const link = record.download_href ? '<a href="' + escapeHtml(record.download_href) + '">打开本地 PDF</a>' : '';
       const downloaded = record.downloaded ? '<span class="badge downloaded">本地已有</span>' : '';
-      const recall = record.recall_priority ? '<span>recall ' + escapeHtml(record.recall_priority) + ' / ' + escapeHtml(record.recall_score) + '</span>' : '';
-      const evidence = (record.evidence_keywords || []).length ? '<div class="path">Evidence: ' + escapeHtml((record.evidence_keywords || []).join(' / ')) + '</div>' : '';
-      const review = (record.downgrade_reasons || []).length ? '<div class="path">Review: ' + escapeHtml((record.downgrade_reasons || []).join('；')) + '</div>' : '';
+      const evidence = (record.ranking_evidence || []).length ? '<div class="path">Evidence: ' + escapeHtml((record.ranking_evidence || []).join(' / ')) + '</div>' : '';
+      const review = (record.false_positive_checks || []).length ? '<div class="path">False-positive checks: ' + escapeHtml((record.false_positive_checks || []).join('；')) + '</div>' : '';
+      const summary = record.executive_summary ? '<p class="ima-summary"><strong>IMA摘要：</strong>' + escapeHtml(record.executive_summary) + '</p>' : '';
+      const findings = (record.key_findings || []).length
+        ? '<ul class="findings">' + record.key_findings.map((item) => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul>'
+        : '';
       return '<article class="item">' +
         '<div class="rankbox"><div class="rank">#' + escapeHtml(record.manual_rank) + '</div><div class="small">LLM #' + escapeHtml(record.rank) + '</div></div>' +
         '<div>' +
-          '<div class="meta"><span class="badge ' + record.priority.toLowerCase() + '">' + escapeHtml(record.priority) + '</span><span class="badge tier">' + escapeHtml(record.manual_tier) + '</span>' + downloaded + '<span>' + escapeHtml(record.manual_bucket) + '</span><span>score ' + escapeHtml(record.score) + '</span>' + recall + '</div>' +
+          '<div class="meta"><span class="badge ' + record.priority.toLowerCase() + '">' + escapeHtml(record.priority) + '</span><span class="badge tier">' + escapeHtml(record.manual_tier) + '</span>' + downloaded + '<span>' + escapeHtml(record.manual_bucket) + '</span><span>score ' + escapeHtml(record.score) + '</span></div>' +
           '<h3 class="title">' + escapeHtml(record.title) + '</h3>' +
           '<div class="tags">' + tags + '</div>' +
           '<p class="reason">' + escapeHtml((record.reasons || []).join('；')) + '</p>' +
+          summary + findings +
           evidence + review +
           '<div class="path">IMA 目录: ' + escapeHtml(record.ima_directory) + '</div>' +
           '<div class="path">IMA 文件: ' + escapeHtml(record.ima_file) + '</div>' +
@@ -1092,20 +1195,22 @@
       els.rows.innerHTML = rows.map((record) => {
         const tags = (record.topics || []).map((topic) => '<span class="tag">' + escapeHtml(topic) + '</span>').join('');
         const link = record.download_href ? '<a href="' + escapeHtml(record.download_href) + '">打开本地 PDF</a>' : '';
-        const evidence = (record.evidence_keywords || []).map((keyword) => '<span class="tag">' + escapeHtml(keyword) + '</span>').join('');
-        const downgrade = (record.downgrade_reasons || []).join('；');
-        const recall = record.recall_priority ? 'Recall ' + record.recall_priority + ' / ' + record.recall_score : '';
+        const evidence = (record.ranking_evidence || []).map((item) => '<span class="tag">' + escapeHtml(item) + '</span>').join('');
+        const falsePositive = (record.false_positive_checks || []).join('；');
         return '<tr>' +
           '<td><strong>' + record.manual_rank + '</strong><div class="small">' + escapeHtml(record.manual_tier) + '</div></td>' +
           '<td><span class="badge ' + record.priority.toLowerCase() + '">' + escapeHtml(record.priority) + '</span></td>' +
-          '<td>' + escapeHtml(record.score) + '<div class="small">LLM #' + escapeHtml(record.rank) + '</div><div class="small">' + escapeHtml(recall) + '</div></td>' +
+          '<td>' + escapeHtml(record.score) + '<div class="small">LLM #' + escapeHtml(record.rank) + '</div></td>' +
           '<td><strong>' + escapeHtml(record.title) + '</strong><div class="small">' + escapeHtml(record.day_label) + '</div></td>' +
-          '<td><div class="tags">' + tags + '</div><div class="small">' + escapeHtml(record.manual_bucket) + '</div><div class="small">' + escapeHtml(record.evidence_level || '') + '</div></td>' +
-          '<td><div>' + escapeHtml((record.reasons || []).join('；')) + '</div><div class="tags">' + evidence + '</div><div class="small">' + escapeHtml(downgrade) + '</div><div class="path">IMA 目录: ' + escapeHtml(record.ima_directory) + '</div><div class="path">IMA 文件: ' + escapeHtml(record.ima_file) + '</div><div class="path">本地路径: ' + escapeHtml(record.local_download_path) + '</div><div class="small">' + link + '</div></td>' +
+          '<td><div class="tags">' + tags + '</div><div class="small">' + escapeHtml(record.manual_bucket) + '</div></td>' +
+          '<td><div>' + escapeHtml((record.reasons || []).join('；')) + '</div>' +
+            (record.executive_summary ? '<p class="ima-summary"><strong>IMA摘要：</strong>' + escapeHtml(record.executive_summary) + '</p>' : '') +
+            ((record.key_findings || []).length ? '<ul class="findings">' + record.key_findings.map((item) => '<li>' + escapeHtml(item) + '</li>').join('') + '</ul>' : '') +
+            '<div class="tags">' + evidence + '</div><div class="small">' + escapeHtml(falsePositive) + '</div><div class="path">IMA 目录: ' + escapeHtml(record.ima_directory) + '</div><div class="path">IMA 文件: ' + escapeHtml(record.ima_file) + '</div><div class="path">本地路径: ' + escapeHtml(record.local_download_path) + '</div><div class="small">' + link + '</div></td>' +
           '</tr>';
       }).join('');
     }
-    for (const key of ['priority', 'bucket', 'topic', 'month', 'dayFolder']) {
+    for (const key of ['priority', 'bucket', 'topic', 'month', 'dayFolder', 'localStatus']) {
       els[key].addEventListener('change', () => {
         state[key] = els[key].value;
         renderRows();

@@ -5,6 +5,8 @@ const {
   buildSnapshot,
   buildPending,
   audit,
+  parseStrictJson,
+  mapBatchReports,
 } = require('../scripts/report-summaries.cjs');
 
 function indexRecord(number = 1) {
@@ -72,11 +74,28 @@ test('accepts valid v2 and preserves download identity', () => {
   assert.equal(result.saved_path, '/tmp/报告1.pdf');
 });
 
-test('rejects invalid report type and content tag', () => {
+test('preserves exact answer source title across snapshot revalidation', () => {
+  const raw = {
+    ...validRecord(),
+    source_count: 72,
+    source_titles: [],
+    source_title: '报告1.pdf',
+  };
+  const firstPass = validateAndNormalizeSuccess(raw, indexRecord());
+  const secondPass = validateAndNormalizeSuccess(firstPass, indexRecord());
+  assert.equal(firstPass.source_title, '报告1.pdf');
+  assert.equal(secondPass.source_match, true);
+  assert.equal(secondPass.status, 'reviewed');
+});
+
+test('normalizes invalid report type and preserves unknown content tags as warnings', () => {
   const raw = { ...validRecord(), report_type: 'equity', content_tags: ['financials', 'ai_theme'] };
   const result = validateAndNormalizeSuccess(raw, indexRecord());
-  assert.equal(result.status, 'UNREVIEWED');
-  assert.deepEqual(result.validation_errors, ['INVALID_REPORT_TYPE', 'INVALID_CONTENT_TAG']);
+  assert.equal(result.status, 'reviewed');
+  assert.equal(result.report_type, 'other');
+  assert.deepEqual(result.content_tags, ['financials', 'ai_theme']);
+  assert.ok(result.validation_warnings.includes('report_type_normalized_to_other:equity'));
+  assert.ok(result.validation_warnings.includes('unknown_content_tags_preserved:ai_theme'));
 });
 
 test('deterministically truncates capped arrays and records warnings', () => {
@@ -123,20 +142,17 @@ test('snapshot has one authoritative row per index record', () => {
   assert.equal(report.complete_accounting, true);
 });
 
-test('browser parser accepts complete fenced JSON and strips citation glyphs', async () => {
-  const { parseStrictJson } = await import('../scripts/ima-browser-summary-runner.mjs');
+test('answer parser accepts complete fenced JSON and strips citation glyphs', () => {
   const parsed = parseStrictJson('```json\n{"report_type":"company","evidence":[{"quote":"原文\\uE001"}]}\n```');
   assert.equal(parsed.report_type, 'company');
   assert.equal(parsed.evidence[0].quote, '原文');
 });
 
-test('browser parser rejects trailing prose', async () => {
-  const { parseStrictJson } = await import('../scripts/ima-browser-summary-runner.mjs');
+test('answer parser rejects trailing prose', () => {
   assert.throws(() => parseStrictJson('{"report_type":"company"}\n完成'), SyntaxError);
 });
 
-test('batch parser maps reports by exact source_title rather than array order', async () => {
-  const { mapBatchReports } = await import('../scripts/ima-browser-summary-runner.mjs');
+test('batch parser maps reports by exact source_title rather than array order', () => {
   const result = mapBatchReports({
     reports: [
       { source_title: '报告3.pdf', research_subject: '主体3' },
@@ -147,8 +163,7 @@ test('batch parser maps reports by exact source_title rather than array order', 
   assert.deepEqual(result.map((item) => item.report.research_subject), ['主体1', '主体2', '主体3']);
 });
 
-test('batch parser isolates missing and duplicate titles to affected reports', async () => {
-  const { mapBatchReports } = await import('../scripts/ima-browser-summary-runner.mjs');
+test('batch parser isolates missing and duplicate titles to affected reports', () => {
   const result = mapBatchReports({
     reports: [
       { source_title: '报告1.pdf' },
@@ -161,8 +176,7 @@ test('batch parser isolates missing and duplicate titles to affected reports', a
   assert.equal(result[2].failure_code, 'BATCH_REPORT_MISSING');
 });
 
-test('batch parser enforces per-report caps without blocking other reports', async () => {
-  const { mapBatchReports } = await import('../scripts/ima-browser-summary-runner.mjs');
+test('batch parser enforces per-report caps without blocking other reports', () => {
   const reports = [1, 2, 3].map((number) => ({
     source_title: `报告${number}.pdf`,
     key_findings: Array.from({ length: 5 }, (_, index) => `结论${index}`),
@@ -178,4 +192,19 @@ test('batch parser enforces per-report caps without blocking other reports', asy
   assert.ok(result[0].warnings.includes('batch_data_points_truncated:6->4'));
   assert.ok(result[1].report);
   assert.ok(result[2].report);
+});
+
+test('batch parser supports five reports and records the expected count in warnings', () => {
+  const expected = Array.from({ length: 5 }, (_, index) => `报告${index + 1}.pdf`);
+  const reports = expected.map((sourceTitle) => ({
+    source_title: sourceTitle,
+    executive_summary: `${sourceTitle}摘要`,
+  }));
+  const complete = mapBatchReports({ reports }, expected);
+  assert.equal(complete.length, 5);
+  assert.ok(complete.every((item) => item.report && item.warnings.length === 0));
+
+  const incomplete = mapBatchReports({ reports: reports.slice(0, 4) }, expected);
+  assert.equal(incomplete[4].failure_code, 'BATCH_REPORT_MISSING');
+  assert.ok(incomplete[0].warnings.includes('batch_report_count:4->5'));
 });

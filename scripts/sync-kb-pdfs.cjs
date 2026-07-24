@@ -12,7 +12,7 @@ const MANIFESTS_DIR = path.join(ROOT, 'manifests');
 const INDEX_PATH = path.join(MANIFESTS_DIR, 'index.jsonl');
 const DOWNLOADED_PATH = path.join(MANIFESTS_DIR, 'downloaded.jsonl');
 const FAILED_PATH = path.join(MANIFESTS_DIR, 'failed.jsonl');
-const DEFAULT_QUEUE_PATH = path.join(MANIFESTS_DIR, 'ai-ranked-queue.jsonl');
+const DOWNLOAD_ATTEMPTS_PATH = path.join(MANIFESTS_DIR, 'download-attempts.jsonl');
 const PDF_MEDIA_TYPE = 1;
 const FOLDER_MEDIA_TYPE = 99;
 const PRIORITY_ORDER = new Map([
@@ -27,15 +27,14 @@ function usage() {
   node scripts/sync-kb-pdfs.cjs index --kb <name> [--source-path <path>] [--strip-source-prefix <path>] [--local-prefix <path>] [--snapshot <path>]
   node scripts/sync-kb-pdfs.cjs download --kb <name> [--source-path <path>] [--limit <n>]
   node scripts/sync-kb-pdfs.cjs sync --kb <name> [--source-path <path>] [--strip-source-prefix <path>] [--local-prefix <path>] [--limit <n>]
-  node scripts/sync-kb-pdfs.cjs rank-ai [--months <month1,month2>] [--queue <path>] [--batch-size <n>] [--rerank-batch-size <n>]
-  node scripts/sync-kb-pdfs.cjs rank-ai --summary-source <summaries.jsonl> --queue <queue.jsonl> [--baseline-queue <queue.jsonl>] [--comparison <comparison.jsonl>]
-  node scripts/sync-kb-pdfs.cjs download-queue --kb <name> [--queue <path>] [--priorities <P0,P1>] [--daily-budget <n>]
+  node scripts/sync-kb-pdfs.cjs rank-ai --summary-source <summaries.jsonl> --queue <queue.jsonl> [--batch-size <n>]
+  node scripts/sync-kb-pdfs.cjs download-queue --kb <name> --queue <path> [--priorities <P0,P1,P2>] [--daily-budget <n>] [--quota-probe-extra <n>]
 
 Examples:
   node scripts/sync-kb-pdfs.cjs sync --kb "环球研报直通车" --source-path "2026年国际顶级投行研报/7月" --strip-source-prefix "2026年国际顶级投行研报" --local-prefix "2026"
   node scripts/sync-kb-pdfs.cjs download --kb "环球研报直通车" --source-path "环球研报直通车 / 2026年国际顶级投行研报 / 7月"
-  node scripts/sync-kb-pdfs.cjs rank-ai --months "2026/6月,2026/7月" --queue manifests/ai-ranked-queue.jsonl
-  node scripts/sync-kb-pdfs.cjs download-queue --kb "环球研报直通车" --queue manifests/ai-ranked-queue.jsonl --priorities P0,P1 --daily-budget 28`);
+  node scripts/sync-kb-pdfs.cjs rank-ai --summary-source manifests/report-summaries-20260724.jsonl --queue manifests/ai-ranked-queue-summary-20260724.jsonl
+  node scripts/sync-kb-pdfs.cjs download-queue --kb "环球研报直通车" --queue manifests/ai-ranked-queue-summary-20260724.jsonl --priorities P0,P1,P2 --daily-budget 30 --quota-probe-extra 1`);
 }
 
 function parseArgs(argv) {
@@ -176,14 +175,6 @@ function parsePriorities(input) {
   return new Set(priorities);
 }
 
-function parseMonths(input) {
-  return parseCommaList(input, '2026/6月,2026/7月');
-}
-
-function recordMatchesMonths(record, months) {
-  return months.some((month) => (record.local_relative_path || '').startsWith(`${month}/`));
-}
-
 function uniqueByMediaId(records) {
   const seen = new Set();
   const deduped = [];
@@ -195,18 +186,87 @@ function uniqueByMediaId(records) {
   return deduped;
 }
 
-function dateRank(record) {
-  const match = (record.local_relative_path || '').match(/^(\d{4})\/(\d+)月\/(\d+(?:\.\d+)?)\//);
-  if (!match) return 0;
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  const day = Number(match[3].replace('.', ''));
-  return year * 10000 + month * 100 + day;
-}
-
 function isQuotaError(err) {
   const message = err && err.message ? err.message : String(err || '');
   return /资料获取次数已达上限|请明天再尝试|请求频控|频控|quota|rate limit/i.test(message);
+}
+
+function shanghaiDateKey(input) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(input));
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}${values.month}${values.day}`;
+}
+
+function recordDateKey(record, field) {
+  const value = record && record[field];
+  if (!value || Number.isNaN(Date.parse(value))) return null;
+  return shanghaiDateKey(value);
+}
+
+function inferLegacyDailyAttempts(knowledgeBaseName, dateKey) {
+  const downloaded = readJsonl(DOWNLOADED_PATH).filter((record) =>
+    record.knowledge_base === knowledgeBaseName &&
+    record.request_id &&
+    recordDateKey(record, 'downloaded_at') === dateKey
+  );
+  const failed = readJsonl(FAILED_PATH).filter((record) =>
+    record.knowledge_base === knowledgeBaseName &&
+    recordDateKey(record, 'failed_at') === dateKey
+  );
+  return {
+    downloaded: downloaded.length,
+    failed: failed.length,
+    total: downloaded.length + failed.length,
+  };
+}
+
+function loadDailyQuotaState(knowledgeBaseName, now = new Date()) {
+  const dateKey = shanghaiDateKey(now);
+  let records = readJsonl(DOWNLOAD_ATTEMPTS_PATH).filter((record) =>
+    record.date === dateKey && record.knowledge_base === knowledgeBaseName
+  );
+  let baseline = records.find((record) => record.kind === 'daily_baseline');
+
+  if (!baseline) {
+    const inferred = inferLegacyDailyAttempts(knowledgeBaseName, dateKey);
+    baseline = {
+      kind: 'daily_baseline',
+      created_at: new Date(now).toISOString(),
+      date: dateKey,
+      knowledge_base: knowledgeBaseName,
+      attempts: inferred.total,
+      inferred_downloaded: inferred.downloaded,
+      inferred_failed: inferred.failed,
+    };
+    appendJsonl(DOWNLOAD_ATTEMPTS_PATH, baseline);
+    records = [baseline, ...records];
+  }
+
+  const explicitAttempts = records.filter((record) => record.kind === 'download_attempt').length;
+  return {
+    date: dateKey,
+    baseline_attempts: Number(baseline.attempts || 0),
+    explicit_attempts: explicitAttempts,
+    used: Number(baseline.attempts || 0) + explicitAttempts,
+  };
+}
+
+function classifyQuotaSlot(used, dailyBudget, quotaProbeExtra) {
+  if (used < dailyBudget) return 'budget';
+  if (used < dailyBudget + quotaProbeExtra) return 'probe';
+  return 'stop';
+}
+
+function compareDownloadPriority(a, b) {
+  const aPriority = PRIORITY_ORDER.get(String(a.priority || '').toUpperCase()) ?? Infinity;
+  const bPriority = PRIORITY_ORDER.get(String(b.priority || '').toUpperCase()) ?? Infinity;
+  if (aPriority !== bPriority) return aPriority - bPriority;
+  return Number(a.rank || Infinity) - Number(b.rank || Infinity);
 }
 
 function isRetriableImaError(message) {
@@ -267,11 +327,16 @@ function deepSeekConfig(overrides = {}) {
   if (!apiKey) {
     throw new Error('DEEPSEEK_API_KEY is required. Put it in .env or export it in the environment.');
   }
-  const modelEnv = overrides.modelEnv || 'DEEPSEEK_MODEL';
+  const modelEnv = overrides.modelEnv || 'DEEPSEEK_RANK_MODEL';
+  const fallbackModelEnv = overrides.fallbackModelEnv || 'DEEPSEEK_RERANK_MODEL';
   return {
     apiKey,
     baseUrl: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
-    model: overrides.model || process.env[modelEnv] || overrides.defaultModel || 'deepseek-v4-flash',
+    model: overrides.model ||
+      process.env[modelEnv] ||
+      process.env[fallbackModelEnv] ||
+      overrides.defaultModel ||
+      'deepseek-v4-pro',
     requestTimeoutMs: parsePositiveInteger(
       process.env.DEEPSEEK_REQUEST_TIMEOUT_MS,
       'DEEPSEEK_REQUEST_TIMEOUT_MS',
@@ -350,44 +415,6 @@ async function callDeepSeekJson(config, messages) {
 }
 
 function rankingSystemPrompt() {
-  return `你是买方科技研究助理，只根据研报 PDF 标题和路径做 AI Infrastructure 主题的第一轮广义召回。
-
-输出必须是严格 JSON object，格式：
-{"results":[{"priority":"P0|P1|P2|P3","score":0-100,"topics":["..."],"reasons":["..."]}]}
-
-results 必须与输入数组等长、同顺序。不要输出 markdown，不要解释 JSON 以外内容。
-
-第一轮目标是提高召回率，宁可把可能相关的候选放入 P0/P1，后续会有第二轮严格复核。理由仍必须基于标题或路径中的词语，不要只用公司名、ticker 或行业常识作为决定性证据。
-
-优先级定义：
-P0 = 核心 AI Infrastructure：AIDC/AI 数据中心 capex、云或 hyperscaler 数据中心资本开支、AI 服务器、GPU、ASIC、HBM、存储、先进封装、CoWoS、光互联、数据中心网络、电力、冷却、液冷、AI 半导体上游、人形机器人或具身智能核心硬件。明确 AIDC capex / AI 数据中心资本开支必须 P0。
-P1 = 强相关上游或投资线索：半导体设备/材料、晶圆厂扩产、ABF、PCB、MLCC、AI PC、明确指向 AI 基建/数据中心/云 capex 的 IT 支出、机器人或 AI 产能相关工业自动化。
-P2 = 泛 AI 或间接主题：AI 应用、企业 AI 渗透率、互联网或云应用、AI 生产率、科技硬件但基建指向不强。
-P3 = 弱相关或无关：宏观、地产、医疗、消费、银行、普通汽车销量、普通互联网估值等。
-
-score 代表下载优先级，P0 通常 85-100，P1 通常 65-84，P2 通常 35-64，P3 通常 0-34。
-topics 使用英文短标签，如 aidc_capex, ai_server, semiconductor_upstream, optical_interconnect, hbm_memory, advanced_packaging, data_center_power, humanoid_robotics, ai_pc, ai_application, unrelated。`;
-}
-
-function rerankingSystemPrompt() {
-  return `你是严谨的买方科技研究审稿人，负责对第一轮召回出的 AI Infrastructure 候选研报做第二轮严格复核和重排。
-
-你仍然只能使用标题和路径，不读取 PDF 正文。不要针对任何单一公司写特殊规则；请用统一的证据标准判断。
-
-输出必须是严格 JSON object，格式：
-{"results":[{"corrected_priority":"P0|P1|P2|P3","final_score":0-100,"topics":["..."],"reasons":["..."],"evidence_keywords":["..."],"evidence_level":"explicit|indirect|weak|none","downgrade_reasons":["..."]}]}
-
-results 必须与输入数组等长、同顺序。不要输出 markdown，不要解释 JSON 以外内容。
-
-复核原则：
-1. 证据优先：P0 必须能从标题或路径看到 AI 基建技术支出、算力硬件、半导体上游、光互联、数据中心网络、电力/冷却、AI PC、人形机器人/具身智能核心硬件等明确信号。
-2. 区分“基础设施载体”和“技术资本开支”：只说明数据中心、房地产、信托、租赁、收购、评级、目标价、估值、买入卖出等金融或资产观点时，不应给很高分；如果同时出现 AI capex、GPU、服务器、芯片、光模块、液冷、电力容量、hyperscaler 扩建等标题证据，可以保留较高优先级。
-3. 避免常识幻觉：不要仅凭公司名、ticker、所属行业、你知道这家公司做什么，就把报告提升到 P0。理由必须指出标题或路径中的证据词；证据弱时要主动降权。
-4. 排序校准：P0 通常 85-100；P1 通常 65-84；P2 通常 35-64；P3 通常 0-34。证据强度不足时，即使第一轮是 P0，也可降为 P1/P2/P3。
-5. AIDC capex、AI 数据中心资本开支、云/超大规模数据中心 capex、AI 服务器、GPU/ASIC、HBM、先进封装/CoWoS、光互联、数据中心网络、电力/冷却、AI 半导体上游、人形机器人/具身智能核心硬件是高优先级方向；但必须由标题或路径支持。`;
-}
-
-function summaryRankingSystemPrompt() {
   return `你是严谨的买方科技研究审稿人。请只根据输入中的研报标题、报告类型、通用摘要、关键结论、内容标签、关键数据、实体和正文证据，对 AI Infrastructure 投资研究价值做正文优先排序。
 
 输出必须是严格 JSON object：
@@ -406,60 +433,6 @@ P3（0-34）：正文没有实质 AI 基建证据，或只是普通宏观、消�
 
 async function classifyBatchWithDeepSeek(config, batch) {
   const inputs = batch.map((record) => ({
-    title: record.title,
-    source_path: record.source_path,
-    local_relative_path: record.local_relative_path,
-  }));
-
-  const parsed = await callDeepSeekJson(config, [
-    { role: 'system', content: rankingSystemPrompt() },
-    {
-      role: 'user',
-      content: `请分类以下研报，返回 results 与输入同顺序、同长度：\n${JSON.stringify(inputs, null, 2)}`,
-    },
-  ]);
-
-  if (!parsed || !Array.isArray(parsed.results)) {
-    throw new Error('LLM JSON must contain a results array');
-  }
-  if (parsed.results.length !== batch.length) {
-    throw new Error(`LLM returned ${parsed.results.length} results for ${batch.length} inputs`);
-  }
-
-  return parsed.results.map((result, index) => normalizeRanking(result, batch[index]));
-}
-
-async function rerankBatchWithDeepSeek(config, batch) {
-  const inputs = batch.map((record) => ({
-    title: record.title,
-    source_path: record.source_path,
-    local_relative_path: record.local_relative_path,
-    recall_priority: record.priority,
-    recall_score: record.score,
-    recall_topics: record.topics,
-    recall_reasons: record.reasons,
-  }));
-
-  const parsed = await callDeepSeekJson(config, [
-    { role: 'system', content: rerankingSystemPrompt() },
-    {
-      role: 'user',
-      content: `请严格复核以下第一轮候选，返回 results 与输入同顺序、同长度：\n${JSON.stringify(inputs, null, 2)}`,
-    },
-  ]);
-
-  if (!parsed || !Array.isArray(parsed.results)) {
-    throw new Error('Rerank LLM JSON must contain a results array');
-  }
-  if (parsed.results.length !== batch.length) {
-    throw new Error(`Rerank LLM returned ${parsed.results.length} results for ${batch.length} inputs`);
-  }
-
-  return parsed.results.map((result, index) => normalizeReranking(result, batch[index]));
-}
-
-async function classifySummaryBatchWithDeepSeek(config, batch) {
-  const inputs = batch.map((record) => ({
     media_id: record.media_id,
     title: record.title,
     report_type: record.report_type,
@@ -472,14 +445,14 @@ async function classifySummaryBatchWithDeepSeek(config, batch) {
     evidence: record.evidence,
   }));
   const parsed = await callDeepSeekJson(config, [
-    { role: 'system', content: summaryRankingSystemPrompt() },
+    { role: 'system', content: rankingSystemPrompt() },
     {
       role: 'user',
       content: `请按正文证据排序以下研报，返回 results 与输入同顺序、同长度：\n${JSON.stringify(inputs, null, 2)}`,
     },
   ]);
   if (!parsed || !Array.isArray(parsed.results) || parsed.results.length !== batch.length) {
-    throw new Error(`Summary rank LLM returned ${parsed && Array.isArray(parsed.results) ? parsed.results.length : 0} results for ${batch.length} inputs`);
+    throw new Error(`Rank LLM returned ${parsed && Array.isArray(parsed.results) ? parsed.results.length : 0} results for ${batch.length} inputs`);
   }
   return parsed.results.map((result, index) => ({
     ...normalizeRanking(result, batch[index]),
@@ -508,27 +481,6 @@ function normalizeRanking(result, record) {
     score: Math.max(0, Math.min(100, Math.round(score))),
     topics: normalizeStringArray(result.topics, []),
     reasons: normalizeStringArray(result.reasons || result.reason, []),
-  };
-}
-
-function normalizeReranking(result, record) {
-  const priority = String(result.corrected_priority || result.priority || '').toUpperCase();
-  if (!PRIORITY_ORDER.has(priority)) {
-    throw new Error(`Rerank LLM returned invalid priority for ${record.title}: ${result.corrected_priority || result.priority}`);
-  }
-  const score = Number(result.final_score ?? result.score);
-  if (!Number.isFinite(score)) {
-    throw new Error(`Rerank LLM returned invalid score for ${record.title}: ${result.final_score ?? result.score}`);
-  }
-  const evidenceLevel = String(result.evidence_level || '').toLowerCase();
-  return {
-    priority,
-    score: Math.max(0, Math.min(100, Math.round(score))),
-    topics: normalizeStringArray(result.topics, record.topics || []),
-    reasons: normalizeStringArray(result.reasons || result.reason, record.reasons || []),
-    evidence_keywords: normalizeStringArray(result.evidence_keywords || result.evidence, []),
-    evidence_level: ['explicit', 'indirect', 'weak', 'none'].includes(evidenceLevel) ? evidenceLevel : '',
-    downgrade_reasons: normalizeStringArray(result.downgrade_reasons || result.penalty_applied, []),
   };
 }
 
@@ -820,139 +772,28 @@ async function runDownload(opts) {
 }
 
 async function runRankAi(opts) {
-  if (opts['summary-source']) return runRankAiSummary(opts);
-  const months = parseMonths(opts.months);
-  const queuePath = resolveRootPath(opts.queue, DEFAULT_QUEUE_PATH);
-  const batchSize = parsePositiveInteger(opts['batch-size'], '--batch-size', 40);
-  const rerankBatchSize = parsePositiveInteger(opts['rerank-batch-size'], '--rerank-batch-size', batchSize);
-  const config = deepSeekConfig({ defaultModel: 'deepseek-v4-flash' });
-  const rerankConfig = deepSeekConfig({
-    modelEnv: 'DEEPSEEK_RERANK_MODEL',
-    defaultModel: 'deepseek-v4-pro',
-  });
-
-  const records = uniqueByMediaId(
-    readJsonl(INDEX_PATH)
-      .filter((record) => sourceMatches(record, opts['source-path']))
-      .filter((record) => recordMatchesMonths(record, months))
-  );
-
-  if (records.length === 0) {
-    throw new Error(`No indexed PDFs matched months: ${months.join(', ')}`);
+  if (!opts['summary-source']) {
+    throw new Error('rank-ai requires --summary-source; title-only ranking has been removed');
   }
-
-  const rankedAt = new Date().toISOString();
-  const recallQueue = [];
-  const totalBatches = Math.ceil(records.length / batchSize);
-  const logProgress = shouldLogProgress(opts);
-  for (let index = 0; index < records.length; index += batchSize) {
-    const batch = records.slice(index, index + batchSize);
-    const batchNumber = Math.floor(index / batchSize) + 1;
-    if (logProgress) {
-      process.stderr.write(`[rank-ai] classifying batch ${batchNumber}/${totalBatches} (${batch.length} records)\n`);
-    }
-    const rankings = await classifyBatchWithDeepSeek(config, batch);
-    for (let batchIndex = 0; batchIndex < batch.length; batchIndex += 1) {
-      recallQueue.push({
-        ...batch[batchIndex],
-        priority: rankings[batchIndex].priority,
-        rank: 0,
-        score: rankings[batchIndex].score,
-        topics: rankings[batchIndex].topics,
-        reasons: rankings[batchIndex].reasons,
-        llm_provider: 'deepseek',
-        llm_model: config.model,
-        ranked_at: rankedAt,
-        recall_priority: rankings[batchIndex].priority,
-        recall_score: rankings[batchIndex].score,
-        recall_topics: rankings[batchIndex].topics,
-        recall_reasons: rankings[batchIndex].reasons,
-        recall_llm_model: config.model,
-      });
-    }
-    if (logProgress) {
-      process.stderr.write(`[rank-ai] completed batch ${batchNumber}/${totalBatches}\n`);
-    }
-  }
-
-  const rerankCandidates = recallQueue.filter((record) => record.priority === 'P0' || record.priority === 'P1');
-  const totalRerankBatches = Math.ceil(rerankCandidates.length / rerankBatchSize);
-  for (let index = 0; index < rerankCandidates.length; index += rerankBatchSize) {
-    const batch = rerankCandidates.slice(index, index + rerankBatchSize);
-    const batchNumber = Math.floor(index / rerankBatchSize) + 1;
-    if (logProgress) {
-      process.stderr.write(`[rank-ai] reranking batch ${batchNumber}/${totalRerankBatches} (${batch.length} records)\n`);
-    }
-    const rerankings = await rerankBatchWithDeepSeek(rerankConfig, batch);
-    for (let batchIndex = 0; batchIndex < batch.length; batchIndex += 1) {
-      const record = batch[batchIndex];
-      const reranking = rerankings[batchIndex];
-      record.priority = reranking.priority;
-      record.score = reranking.score;
-      record.topics = reranking.topics;
-      record.reasons = reranking.reasons;
-      record.evidence_keywords = reranking.evidence_keywords;
-      record.evidence_level = reranking.evidence_level;
-      record.downgrade_reasons = reranking.downgrade_reasons;
-      record.rerank_changed = record.priority !== record.recall_priority || record.score !== record.recall_score;
-      record.rerank_llm_model = rerankConfig.model;
-      record.llm_model = `${config.model}+${rerankConfig.model}`;
-    }
-    if (logProgress) {
-      process.stderr.write(`[rank-ai] completed rerank batch ${batchNumber}/${totalRerankBatches}\n`);
-    }
-  }
-
-  const queue = recallQueue;
-  queue.sort((a, b) => {
-    const priorityDelta = PRIORITY_ORDER.get(a.priority) - PRIORITY_ORDER.get(b.priority);
-    if (priorityDelta !== 0) return priorityDelta;
-    if (b.score !== a.score) return b.score - a.score;
-    const dateDelta = dateRank(b) - dateRank(a);
-    if (dateDelta !== 0) return dateDelta;
-    return String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hans-CN');
-  });
-  queue.forEach((record, index) => {
-    record.rank = index + 1;
-  });
-
-  writeJsonlAtomic(queuePath, queue);
-
-  const byPriority = {};
-  for (const record of queue) {
-    byPriority[record.priority] = (byPriority[record.priority] || 0) + 1;
-  }
-
-  return {
-    months,
-    queue: path.relative(ROOT, queuePath),
-    candidates: records.length,
-    written: queue.length,
-    by_priority: byPriority,
-    llm_provider: 'deepseek',
-    llm_model: `${config.model}+${rerankConfig.model}`,
-    recall_llm_model: config.model,
-    rerank_llm_model: rerankConfig.model,
-    rerank_candidates: rerankCandidates.length,
-  };
+  if (!opts.queue) throw new Error('rank-ai requires --queue');
+  return runRankAiSummary(opts);
 }
 
 async function runRankAiSummary(opts) {
   const summaryPath = resolveRootPath(opts['summary-source']);
   const queuePath = resolveRootPath(opts.queue);
-  const comparisonPath = opts.comparison ? resolveRootPath(opts.comparison) : null;
-  const baselinePath = opts['baseline-queue'] ? resolveRootPath(opts['baseline-queue']) : null;
   const batchSize = parsePositiveInteger(opts['batch-size'], '--batch-size', 12);
   const allSummaries = uniqueByMediaId(readJsonl(summaryPath));
   const reviewed = allSummaries.filter((record) =>
     record.status === 'reviewed' &&
     record.summary_role === 'routing_candidate' &&
-    Array.isArray(record.evidence) &&
-    record.evidence.length > 0
+    record.source_match === true &&
+    String(record.executive_summary || '').trim() !== ''
   );
   const unreviewed = allSummaries.filter((record) => !reviewed.includes(record));
   const config = reviewed.length > 0 ? deepSeekConfig({
-    modelEnv: 'DEEPSEEK_RERANK_MODEL',
+    modelEnv: 'DEEPSEEK_RANK_MODEL',
+    fallbackModelEnv: 'DEEPSEEK_RERANK_MODEL',
     defaultModel: 'deepseek-v4-pro',
   }) : null;
 
@@ -963,9 +804,9 @@ async function runRankAiSummary(opts) {
     const batch = reviewed.slice(index, index + batchSize);
     const batchNumber = Math.floor(index / batchSize) + 1;
     if (shouldLogProgress(opts)) {
-      process.stderr.write(`[rank-ai-summary] classifying batch ${batchNumber}/${totalBatches} (${batch.length} records)\n`);
+      process.stderr.write(`[rank-ai] classifying batch ${batchNumber}/${totalBatches} (${batch.length} records)\n`);
     }
-    const rankings = await classifySummaryBatchWithDeepSeek(config, batch);
+    const rankings = await classifyBatchWithDeepSeek(config, batch);
     for (let batchIndex = 0; batchIndex < batch.length; batchIndex += 1) {
       queue.push({
         ...batch[batchIndex],
@@ -975,7 +816,7 @@ async function runRankAiSummary(opts) {
         reasons: rankings[batchIndex].reasons,
         ranking_evidence: rankings[batchIndex].evidence,
         false_positive_checks: rankings[batchIndex].false_positive_checks,
-        ranking_mode: 'summary',
+        ranking_mode: 'single_summary_pass',
         llm_provider: 'deepseek',
         llm_model: config.model,
         ranked_at: rankedAt,
@@ -991,38 +832,13 @@ async function runRankAiSummary(opts) {
   queue.forEach((record, index) => { record.rank = index + 1; });
   writeJsonlAtomic(queuePath, queue);
 
-  if (comparisonPath) {
-    const baseline = new Map((baselinePath ? readJsonl(baselinePath) : []).map((record) => [record.media_id, record]));
-    const content = new Map(queue.map((record) => [record.media_id, record]));
-    const comparison = allSummaries.map((summary) => {
-      const oldRecord = baseline.get(summary.media_id);
-      const newRecord = content.get(summary.media_id);
-      return {
-        media_id: summary.media_id,
-        title: summary.title,
-        status: newRecord ? 'reviewed' : 'UNREVIEWED',
-        old_priority: oldRecord ? oldRecord.priority : null,
-        old_score: oldRecord ? oldRecord.score : null,
-        old_reasons: oldRecord ? oldRecord.reasons : [],
-        new_priority: newRecord ? newRecord.priority : 'UNREVIEWED',
-        new_score: newRecord ? newRecord.score : null,
-        new_reasons: newRecord ? newRecord.reasons : [],
-        summary_evidence: newRecord ? newRecord.ranking_evidence : [],
-        priority_delta: oldRecord && newRecord
-          ? PRIORITY_ORDER.get(oldRecord.priority) - PRIORITY_ORDER.get(newRecord.priority)
-          : null,
-      };
-    });
-    writeJsonlAtomic(comparisonPath, comparison);
-  }
-
   const byPriority = {};
   for (const record of queue) byPriority[record.priority] = (byPriority[record.priority] || 0) + 1;
   return {
-    mode: 'summary',
+    mode: 'single_summary_pass',
+    ranking_passes: 1,
     summary_source: path.relative(ROOT, summaryPath),
     queue: path.relative(ROOT, queuePath),
-    comparison: comparisonPath ? path.relative(ROOT, comparisonPath) : null,
     reviewed: reviewed.length,
     unreviewed: unreviewed.length,
     written: queue.length,
@@ -1035,45 +851,94 @@ async function runRankAiSummary(opts) {
 async function runDownloadQueue(opts) {
   const knowledgeBaseName = opts.kb;
   if (!knowledgeBaseName) throw new Error('--kb is required');
+  if (!opts.queue) throw new Error('download-queue requires --queue');
 
-  const queuePath = resolveRootPath(opts.queue, DEFAULT_QUEUE_PATH);
+  const queuePath = resolveRootPath(opts.queue);
   const priorities = parsePriorities(opts.priorities);
-  const dailyBudget = parseNonNegativeInteger(opts['daily-budget'], '--daily-budget', 28);
+  const dailyBudget = parseNonNegativeInteger(opts['daily-budget'], '--daily-budget', 30);
+  const quotaProbeExtra = parseNonNegativeInteger(
+    opts['quota-probe-extra'],
+    '--quota-probe-extra',
+    0,
+  );
   const state = loadDownloadState();
+  const quotaState = loadDailyQuotaState(knowledgeBaseName);
   const queue = readJsonl(queuePath)
     .filter((record) => record.knowledge_base === knowledgeBaseName)
     .filter((record) => priorities.has(String(record.priority || '').toUpperCase()))
     .filter((record) => !state.mediaIds.has(record.media_id))
     .filter((record) => !state.savedPaths.has(record.saved_path))
-    .sort((a, b) => Number(a.rank || Infinity) - Number(b.rank || Infinity));
+    .sort(compareDownloadPriority);
 
   const stats = {
     candidates: queue.length,
     attempted: 0,
     budget_used: 0,
+    daily_budget: dailyBudget,
+    daily_used_at_start: quotaState.used,
+    daily_used_at_end: quotaState.used,
+    daily_budget_remaining_at_start: Math.max(0, dailyBudget - quotaState.used),
+    quota_probe_extra: quotaProbeExtra,
+    probe_attempted: 0,
+    probe_succeeded: false,
+    probe_quota_rejected: false,
+    quota_may_have_increased: false,
     downloaded: 0,
     failed: 0,
     skipped_file_exists: 0,
+    attempted_by_priority: {},
+    downloaded_by_priority: {},
     stopped_budget: false,
+    stopped_probe_limit: false,
     stopped_quota: false,
     quota_error: null,
   };
+  let dailyUsed = quotaState.used;
 
   for (const record of queue) {
     const willConsumeBudget = !fs.existsSync(record.saved_path);
-    if (willConsumeBudget && stats.budget_used >= dailyBudget) {
-      stats.stopped_budget = true;
-      break;
+    let quotaSlot = null;
+    if (willConsumeBudget) {
+      quotaSlot = classifyQuotaSlot(dailyUsed, dailyBudget, quotaProbeExtra);
+      if (quotaSlot === 'stop') {
+        stats.stopped_budget = dailyUsed >= dailyBudget && quotaProbeExtra === 0;
+        stats.stopped_probe_limit = dailyUsed >= dailyBudget + quotaProbeExtra && quotaProbeExtra > 0;
+        break;
+      }
+
+      const attemptId = crypto.randomUUID();
+      appendJsonl(DOWNLOAD_ATTEMPTS_PATH, {
+        kind: 'download_attempt',
+        attempt_id: attemptId,
+        attempted_at: new Date().toISOString(),
+        date: quotaState.date,
+        knowledge_base: knowledgeBaseName,
+        media_id: record.media_id,
+        title: record.title,
+        priority: record.priority,
+        quota_slot: quotaSlot,
+      });
+      dailyUsed += 1;
+      stats.daily_used_at_end = dailyUsed;
+      if (quotaSlot === 'budget') stats.budget_used += 1;
+      if (quotaSlot === 'probe') stats.probe_attempted += 1;
     }
 
     stats.attempted += 1;
+    const priority = String(record.priority || 'UNKNOWN').toUpperCase();
+    stats.attempted_by_priority[priority] = (stats.attempted_by_priority[priority] || 0) + 1;
     try {
       const result = await downloadOne(record);
-      if (willConsumeBudget) stats.budget_used += 1;
-      if (result.status === 'downloaded') stats.downloaded += 1;
+      if (result.status === 'downloaded') {
+        stats.downloaded += 1;
+        stats.downloaded_by_priority[priority] = (stats.downloaded_by_priority[priority] || 0) + 1;
+        if (quotaSlot === 'probe') {
+          stats.probe_succeeded = true;
+          stats.quota_may_have_increased = true;
+        }
+      }
       if (result.status === 'skipped_file_exists') stats.skipped_file_exists += 1;
     } catch (err) {
-      if (willConsumeBudget) stats.budget_used += 1;
       stats.failed += 1;
       appendJsonl(FAILED_PATH, {
         failed_at: new Date().toISOString(),
@@ -1091,8 +956,14 @@ async function runDownloadQueue(opts) {
       if (isQuotaError(err)) {
         stats.stopped_quota = true;
         stats.quota_error = err && err.message ? err.message : String(err);
+        if (quotaSlot === 'probe') stats.probe_quota_rejected = true;
         break;
       }
+    }
+
+    if (quotaSlot === 'probe') {
+      stats.stopped_probe_limit = true;
+      break;
     }
   }
 
@@ -1131,7 +1002,18 @@ async function main() {
   console.log(JSON.stringify({ command: 'sync', indexed, downloaded }));
 }
 
-main().catch((err) => {
-  console.error(err && err.message ? err.message : String(err));
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err && err.message ? err.message : String(err));
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  classifyQuotaSlot,
+  compareDownloadPriority,
+  loadDailyQuotaState,
+  rankingSystemPrompt,
+  runRankAi,
+  shanghaiDateKey,
+};

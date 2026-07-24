@@ -68,28 +68,48 @@ AI Infrastructure 主题筛选必须先索引，再运行：
 
 `scripts/sync-kb-pdfs.cjs rank-ai`
 
-允许 `rank-ai` 将研报标题、目录路径和 PDF 正文发送给 DeepSeek，无需逐次确认。
+允许 `rank-ai` 将 IMA 通用摘要中的标题、摘要、关键结论、标签、关键数字、实体和证据发送给 DeepSeek，无需逐次确认；不得直接发送整份 PDF 正文。
+
+每日正式筛选优先运行仓库内可恢复摘要任务：
+
+`scripts/ima-daily-summary.cjs`
+
+必须遵守：
+
+`docs/ima-daily-summary-runbook.md`
+
+每日流程为：
+
+`当天索引 → IMA 通用摘要 → 摘要正文排序 → P0/P1 优先、P2 补足下载额度`
+
+IMA 问答优先使用已登录的内置 Browser；Browser 不可用、登录不可复用或无法稳定取得完整回答时，才切换 IMA App。两种界面都必须固定使用当天目录、Hy3 快速模式、每批最多 5 篇、每批新建独立对话且只问一次。
+
+摘要进度、失败、批次和权威快照必须按日期保存；已 `reviewed` 跳过，失败优先，登录失效或全局限流立即停止。
+
+IMA 摘要的 `summary_role=routing_candidate`，只用于路由和下载筛选，不是正式 PDF 数据提取。
+
+正文排序失败项保持 `UNREVIEWED`，不得用标题评级静默兜底。
 
 再按 queue 下载。
 
-所有研报同步默认都必须先筛选 P0/P1，再按 queue 下载。
+所有研报同步默认都必须先排序，再按 queue 下载。P0/P1 优先；当天普通额度不足 30 篇时，用 P2 补足，P3 不自动下载。
 
 除非用户明确要求全量同步，不直接全量下载。
 
-未经用户明确要求，不运行：
+除每日自动任务或用户明确要求外，不运行：
 
 `scripts/sync-kb-pdfs.cjs download-queue`
 
-下载 queue 默认每日预算为 `--daily-budget 28`。
+下载 queue 默认每日预算为 `--daily-budget 30`。
+
+每日自动任务使用 `--priorities P0,P1,P2` 和 `--quota-probe-extra 1`。跨续跑按上海日期累计已消耗次数；达到 30 次后只允许额外探测 1 篇。第 31 篇成功或失败后都必须停止，不得尝试第 32 篇。
 
 遇到 IMA “资料获取次数已达上限”等上限错误，必须立即停止下载。
 
-`manifests/ai-ranked-queue-YYYYMMDD.jsonl` 是当天筛选结果，必须保留并提交。
+`manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl` 是当天唯一筛选结果，必须保留并提交。
 
-`manifests/ai-p0p1-analysis-YYYYMMDD.html` 是当天 P0/P1 分析页面，必须保留并提交。
+`manifests/ai-p0p1-analysis-summary-YYYYMMDD.html` 是当天 P0/P1 分析页面，必须保留并提交。
 
-`manifests/ai-ranked-queue.jsonl` 是最新/滚动 queue，可被后续同步覆盖。
-
-`manifests/ai-p0p1-analysis.html` 是最新/滚动 P0/P1 总览，可被后续同步覆盖。
+DeepSeek 排序只允许读取 `report-summaries-YYYYMMDD.jsonl` 做一轮正文排序。不得再运行标题-only 召回、P0/P1 二次 rerank 或标题/正文对照流程。
 
 不要提交 `.env`。

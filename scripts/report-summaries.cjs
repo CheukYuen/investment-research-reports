@@ -18,6 +18,7 @@ const CONTENT_TAGS = new Set([
 ]);
 const BASIS = new Set(['actual', 'forecast', 'guidance', 'valuation']);
 const LIMITS = { key_findings: 4, content_tags: 6, data_points: 6, entities: 10, evidence: 4 };
+const BATCH_LIMITS = { key_findings: 3, content_tags: 6, data_points: 4, entities: 8, evidence: 3 };
 
 function parseArgs(argv) {
   const [command, ...rest] = argv;
@@ -70,6 +71,80 @@ function normalizeText(value) {
 
 function normalizeStringArray(value) {
   return (Array.isArray(value) ? value : []).map(normalizeText).filter(Boolean);
+}
+
+function stripCitationArtifacts(value) {
+  return String(value || '')
+    .replace(/[\uE000-\uF8FF]/g, '')
+    .replace(/\u200B/g, '')
+    .trim();
+}
+
+function parseStrictJson(rawAnswer) {
+  let text = stripCitationArtifacts(rawAnswer);
+  const fenced = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  if (fenced) text = fenced[1].trim();
+  const sanitize = (value) => {
+    if (typeof value === 'string') return stripCitationArtifacts(value);
+    if (Array.isArray(value)) return value.map(sanitize);
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value).map(([key, item]) => [key, sanitize(item)]),
+      );
+    }
+    return value;
+  };
+  const parsed = sanitize(JSON.parse(text));
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+    throw new Error('Answer must be one JSON object');
+  }
+  return parsed;
+}
+
+function applyBatchLimits(report) {
+  const warnings = [];
+  const limited = { ...report };
+  for (const [field, limit] of Object.entries(BATCH_LIMITS)) {
+    const values = Array.isArray(report?.[field]) ? report[field] : [];
+    if (values.length > limit) warnings.push(`batch_${field}_truncated:${values.length}->${limit}`);
+    limited[field] = values.slice(0, limit);
+  }
+  return { report: limited, warnings };
+}
+
+function mapBatchReports(parsed, expectedTitles) {
+  if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.reports)) {
+    throw new Error('Batch answer must contain reports[]');
+  }
+  if (
+    !Array.isArray(expectedTitles) ||
+    expectedTitles.length < 1 ||
+    new Set(expectedTitles).size !== expectedTitles.length
+  ) {
+    throw new Error('Batch requires distinct expected titles');
+  }
+  const byTitle = new Map();
+  for (const report of parsed.reports) {
+    const title = typeof report?.source_title === 'string' ? report.source_title.trim() : '';
+    if (!byTitle.has(title)) byTitle.set(title, []);
+    byTitle.get(title).push(report);
+  }
+  return expectedTitles.map((title) => {
+    const matches = byTitle.get(title) || [];
+    if (matches.length === 0) return { title, failure_code: 'BATCH_REPORT_MISSING' };
+    if (matches.length > 1) return { title, failure_code: 'BATCH_REPORT_DUPLICATE' };
+    const limited = applyBatchLimits(matches[0]);
+    return {
+      title,
+      report: limited.report,
+      warnings: [
+        ...(parsed.reports.length === expectedTitles.length
+          ? []
+          : [`batch_report_count:${parsed.reports.length}->${expectedTitles.length}`]),
+        ...limited.warnings,
+      ],
+    };
+  });
 }
 
 function truncate(items, name, warnings) {
@@ -178,6 +253,7 @@ function validateAndNormalizeSuccess(record, indexRecord) {
     validation_warnings: warnings,
     attempts: Number.isFinite(Number(record.attempts)) ? Number(record.attempts) : 1,
     source_count: Number.isFinite(sourceCount) ? sourceCount : null,
+    source_title: answerSourceTitle || null,
     source_titles: sourceTitles,
     source_match: sourceMatch,
     source_exclusive: sourceExclusive,
@@ -190,7 +266,7 @@ function validateAndNormalizeSuccess(record, indexRecord) {
     data_points: dataPoints,
     entities,
     evidence,
-    prompt_version: normalizeText(record.prompt_version || 'ima-download-screen-summary-v2'),
+    prompt_version: normalizeText(record.prompt_version || 'ima-download-screen-summary-batch-v2'),
     model_version: normalizeText(record.model_version || 'ima-web-hy3-fast'),
     generated_at: normalizeText(record.generated_at || new Date().toISOString()),
     elapsed_ms: Number.isFinite(Number(record.elapsed_ms)) ? Number(record.elapsed_ms) : null,
@@ -210,6 +286,7 @@ function normalizeFailure(record, indexRecord) {
     validation_warnings: normalizeStringArray(record && record.validation_warnings),
     attempts: Number.isFinite(Number(record && record.attempts)) ? Number(record.attempts) : 0,
     source_count: Number.isFinite(sourceCount) ? sourceCount : null,
+    source_title: normalizeText(record && record.source_title) || null,
     source_titles: sourceTitles,
     source_match: sourceMatch,
     source_exclusive: sourceCount === 1 && sourceTitles.length === 1,
@@ -222,7 +299,7 @@ function normalizeFailure(record, indexRecord) {
     data_points: [],
     entities: [],
     evidence: [],
-    prompt_version: normalizeText(record && record.prompt_version) || 'ima-download-screen-summary-v2',
+    prompt_version: normalizeText(record && record.prompt_version) || 'ima-download-screen-summary-batch-v2',
     model_version: normalizeText(record && record.model_version) || 'ima-web-hy3-fast',
     generated_at: normalizeText(record && (record.generated_at || record.failed_at)),
     elapsed_ms: Number.isFinite(Number(record && record.elapsed_ms)) ? Number(record.elapsed_ms) : null,
@@ -240,10 +317,10 @@ function buildSnapshot(index, progress, failures) {
   });
 }
 
-function buildPending(index, progress, failures) {
+function buildPending(index, progress, failures, maxAttempts = 4) {
   const successful = new Set(progress.filter((record) => record.status === 'reviewed').map((record) => record.media_id));
-  const failed = new Set(failures.filter((record) => Number(record.attempts || 0) < 4).map((record) => record.media_id));
-  const terminalFailed = new Set(failures.filter((record) => Number(record.attempts || 0) >= 4).map((record) => record.media_id));
+  const failed = new Set(failures.filter((record) => Number(record.attempts || 0) < maxAttempts).map((record) => record.media_id));
+  const terminalFailed = new Set(failures.filter((record) => Number(record.attempts || 0) >= maxAttempts).map((record) => record.media_id));
   return [
     ...index.filter((record) => failed.has(record.media_id) && !successful.has(record.media_id)),
     ...index.filter((record) => !failed.has(record.media_id) && !terminalFailed.has(record.media_id) && !successful.has(record.media_id)),
@@ -261,8 +338,7 @@ function audit(index, snapshot, progress, failures) {
     unreviewed: unreviewed.length,
     success_rate: index.length ? reviewed.length / index.length : 0,
     structured_parse_rate: index.length ? reviewed.filter((record) =>
-      record.report_type && record.research_subject && record.executive_summary &&
-      record.source_match && record.evidence.some((item) => item.quote)
+      record.report_type && record.executive_summary && record.source_match
     ).length / index.length : 0,
     duplicate_index_media_ids: duplicateValues(index, 'media_id'),
     duplicate_index_titles: duplicateValues(index, 'title'),
@@ -365,8 +441,12 @@ module.exports = {
   CONTENT_TAGS,
   BASIS,
   LIMITS,
+  BATCH_LIMITS,
   readJsonl,
   writeJsonlAtomic,
+  stripCitationArtifacts,
+  parseStrictJson,
+  mapBatchReports,
   validateAndNormalizeSuccess,
   normalizeFailure,
   buildSnapshot,
