@@ -10,7 +10,7 @@
 → 逐篇写入可恢复进度
 → 生成权威日期快照
 → 基于摘要做 AI Infrastructure 正文排序
-→ 生成 P0/P1 下载候选与 HTML
+→ 生成当日排序队列并更新当月 P0–P3 HTML
 → P0/P1 优先下载，P2 补足普通额度
 ```
 
@@ -39,7 +39,7 @@ manifests/report-summary-browser-failures-YYYYMMDD.jsonl
 manifests/report-summary-batches-YYYYMMDD.jsonl
 manifests/report-summaries-YYYYMMDD.jsonl
 manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl
-manifests/ai-p0p1-analysis-summary-YYYYMMDD.html
+manifests/ai-ranking-analysis-YYYYMM.html
 ```
 
 `progress` 保存每篇完整 IMA 原始回答和结构化摘要；`failures` 保存失败原因与累计尝试次数；`batches` 保存每次 Prompt、批次文件和批次状态。三者共同构成断点，不依赖 Codex 聊天记录。
@@ -164,7 +164,7 @@ node scripts/ima-daily-summary.cjs finalize
 node scripts/ima-daily-summary.cjs status
 ```
 
-`finalize` 总是先写入一行对应一个 `media_id` 的权威摘要快照，再调用 DeepSeek 做唯一一次正文排序，并生成摘要队列和 P0/P1 HTML。不再生成标题排序基线、第二轮 rerank 或标题/正文对照。进入正文排序的最低条件是：
+`finalize` 总是先写入一行对应一个 `media_id` 的权威摘要快照，再调用 DeepSeek 做唯一一次正文排序，生成日期化摘要队列，并汇总当月所有日期化摘要队列覆盖更新月度 P0–P3 HTML。不再生成标题排序基线、第二轮 rerank 或标题/正文对照。进入正文排序的最低条件是：
 
 - `status=reviewed`；
 - `summary_role=routing_candidate`；

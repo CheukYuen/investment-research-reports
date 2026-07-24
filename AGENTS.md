@@ -108,7 +108,7 @@ IMA 摘要的 `summary_role=routing_candidate`，只用于路由和下载筛选�
 
 `manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl` 是当天唯一筛选结果，必须保留并提交。
 
-`manifests/ai-p0p1-analysis-summary-YYYYMMDD.html` 是当天 P0/P1 分析页面，必须保留并提交。
+`manifests/ai-ranking-analysis-YYYYMM.html` 是当月唯一的 P0–P3 排序页面；每日覆盖更新，必须保留并提交。
 
 DeepSeek 排序只允许读取 `report-summaries-YYYYMMDD.jsonl` 做一轮正文排序。不得再运行标题-only 召回、P0/P1 二次 rerank 或标题/正文对照流程。
 

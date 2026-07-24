@@ -58,6 +58,7 @@ test('date paths are derived from the requested day rather than a fixed experime
   const paths = pathsForDate('20260803');
   assert.match(paths.index, /index-20260803\.jsonl$/);
   assert.match(paths.summaryQueue, /ai-ranked-queue-summary-20260803\.jsonl$/);
+  assert.match(paths.summaryHtml, /ai-ranking-analysis-202608\.html$/);
   assert.equal(paths.titleQueue, undefined);
   assert.equal(paths.comparison, undefined);
 });

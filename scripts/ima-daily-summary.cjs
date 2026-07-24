@@ -121,6 +121,7 @@ function normalizeDate(input) {
 function pathsForDate(input) {
   const date = normalizeDate(input);
   const inManifests = (name) => path.join(ROOT, 'manifests', `${name}-${date.compact}`);
+  const monthCompact = date.compact.slice(0, 6);
   return {
     date,
     index: `${inManifests('index')}.jsonl`,
@@ -129,7 +130,7 @@ function pathsForDate(input) {
     summaries: `${inManifests('report-summaries')}.jsonl`,
     batches: `${inManifests('report-summary-batches')}.jsonl`,
     summaryQueue: `${inManifests('ai-ranked-queue-summary')}.jsonl`,
-    summaryHtml: `${inManifests('ai-p0p1-analysis-summary')}.html`,
+    summaryHtml: path.join(ROOT, 'manifests', `ai-ranking-analysis-${monthCompact}.html`),
   };
 }
 
@@ -575,8 +576,8 @@ function commandFinalize(paths, opts) {
     ];
     ranking = runNode(args);
     html = runNode([
-      'scripts/render-ai-p0p1-html.cjs',
-      '--queue', relative(paths.summaryQueue),
+      'scripts/render-ai-ranking-html.cjs',
+      '--month', paths.date.compact.slice(0, 6),
       '--out', relative(paths.summaryHtml),
     ]);
   }

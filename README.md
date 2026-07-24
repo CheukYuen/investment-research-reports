@@ -27,8 +27,7 @@
 | `manifests/downloaded.jsonl` | 下载成功日志 |
 | `manifests/failed.jsonl` | 下载失败日志 |
 | `manifests/download-attempts.jsonl` | 上海日期口径的下载额度与第31篇探测审计日志 |
-| `manifests/ai-p0p1-analysis.html` | 最新 P0/P1 人工查看页（可覆盖） |
-| `manifests/ai-p0p1-analysis-YYYYMMDD.html` | 当天 P0/P1 分析页（须保留并提交） |
+| `manifests/ai-ranking-analysis-YYYYMM.html` | 当月 P0–P3 排序看板；每日覆盖更新 |
 
 HTML 仅供人工复核，不是机器读取的主数据源。跨机器引用 PDF 时用 `local_relative_path`，不要依赖 `saved_path`。
 
@@ -141,13 +140,15 @@ node scripts/sync-kb-pdfs.cjs rank-ai \
   --queue manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl
 ```
 
-### 3. 生成 P0/P1 查看页（不调 DeepSeek / IMA）
+### 3. 更新当月 P0–P3 看板（不调 DeepSeek / IMA）
 
 ```bash
-node scripts/render-ai-p0p1-html.cjs \
-  --queue manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl \
-  --out manifests/ai-p0p1-analysis-summary-YYYYMMDD.html
+node scripts/render-ai-ranking-html.cjs \
+  --month YYYYMM \
+  --out manifests/ai-ranking-analysis-YYYYMM.html
 ```
+
+渲染器会自动汇总当月所有日期化 summary queue，按 `media_id` 去重，并展示 P0、P1、P2、P3 和 `UNREVIEWED`。HTML 每月只保留一份。
 
 ### 4. 按 queue 下载（耗 IMA 额度）
 
@@ -166,7 +167,7 @@ node scripts/sync-kb-pdfs.cjs download-queue \
 
 ### 提交
 
-- 当天正式结果：提交 `report-summaries-YYYYMMDD.jsonl`、`ai-ranked-queue-summary-YYYYMMDD.jsonl` 与 `ai-p0p1-analysis-summary-YYYYMMDD.html`
+- 当天正式结果：提交 `report-summaries-YYYYMMDD.jsonl`、`ai-ranked-queue-summary-YYYYMMDD.jsonl`，并更新提交 `ai-ranking-analysis-YYYYMM.html`
 - PDF 是否提交需单独确认，避免无意提交大量文件
 
 ## 仅明确要求全量时
@@ -189,7 +190,7 @@ node scripts/sync-kb-pdfs.cjs sync \
 | `CLAUDE.md` | 指向 `AGENTS.md` 的 symlink |
 | `ima-skill/` | ima OpenAPI Skill；`.claude/skills/ima-skill` 为其 symlink |
 | `scripts/sync-kb-pdfs.cjs` | 索引、排序、按 queue 下载 |
-| `scripts/render-ai-p0p1-html.cjs` | P0/P1 HTML 可视化 |
+| `scripts/render-ai-ranking-html.cjs` | 月度 P0–P3 HTML 看板 |
 | [docs/data-catalog.md](docs/data-catalog.md) | 字段、路径约定、跨项目引用 |
 
 同步与下载的完整约束（断点恢复、`media_id`、`get_media_info`、禁止自行批量 curl 等）见 [AGENTS.md](AGENTS.md)。

@@ -18,7 +18,7 @@
 - AI Infrastructure 主题排序队列：保存在 `manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl`
 - IMA 通用摘要快照：保存在 `manifests/report-summaries-YYYYMMDD.jsonl`
 - DeepSeek 基于摘要正文的一轮排序：保存在 `manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl`
-- P0/P1 人工查看页面：保存在 `manifests/ai-p0p1-analysis*.html`
+- 月度 P0–P3 排序看板：保存在 `manifests/ai-ranking-analysis-YYYYMM.html`
 
 当前快照（2026-07-06）：
 
@@ -48,7 +48,7 @@ manifests/
   report-summary-batches-YYYYMMDD.jsonl
   report-summaries-YYYYMMDD.jsonl
   ai-ranked-queue-summary-YYYYMMDD.jsonl
-  ai-p0p1-analysis-summary-YYYYMMDD.html
+  ai-ranking-analysis-YYYYMM.html
 ```
 
 项目约定保留 ima 知识库中的原始目录结构和原始文件名。其他项目引用 PDF 时，推荐使用：
@@ -237,7 +237,7 @@ const pdfPath = path.join(repoRoot, 'downloads', record.local_relative_path);
 
 旧的 `ai-ranked-queue.jsonl`、`ai-ranked-queue-YYYYMMDD.jsonl`、`ai-ranking-comparison-YYYYMMDD.jsonl` 和非 summary HTML 仅保留作历史审计，不再更新，也不得作为新流程输入。
 
-P0/P1 人工查看页面固定为 `manifests/ai-p0p1-analysis-summary-YYYYMMDD.html`。
+月度 P0–P3 排序看板固定为 `manifests/ai-ranking-analysis-YYYYMM.html`。日期化 JSONL 保留审计轨迹，HTML 每月仅维护一份并由每日任务覆盖更新。
 
 ## 推荐接入方式
 
@@ -319,12 +319,12 @@ node scripts/sync-kb-pdfs.cjs rank-ai \
   --queue manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl
 ```
 
-生成 P0/P1 查看页：
+更新当月 P0–P3 看板：
 
 ```bash
-node scripts/render-ai-p0p1-html.cjs \
-  --queue manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl \
-  --out manifests/ai-p0p1-analysis-summary-YYYYMMDD.html
+node scripts/render-ai-ranking-html.cjs \
+  --month YYYYMM \
+  --out manifests/ai-ranking-analysis-YYYYMM.html
 ```
 
 按 queue 下载 PDF：
