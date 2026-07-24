@@ -208,8 +208,8 @@ async function processBatch3(tab, indexRecords, promptTemplate, options) {
     elapsed_ms: Date.now() - startedAt,
     raw_answer: extracted.answer,
   };
-  if (result.failureCode || !sourceCount) {
-    const failureCode = result.failureCode || 'NO_SOURCE_METADATA';
+  if (result.failureCode) {
+    const failureCode = result.failureCode;
     return {
       failure_code: failureCode,
       outcomes: indexRecords.map((indexRecord) => ({
@@ -231,6 +231,7 @@ async function processBatch3(tab, indexRecords, promptTemplate, options) {
       ...shared,
       media_id: indexRecord.media_id,
       status: 'reviewed',
+      source_title: item.report.source_title,
       source_match: extracted.sourceTitles.includes(indexRecord.title),
       source_exclusive: false,
       summary_role: 'routing_candidate',

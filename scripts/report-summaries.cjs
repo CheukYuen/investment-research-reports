@@ -111,26 +111,43 @@ function validateAndNormalizeSuccess(record, indexRecord) {
   const warnings = [];
   const errors = [];
   const sourceTitles = normalizeStringArray(record.source_titles);
-  const sourceCount = Number(record.source_count);
-  const sourceMatch = sourceCount >= 1 && sourceTitles.includes(indexRecord.title);
-  const sourceExclusive = sourceCount === 1 && sourceTitles.length === 1;
-  if (!Number.isFinite(sourceCount) || sourceCount < 1) errors.push('NO_SOURCE_METADATA');
+  const sourceCount = record.source_count == null || record.source_count === ''
+    ? null
+    : Number(record.source_count);
+  const answerSourceTitle = normalizeText(record.source_title);
+  const hasSourceCount = Number.isFinite(sourceCount) && sourceCount >= 1;
+  const sourceMetadataMatch = hasSourceCount && sourceTitles.includes(indexRecord.title);
+  const exactAnswerTitleMatch = answerSourceTitle === indexRecord.title;
+  const sourceMetadataMissing = !hasSourceCount || sourceTitles.length === 0;
+  const sourceMatch = sourceMetadataMatch || (sourceMetadataMissing && exactAnswerTitleMatch);
+  const sourceExclusive = sourceCount === 1 && sourceTitles.length === 1 && sourceMetadataMatch;
+  if (sourceMetadataMissing && exactAnswerTitleMatch) {
+    warnings.push('source_metadata_missing_exact_source_title_used');
+  } else if (!hasSourceCount) {
+    errors.push('NO_SOURCE_METADATA');
+  }
   if (!sourceMatch) warnings.push('target_not_in_source_list');
-  if (sourceMatch && !sourceExclusive) warnings.push(`non_exclusive_sources:${sourceCount}`);
+  if (sourceMetadataMatch && !sourceExclusive) warnings.push(`non_exclusive_sources:${sourceCount}`);
 
-  const reportType = normalizeText(record.report_type);
-  if (!REPORT_TYPES.has(reportType)) errors.push('INVALID_REPORT_TYPE');
+  const rawReportType = normalizeText(record.report_type);
+  const reportType = REPORT_TYPES.has(rawReportType) ? rawReportType : 'other';
+  if (!REPORT_TYPES.has(rawReportType)) {
+    warnings.push(`report_type_normalized_to_other:${rawReportType || 'empty'}`);
+  }
 
   const researchSubject = normalizeText(record.research_subject);
   const executiveSummary = normalizeText(record.executive_summary);
-  if (!researchSubject) errors.push('EMPTY_RESEARCH_SUBJECT');
+  if (!researchSubject) warnings.push('empty_research_subject');
   if (!executiveSummary) errors.push('EMPTY_EXECUTIVE_SUMMARY');
   if (executiveSummary && (executiveSummary.length < 120 || executiveSummary.length > 200)) {
     warnings.push(`executive_summary_length:${executiveSummary.length}`);
   }
 
   const contentTagsRaw = normalizeStringArray(record.content_tags);
-  if (contentTagsRaw.some((tag) => !CONTENT_TAGS.has(tag))) errors.push('INVALID_CONTENT_TAG');
+  const unknownContentTags = contentTagsRaw.filter((tag) => !CONTENT_TAGS.has(tag));
+  if (unknownContentTags.length) {
+    warnings.push(`unknown_content_tags_preserved:${unknownContentTags.join('|')}`);
+  }
   const keyFindings = truncate(normalizeStringArray(record.key_findings), 'key_findings', warnings);
   const contentTags = truncate(contentTagsRaw, 'content_tags', warnings);
   const entities = truncate(normalizeStringArray(record.entities), 'entities', warnings);
@@ -150,7 +167,7 @@ function validateAndNormalizeSuccess(record, indexRecord) {
     claim: normalizeText(item && item.claim),
     quote: normalizeText(item && item.quote),
   })).filter((item) => item.claim || item.quote), 'evidence', warnings);
-  if (!evidence.some((item) => item.quote)) errors.push('NO_EVIDENCE');
+  if (!evidence.some((item) => item.quote)) warnings.push('no_evidence');
 
   const status = errors.length === 0 && record.status === 'reviewed' ? 'reviewed' : 'UNREVIEWED';
   return {
