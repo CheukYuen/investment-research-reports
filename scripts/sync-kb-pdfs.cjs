@@ -6,7 +6,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
-const IMA_API = path.join(ROOT, 'ima-skill', 'ima_api.cjs');
+const IMA_API = path.join(ROOT, 'ima-skills', 'ima_api.cjs');
 const DOWNLOADS_DIR = path.join(ROOT, 'downloads');
 const MANIFESTS_DIR = path.join(ROOT, 'manifests');
 const INDEX_PATH = path.join(MANIFESTS_DIR, 'index.jsonl');

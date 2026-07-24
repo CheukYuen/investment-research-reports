@@ -6,6 +6,7 @@ description: |
   搜索知识库内容、搜索/浏览/创建/编辑笔记时，使用此 skill。
   即使用户没有明确说"知识库"或"笔记"，只要意图涉及文件上传到知识库、网页收藏、
   知识搜索、个人文档存取（如"帮我记一下"、"搜一下知识库里有没有XX"），也应触发此 skill。
+homepage: https://ima.qq.com
 metadata:
   openclaw:
     emoji: 🔧

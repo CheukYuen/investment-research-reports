@@ -8,7 +8,7 @@ investment-research-reports
 
 # Primary Skill
 
-ima-skill
+ima-skills
 
 # Workspace
 

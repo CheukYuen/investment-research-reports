@@ -69,7 +69,7 @@ GATE 4 [UPLOAD EXIT]
 ```bash
 # ── Step 1: preflight-check.cjs ← ⛔ GATE 1 ──
 # 有扩展名时自动推断；无扩展名时需传 --content-type
-PREFLIGHT=$(node .claude/skills/ima-skill/knowledge-base/scripts/preflight-check.cjs \
+PREFLIGHT=$(node .claude/skills/ima-skills/knowledge-base/scripts/preflight-check.cjs \
   --file "/path/to/report.pdf")
 echo "$PREFLIGHT"
 # pass=false → 终止，将 reason 展示给用户。NEVER ask "want to try?"
@@ -82,7 +82,7 @@ MEDIA_TYPE=$(echo "$PREFLIGHT" | node -e "const d=JSON.parse(require('fs').readF
 CONTENT_TYPE=$(echo "$PREFLIGHT" | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8'));process.stdout.write(d.content_type)")
 
 # ── Step 3: check_repeated_names ← ⛔ GATE 3 ──
-# MANDATORY for ALL file uploads (media_type 1/3/4/5/7/9/13/14/15).
+# MANDATORY for ALL file uploads (media_type 1/3/4/5/7/9/13/14/15/20).
 # is_repeated=true → ask user: keep both (append _YYYYMMDDHHmmss) or cancel.
 ima_api "openapi/wiki/v1/check_repeated_names" "{
   \"params\": [{\"name\": \"$FILE_NAME\", \"media_type\": $MEDIA_TYPE}],
@@ -103,7 +103,7 @@ CREATE_MEDIA_RESP=$(ima_api "openapi/wiki/v1/create_media" "{
 
 # ── Step 5: cos-upload.cjs ← ⛔ GATE 5 (non-zero = STOP) ──
 # ⚠️ Large files may exceed default 120s timeout — set --timeout explicitly.
-node .claude/skills/ima-skill/knowledge-base/scripts/cos-upload.cjs \
+node .claude/skills/ima-skills/knowledge-base/scripts/cos-upload.cjs \
   --file "/path/to/report.pdf" \
   --secret-id "<cos_credential.secret_id>" \
   --secret-key "<cos_credential.secret_key>" \
@@ -201,7 +201,7 @@ TEMP_DIR=$(mktemp -d)
 curl -sL -o "$TEMP_DIR/paper.pdf" "<url>"
 
 # 3. preflight-check.cjs ← ⛔ GATE 1
-PREFLIGHT=$(node .claude/skills/ima-skill/knowledge-base/scripts/preflight-check.cjs \
+PREFLIGHT=$(node .claude/skills/ima-skills/knowledge-base/scripts/preflight-check.cjs \
   --file "$TEMP_DIR/paper.pdf" --content-type "$CONTENT_TYPE")
 # pass=false → terminate
 
