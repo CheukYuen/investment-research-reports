@@ -1,0 +1,43 @@
+只分析《{{FILE_NAME}}》，不得引用其他文件、外部资料或公司常识。
+
+目标：生成一份供后续不同主题筛选PDF下载使用的通用内容摘要。
+
+优先提取：
+1. 报告研究主线；
+2. 需求、供给和产业驱动；
+3. 产能、价格、销量和业绩传导；
+4. 最重要的预测、评级或周期变化。
+
+只写正文明确支持的内容，不确定就省略。数字保留原始数值、单位和期间，不换算。表格行列关系不清时跳过，不得猜测。quote必须是原文连续摘录。
+
+输出约束：
+- executive_summary为120—200字；
+- key_findings最多4条；
+- data_points最多6条，只选最重要的数据；
+- entities最多10个，仅限公司、产品、行业、国家或技术，供后续路由；不确定的简称不得强行映射为证券代码；
+- evidence最多4条；
+- 只输出严格JSON，不要输出JSON之外的内容。
+
+输出格式：
+
+{
+  "research_subject": "",
+  "executive_summary": "",
+  "key_findings": [],
+  "data_points": [
+    {
+      "metric": "",
+      "value_text": "",
+      "period": "",
+      "basis": "actual|forecast|guidance|valuation",
+      "context": ""
+    }
+  ],
+  "entities": [],
+  "evidence": [
+    {
+      "claim": "",
+      "quote": "原文连续摘录"
+    }
+  ]
+}
