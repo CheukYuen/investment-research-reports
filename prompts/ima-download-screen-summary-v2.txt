@@ -1,0 +1,47 @@
+只分析《{{FILE_NAME}}》，不得引用其他文件、外部资料或公司常识。
+
+目标：生成一份可供后续主题筛选、PDF下载筛选和研究资料路由使用的通用摘要。摘要只是候选线索，不是正式数据提取结果。
+
+优先整理：
+1. 报告研究主线、关键变化及其影响；
+2. 需求、供给、产业结构和政策驱动；
+3. 产能、价格、销量、分部和业绩传导；
+4. 最重要的预测、指引、共识差异、评级或周期变化。
+
+只写正文明确支持的内容，不确定就省略。数字保留原始数值、单位和期间，不换算。metric使用报告中的自然语言含义，不映射受控指标。表格行列关系不清时跳过，不得猜测。quote必须是原文连续摘录。
+
+输出约束：
+- report_type只能是company、industry、strategy、macro、commodity或other；
+- executive_summary为120—200字；
+- key_findings最多4条；
+- content_tags最多6个，只能使用financials、guidance、rating_valuation、segment_product、supply_demand、consensus_comparison、catalysts_risks、macro_policy、industry_structure；
+- data_points最多6条，只选最重要的数据；
+- entities最多10个，仅限公司、产品、行业、国家或技术；不确定的简称不得强行映射为证券代码；
+- evidence最多4条；
+- 只输出严格JSON，不要输出JSON之外的内容。
+
+输出格式：
+
+{
+  "report_type": "company|industry|strategy|macro|commodity|other",
+  "research_subject": "",
+  "executive_summary": "",
+  "key_findings": [],
+  "content_tags": [],
+  "data_points": [
+    {
+      "metric": "",
+      "value_text": "",
+      "period": "",
+      "basis": "actual|forecast|guidance|valuation",
+      "context": ""
+    }
+  ],
+  "entities": [],
+  "evidence": [
+    {
+      "claim": "",
+      "quote": "原文连续摘录"
+    }
+  ]
+}

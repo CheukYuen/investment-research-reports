@@ -28,6 +28,7 @@ function usage() {
   node scripts/sync-kb-pdfs.cjs download --kb <name> [--source-path <path>] [--limit <n>]
   node scripts/sync-kb-pdfs.cjs sync --kb <name> [--source-path <path>] [--strip-source-prefix <path>] [--local-prefix <path>] [--limit <n>]
   node scripts/sync-kb-pdfs.cjs rank-ai [--months <month1,month2>] [--queue <path>] [--batch-size <n>] [--rerank-batch-size <n>]
+  node scripts/sync-kb-pdfs.cjs rank-ai --summary-source <summaries.jsonl> --queue <queue.jsonl> [--baseline-queue <queue.jsonl>] [--comparison <comparison.jsonl>]
   node scripts/sync-kb-pdfs.cjs download-queue --kb <name> [--queue <path>] [--priorities <P0,P1>] [--daily-budget <n>]
 
 Examples:
@@ -386,6 +387,23 @@ results 必须与输入数组等长、同顺序。不要输出 markdown，不要
 5. AIDC capex、AI 数据中心资本开支、云/超大规模数据中心 capex、AI 服务器、GPU/ASIC、HBM、先进封装/CoWoS、光互联、数据中心网络、电力/冷却、AI 半导体上游、人形机器人/具身智能核心硬件是高优先级方向；但必须由标题或路径支持。`;
 }
 
+function summaryRankingSystemPrompt() {
+  return `你是严谨的买方科技研究审稿人。请只根据输入中的研报标题、报告类型、通用摘要、关键结论、内容标签、关键数据、实体和正文证据，对 AI Infrastructure 投资研究价值做正文优先排序。
+
+输出必须是严格 JSON object：
+{"results":[{"priority":"P0|P1|P2|P3","score":0-100,"topics":["..."],"reasons":["..."],"evidence":["..."],"false_positive_checks":["..."]}]}
+
+results 必须与输入数组等长、同顺序。不要输出 markdown，不要使用公司常识补充输入中不存在的信息。
+
+P0（85-100）：正文明确以 AI 数据中心资本开支、AI 服务器/GPU/ASIC/HBM/先进封装、数据中心光互联/网络、电力/冷却或人形机器人核心硬件为主要投资逻辑。
+P1（65-84）：正文有明确、可投资的 AI 基建需求、供给、价格、产能或业绩传导证据，但不是全文唯一主线；也包括强相关半导体设备材料、PCB、光纤光缆、工业自动化。
+P2（35-64）：正文仅有泛 AI、应用或间接敞口，缺少清晰基建传导。
+P3（0-34）：正文没有实质 AI 基建证据，或只是普通宏观、消费、金融、医药、地产、汽车等。
+
+通用摘要、关键数据、实体都是尚未经过 PDF 级正式验证的路由候选；排序时优先依赖 evidence 的原文连续摘录，并把候选字段仅用于定位和辅助理解。
+必须在 reasons/evidence 中引用输入给出的具体事实或数字。标题与正文冲突时以正文为准。存在“数据中心”但实际只是地产/租赁/并购时主动检查假阳性。`;
+}
+
 async function classifyBatchWithDeepSeek(config, batch) {
   const inputs = batch.map((record) => ({
     title: record.title,
@@ -438,6 +456,36 @@ async function rerankBatchWithDeepSeek(config, batch) {
   }
 
   return parsed.results.map((result, index) => normalizeReranking(result, batch[index]));
+}
+
+async function classifySummaryBatchWithDeepSeek(config, batch) {
+  const inputs = batch.map((record) => ({
+    media_id: record.media_id,
+    title: record.title,
+    report_type: record.report_type,
+    research_subject: record.research_subject,
+    executive_summary: record.executive_summary,
+    key_findings: record.key_findings,
+    content_tags: record.content_tags,
+    data_points: record.data_points,
+    entities: record.entities,
+    evidence: record.evidence,
+  }));
+  const parsed = await callDeepSeekJson(config, [
+    { role: 'system', content: summaryRankingSystemPrompt() },
+    {
+      role: 'user',
+      content: `请按正文证据排序以下研报，返回 results 与输入同顺序、同长度：\n${JSON.stringify(inputs, null, 2)}`,
+    },
+  ]);
+  if (!parsed || !Array.isArray(parsed.results) || parsed.results.length !== batch.length) {
+    throw new Error(`Summary rank LLM returned ${parsed && Array.isArray(parsed.results) ? parsed.results.length : 0} results for ${batch.length} inputs`);
+  }
+  return parsed.results.map((result, index) => ({
+    ...normalizeRanking(result, batch[index]),
+    evidence: normalizeStringArray(result.evidence, []),
+    false_positive_checks: normalizeStringArray(result.false_positive_checks, []),
+  }));
 }
 
 function normalizeStringArray(value, fallback) {
@@ -772,6 +820,7 @@ async function runDownload(opts) {
 }
 
 async function runRankAi(opts) {
+  if (opts['summary-source']) return runRankAiSummary(opts);
   const months = parseMonths(opts.months);
   const queuePath = resolveRootPath(opts.queue, DEFAULT_QUEUE_PATH);
   const batchSize = parsePositiveInteger(opts['batch-size'], '--batch-size', 40);
@@ -885,6 +934,101 @@ async function runRankAi(opts) {
     recall_llm_model: config.model,
     rerank_llm_model: rerankConfig.model,
     rerank_candidates: rerankCandidates.length,
+  };
+}
+
+async function runRankAiSummary(opts) {
+  const summaryPath = resolveRootPath(opts['summary-source']);
+  const queuePath = resolveRootPath(opts.queue);
+  const comparisonPath = opts.comparison ? resolveRootPath(opts.comparison) : null;
+  const baselinePath = opts['baseline-queue'] ? resolveRootPath(opts['baseline-queue']) : null;
+  const batchSize = parsePositiveInteger(opts['batch-size'], '--batch-size', 12);
+  const allSummaries = uniqueByMediaId(readJsonl(summaryPath));
+  const reviewed = allSummaries.filter((record) =>
+    record.status === 'reviewed' &&
+    record.summary_role === 'routing_candidate' &&
+    Array.isArray(record.evidence) &&
+    record.evidence.length > 0
+  );
+  const unreviewed = allSummaries.filter((record) => !reviewed.includes(record));
+  const config = reviewed.length > 0 ? deepSeekConfig({
+    modelEnv: 'DEEPSEEK_RERANK_MODEL',
+    defaultModel: 'deepseek-v4-pro',
+  }) : null;
+
+  const rankedAt = new Date().toISOString();
+  const queue = [];
+  const totalBatches = Math.ceil(reviewed.length / batchSize);
+  for (let index = 0; index < reviewed.length; index += batchSize) {
+    const batch = reviewed.slice(index, index + batchSize);
+    const batchNumber = Math.floor(index / batchSize) + 1;
+    if (shouldLogProgress(opts)) {
+      process.stderr.write(`[rank-ai-summary] classifying batch ${batchNumber}/${totalBatches} (${batch.length} records)\n`);
+    }
+    const rankings = await classifySummaryBatchWithDeepSeek(config, batch);
+    for (let batchIndex = 0; batchIndex < batch.length; batchIndex += 1) {
+      queue.push({
+        ...batch[batchIndex],
+        priority: rankings[batchIndex].priority,
+        score: rankings[batchIndex].score,
+        topics: rankings[batchIndex].topics,
+        reasons: rankings[batchIndex].reasons,
+        ranking_evidence: rankings[batchIndex].evidence,
+        false_positive_checks: rankings[batchIndex].false_positive_checks,
+        ranking_mode: 'summary',
+        llm_provider: 'deepseek',
+        llm_model: config.model,
+        ranked_at: rankedAt,
+      });
+    }
+  }
+  queue.sort((a, b) => {
+    const priorityDelta = PRIORITY_ORDER.get(a.priority) - PRIORITY_ORDER.get(b.priority);
+    if (priorityDelta !== 0) return priorityDelta;
+    if (b.score !== a.score) return b.score - a.score;
+    return String(a.title || '').localeCompare(String(b.title || ''), 'zh-Hans-CN');
+  });
+  queue.forEach((record, index) => { record.rank = index + 1; });
+  writeJsonlAtomic(queuePath, queue);
+
+  if (comparisonPath) {
+    const baseline = new Map((baselinePath ? readJsonl(baselinePath) : []).map((record) => [record.media_id, record]));
+    const content = new Map(queue.map((record) => [record.media_id, record]));
+    const comparison = allSummaries.map((summary) => {
+      const oldRecord = baseline.get(summary.media_id);
+      const newRecord = content.get(summary.media_id);
+      return {
+        media_id: summary.media_id,
+        title: summary.title,
+        status: newRecord ? 'reviewed' : 'UNREVIEWED',
+        old_priority: oldRecord ? oldRecord.priority : null,
+        old_score: oldRecord ? oldRecord.score : null,
+        old_reasons: oldRecord ? oldRecord.reasons : [],
+        new_priority: newRecord ? newRecord.priority : 'UNREVIEWED',
+        new_score: newRecord ? newRecord.score : null,
+        new_reasons: newRecord ? newRecord.reasons : [],
+        summary_evidence: newRecord ? newRecord.ranking_evidence : [],
+        priority_delta: oldRecord && newRecord
+          ? PRIORITY_ORDER.get(oldRecord.priority) - PRIORITY_ORDER.get(newRecord.priority)
+          : null,
+      };
+    });
+    writeJsonlAtomic(comparisonPath, comparison);
+  }
+
+  const byPriority = {};
+  for (const record of queue) byPriority[record.priority] = (byPriority[record.priority] || 0) + 1;
+  return {
+    mode: 'summary',
+    summary_source: path.relative(ROOT, summaryPath),
+    queue: path.relative(ROOT, queuePath),
+    comparison: comparisonPath ? path.relative(ROOT, comparisonPath) : null,
+    reviewed: reviewed.length,
+    unreviewed: unreviewed.length,
+    written: queue.length,
+    by_priority: byPriority,
+    llm_provider: config ? 'deepseek' : null,
+    llm_model: config ? config.model : null,
   };
 }
 
