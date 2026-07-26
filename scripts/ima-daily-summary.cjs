@@ -25,7 +25,7 @@ const PROMPT_VERSION = 'ima-download-screen-summary-batch-v2';
 const BROWSER_MODEL_VERSION = 'ima-web-hy3-fast';
 const APP_MODEL_VERSION = 'ima-app-hy3-fast';
 const INTERACTION_SURFACES = new Set(['browser', 'app']);
-const MAX_BATCH_SIZE = 5;
+const MAX_BATCH_SIZE = 10;
 const MAX_ATTEMPTS = 4;
 const GLOBAL_STOP_CODES = new Set(['GLOBAL_LIMIT', 'LOGIN_REQUIRED']);
 

@@ -148,6 +148,33 @@ test('answer parser accepts complete fenced JSON and strips citation glyphs', ()
   assert.equal(parsed.evidence[0].quote, '原文');
 });
 
+test('answer parser strips IMA context references inserted between JSON properties', () => {
+  const parsed = parseStrictJson(
+    '{"reports":[{"source_title":"报告.pdf",[49](@context-ref?id=11)"report_type":"company"}]}',
+  );
+  assert.equal(parsed.reports[0].source_title, '报告.pdf');
+  assert.equal(parsed.reports[0].report_type, 'company');
+});
+
+test('answer parser escapes unescaped quotation marks inside IMA evidence', () => {
+  const parsed = parseStrictJson(
+    `{"evidence":[{"quote":"GDP is in line with the government's "4.5-5%" target."}]}`,
+  );
+  assert.equal(parsed.evidence[0].quote, 'GDP is in line with the government\'s "4.5-5%" target.');
+});
+
+test('answer parser escapes literal control characters inside IMA evidence', () => {
+  const parsed = parseStrictJson(
+    '{"evidence":[{"quote":"row one\nrow two\tvalue"}]}',
+  );
+  assert.equal(parsed.evidence[0].quote, 'row one\nrow two\tvalue');
+});
+
+test('answer parser restores a missing opening quote on an IMA schema key', () => {
+  const parsed = parseStrictJson('{\nevidence": []\n}');
+  assert.deepEqual(parsed.evidence, []);
+});
+
 test('answer parser rejects trailing prose', () => {
   assert.throws(() => parseStrictJson('{"report_type":"company"}\n完成'), SyntaxError);
 });

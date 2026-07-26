@@ -75,9 +75,64 @@ function normalizeStringArray(value) {
 
 function stripCitationArtifacts(value) {
   return String(value || '')
+    .replace(/\[\d+\]\(@context-ref\?[^)\s]+\)/g, '')
+    .replace(/^(\s*)([A-Za-z_][A-Za-z0-9_]*)"\s*:/gm, '$1"$2":')
     .replace(/[\uE000-\uF8FF]/g, '')
     .replace(/\u200B/g, '')
     .trim();
+}
+
+function escapeUnescapedInteriorQuotes(value) {
+  let output = '';
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (!inString) {
+      output += character;
+      if (character === '"') inString = true;
+      continue;
+    }
+    if (escaped) {
+      output += character;
+      escaped = false;
+      continue;
+    }
+    if (character === '\n') {
+      output += '\\n';
+      continue;
+    }
+    if (character === '\r') {
+      output += '\\r';
+      continue;
+    }
+    if (character === '\t') {
+      output += '\\t';
+      continue;
+    }
+    if (character.charCodeAt(0) < 0x20) {
+      output += `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`;
+      continue;
+    }
+    if (character === '\\') {
+      output += character;
+      escaped = true;
+      continue;
+    }
+    if (character !== '"') {
+      output += character;
+      continue;
+    }
+    let next = index + 1;
+    while (next < value.length && /\s/.test(value[next])) next += 1;
+    if (next >= value.length || /[:,}\]]/.test(value[next])) {
+      output += character;
+      inString = false;
+    } else {
+      output += '\\"';
+    }
+  }
+  return output;
 }
 
 function parseStrictJson(rawAnswer) {
@@ -94,7 +149,13 @@ function parseStrictJson(rawAnswer) {
     }
     return value;
   };
-  const parsed = sanitize(JSON.parse(text));
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    parsed = JSON.parse(escapeUnescapedInteriorQuotes(text));
+  }
+  parsed = sanitize(parsed);
   if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
     throw new Error('Answer must be one JSON object');
   }
