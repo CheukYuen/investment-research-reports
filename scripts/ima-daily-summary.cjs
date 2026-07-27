@@ -17,11 +17,12 @@ const {
   audit,
   parseStrictJson,
   mapBatchReports,
+  parseSectionAnswer,
 } = require('./report-summaries.cjs');
 
 const DEFAULT_KB = '环球研报直通车';
-const PROMPT_PATH = path.join(ROOT, 'prompts', 'ima-download-screen-summary-batch-v2.txt');
-const PROMPT_VERSION = 'ima-download-screen-summary-batch-v2';
+const PROMPT_PATH = path.join(ROOT, 'prompts', 'ima-download-screen-summary-batch-v6.txt');
+const PROMPT_VERSION = 'ima-download-screen-summary-batch-v6';
 const BROWSER_MODEL_VERSION = 'ima-web-hy3-fast';
 const APP_MODEL_VERSION = 'ima-app-hy3-fast';
 const INTERACTION_SURFACES = new Set(['browser', 'app']);
@@ -52,7 +53,7 @@ function usage() {
   node scripts/ima-daily-summary.cjs prepare [--date YYYYMMDD] [--skip-index]
   node scripts/ima-daily-summary.cjs next [--date YYYYMMDD] [--batch-size 5] [--surface browser|app]
   pbpaste | node scripts/ima-daily-summary.cjs ingest [--date YYYYMMDD] [--elapsed-ms N] [--surface browser|app]
-  node scripts/ima-daily-summary.cjs fail-batch [--date YYYYMMDD] --code <CODE> [--message <text>] [--surface browser|app]
+  node scripts/ima-daily-summary.cjs fail-batch [--date YYYYMMDD] --code <CODE> [--message <text>] [--surface browser|app] [--terminal]
   node scripts/ima-daily-summary.cjs finalize [--date YYYYMMDD] [--skip-rank]
   node scripts/ima-daily-summary.cjs status [--date YYYYMMDD]
 
@@ -282,6 +283,7 @@ function commandNext(paths, opts, config = loadConfig()) {
       const requestedSurface = interactionSurface(opts.surface || open.interaction_surface, config);
       const resumedBatch = {
         ...open,
+        prompt_version: PROMPT_VERSION,
         interaction_surface: requestedSurface,
         model_version: surfaceModelVersion(requestedSurface, config),
         records: remaining,
@@ -361,8 +363,34 @@ function readStdin() {
   return fs.readFileSync(0, 'utf8').trim();
 }
 
+function parseSectionBatchAnswer(rawAnswer, titles) {
+  const blocks = String(rawAnswer || '')
+    .split(/(?:^|\r?\n)\s*(?:#{1,6}\s*)?(?:\*\*)?文件名(?:\*\*)?\s*[：:]?\s*(?:\r?\n)/)
+    .slice(1)
+    .map((block) => `文件名\n${block.trim()}`)
+    .filter((block) => block !== '文件名');
+  if (blocks.length === 0) throw new Error('Batch section answer has no 文件名 blocks');
+
+  return titles.map((title) => {
+    for (const block of blocks) {
+      const parsed = parseSectionAnswer(block, title);
+      if (parsed.report || parsed.failure_code !== 'SOURCE_TITLE_MISMATCH') return parsed;
+    }
+    return {
+      title,
+      failure_code: 'BATCH_REPORT_MISSING',
+      error: 'no matching 文件名 section',
+    };
+  });
+}
+
 function parseBatchAnswer(rawAnswer, titles) {
-  return mapBatchReports(parseStrictJson(rawAnswer), titles);
+  try {
+    return mapBatchReports(parseStrictJson(rawAnswer), titles);
+  } catch (error) {
+    if (titles.length === 1) return [parseSectionAnswer(rawAnswer, titles[0])];
+    return parseSectionBatchAnswer(rawAnswer, titles);
+  }
 }
 
 function upsert(records, record) {
@@ -505,15 +533,23 @@ function commandFailBatch(paths, opts, config = loadConfig()) {
   const actualSurface = interactionSurface(opts.surface || open.interaction_surface, config);
   const actualModelVersion = surfaceModelVersion(actualSurface, config);
   const increment = GLOBAL_STOP_CODES.has(code) ? 0 : 1;
+  const maxAttempts = Number(config.max_attempts || MAX_ATTEMPTS);
   for (const planned of open.records) {
     if (reviewedIds.has(planned.media_id)) continue;
     const indexRecord = indexById.get(planned.media_id);
-    const attempts = Number(previousFailures.get(planned.media_id)?.attempts || 0) + increment;
+    const previousFailure = previousFailures.get(planned.media_id);
+    const attempts = opts.terminal && increment > 0
+      ? maxAttempts
+      : Number(previousFailure?.attempts || 0) + increment;
     const failure = normalizeFailure({
+      ...previousFailure,
       media_id: planned.media_id,
       failure_code: code,
       attempts,
-      validation_warnings: opts.message ? [String(opts.message)] : [],
+      validation_warnings: [
+        ...(previousFailure?.validation_warnings || []),
+        ...(opts.message ? [String(opts.message)] : []),
+      ],
       generated_at: new Date().toISOString(),
       prompt_version: PROMPT_VERSION,
       model_version: actualModelVersion,
@@ -545,15 +581,19 @@ function statusReport(paths, config = loadConfig()) {
   const inputs = readInputs(paths);
   const snapshot = buildSnapshot(inputs.index, inputs.progress, inputs.failures);
   const report = audit(inputs.index, snapshot, inputs.progress, inputs.failures);
+  const maxAttempts = Number(config.max_attempts || MAX_ATTEMPTS);
+  const currentFailures = snapshot.filter((record) =>
+    record.status !== 'reviewed' && record.failure_code !== 'MISSING'
+  );
   return {
     date: paths.date.iso,
     folder_path: paths.date.sourcePath,
     ...report,
-    retryable_failures: inputs.failures.filter((record) =>
-      Number(record.attempts || 0) < Number(config.max_attempts || MAX_ATTEMPTS)
+    retryable_failures: currentFailures.filter((record) =>
+      Number(record.attempts || 0) < maxAttempts
     ).length,
-    terminal_failures: inputs.failures.filter((record) =>
-      Number(record.attempts || 0) >= Number(config.max_attempts || MAX_ATTEMPTS)
+    terminal_failures: currentFailures.filter((record) =>
+      Number(record.attempts || 0) >= maxAttempts
     ).length,
     open_batch: latestOpenBatch(inputs.batches)?.batch_id || null,
   };
@@ -629,6 +669,7 @@ module.exports = {
   latestOpenBatch,
   commandNext,
   commandIngest,
+  commandFailBatch,
   statusReport,
   main,
 };

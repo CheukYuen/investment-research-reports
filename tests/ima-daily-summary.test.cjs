@@ -10,6 +10,8 @@ const {
   renderPrompt,
   commandNext,
   commandIngest,
+  commandFailBatch,
+  statusReport,
 } = require('../scripts/ima-daily-summary.cjs');
 
 function indexRecord(number) {
@@ -63,13 +65,185 @@ test('date paths are derived from the requested day rather than a fixed experime
   assert.equal(paths.comparison, undefined);
 });
 
-test('dynamic batch prompt supports a tail smaller than five reports', () => {
+test('dynamic prompt keeps core content requirements and substitutes report titles', () => {
   const prompt = renderPrompt([indexRecord(1), indexRecord(2)]);
-  assert.match(prompt, /以下2篇研报/);
-  assert.match(prompt, /恰好包含2条记录/);
+  assert.match(prompt, /读这2篇研报/);
+  assert.match(prompt, /核心摘要/);
+  assert.match(prompt, /关键结论/);
+  assert.match(prompt, /重要数字/);
+  assert.match(prompt, /关键实体与标签/);
+  assert.match(prompt, /NO_CONTENT/);
   assert.match(prompt, /1\.《报告1\.pdf》/);
   assert.match(prompt, /2\.《报告2\.pdf》/);
   assert.doesNotMatch(prompt, /\{\{REPORT_COUNT\}\}|\{\{FILE_LIST\}\}/);
+});
+
+function sectionAnswer(title = '报告1.pdf') {
+  return `文件名
+${title}
+
+核心摘要
+报告分析测试公司的产品需求、经营变化和盈利传导，认为订单与产能释放将推动未来收入增长，同时提示竞争加剧和价格下行风险。
+
+关键结论
+- 核心产品需求持续增长
+- 新产能释放构成主要催化剂
+
+重要数字
+- 收入增长：2026E 预计增长20%
+
+关键实体与标签
+- 测试公司、核心产品、半导体设备
+- 需求、产能、订单`;
+}
+
+test('ingest parses a standard section answer into structured fields', async () => {
+  const { root, paths } = tempPaths(1);
+  try {
+    const config = { max_batch_size: 1, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const result = await commandIngest(paths, {}, config, sectionAnswer());
+    assert.equal(result.reviewed, 1);
+    assert.equal(result.failed, 0);
+    const saved = readLines(paths.progress)[0];
+    assert.equal(saved.source_title, '报告1.pdf');
+    assert.ok(saved.key_findings.length >= 2);
+    assert.ok(saved.data_points.length >= 1);
+    assert.ok(saved.entities.length >= 1);
+    assert.doesNotMatch(saved.executive_summary, /核心摘要/);
+    assert.ok(saved.validation_warnings.includes('section_answer_parsed'));
+    assert.ok(!saved.validation_warnings.includes('natural_language_answer_wrapped'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ingest accepts markdown heading and bullet variants', async () => {
+  const { root, paths } = tempPaths(1);
+  try {
+    const config = { max_batch_size: 1, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const answer = `## 文件名
+**报告1.pdf**
+
+## 核心摘要
+报告分析测试公司的产品需求、经营变化和盈利传导，认为订单与产能释放将推动未来收入增长，同时提示竞争加剧和价格下行风险。
+
+**关键结论**
+1. 核心产品需求持续增长
+2. 新产能释放构成主要催化剂
+
+## 重要数字
+• 收入增长：2026E 预计增长20%
+
+**关键实体与标签**
+• 测试公司、核心产品、半导体设备
+• 需求、产能、订单`;
+    const result = await commandIngest(paths, {}, config, answer);
+    assert.equal(result.reviewed, 1);
+    const saved = readLines(paths.progress)[0];
+    assert.equal(saved.key_findings.length, 2);
+    assert.equal(saved.data_points.length, 1);
+    assert.ok(saved.entities.length >= 1);
+    assert.doesNotMatch(saved.executive_summary, /核心摘要/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ingest rejects NO_CONTENT without writing progress', async () => {
+  const { root, paths } = tempPaths(1);
+  try {
+    const config = { max_batch_size: 1, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const result = await commandIngest(paths, {}, config, 'NO_CONTENT');
+    assert.equal(result.failed, 1);
+    assert.equal(readLines(paths.progress).length, 0);
+    assert.equal(readLines(paths.failures)[0].failure_code, 'CONTENT_UNREADABLE');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ingest rejects NO_CONTENT inside the core summary section', async () => {
+  const { root, paths } = tempPaths(1);
+  try {
+    const config = { max_batch_size: 1, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const answer = `文件名
+报告1.pdf
+
+核心摘要
+NO_CONTENT`;
+    const result = await commandIngest(paths, {}, config, answer);
+    assert.equal(result.failed, 1);
+    assert.equal(readLines(paths.progress).length, 0);
+    assert.equal(readLines(paths.failures)[0].failure_code, 'CONTENT_UNREADABLE');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ingest rejects a mismatched source title without writing progress', async () => {
+  const { root, paths } = tempPaths(1);
+  try {
+    const config = { max_batch_size: 1, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const result = await commandIngest(paths, {}, config, sectionAnswer('另一篇报告.pdf'));
+    assert.equal(result.failed, 1);
+    assert.equal(readLines(paths.progress).length, 0);
+    assert.equal(readLines(paths.failures)[0].failure_code, 'SOURCE_TITLE_MISMATCH');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ingest accepts a normalized source title and records a warning', async () => {
+  const { root, paths } = tempPaths(1);
+  try {
+    const config = { max_batch_size: 1, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const result = await commandIngest(paths, {}, config, sectionAnswer('《报告1》'));
+    assert.equal(result.reviewed, 1);
+    const saved = readLines(paths.progress)[0];
+    assert.equal(saved.source_title, '报告1.pdf');
+    assert.ok(saved.validation_warnings.includes('source_title_normalized'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ingest maps multi-report section answers by exact source title', async () => {
+  const { root, paths } = tempPaths(2);
+  try {
+    const config = { max_batch_size: 5, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const answer = `${sectionAnswer('报告2.pdf')}\n\n${sectionAnswer('报告1.pdf')}`;
+    const result = await commandIngest(paths, {}, config, answer);
+    assert.equal(result.reviewed, 2);
+    assert.equal(result.failed, 0);
+    const saved = readLines(paths.progress);
+    assert.deepEqual(new Set(saved.map((record) => record.source_title)), new Set([
+      '报告1.pdf',
+      '报告2.pdf',
+    ]));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ingest rejects chatter without a core summary section', async () => {
+  const { root, paths } = tempPaths(1);
+  try {
+    const config = { max_batch_size: 1, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const result = await commandIngest(paths, {}, config, '我没有找到该文件');
+    assert.equal(result.failed, 1);
+    assert.equal(readLines(paths.progress).length, 0);
+    assert.equal(readLines(paths.failures)[0].failure_code, 'MISSING_SUMMARY_SECTION');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('next creates five-item batches and resumes an open batch without duplicating state', () => {
@@ -128,6 +302,38 @@ test('next prioritizes retryable failures and leaves terminal failures out', () 
       result.records.map((record) => record.media_id),
       ['pdf-3', 'pdf-1', 'pdf-2'],
     );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('terminal batch failure skips the report without another retry', () => {
+  const { root, paths } = tempPaths(1);
+  try {
+    const config = { max_batch_size: 1, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const failed = commandFailBatch(paths, {
+      code: 'ANSWER_TIMEOUT',
+      terminal: true,
+      surface: 'app',
+    }, config);
+    assert.equal(failed.outcomes[0].attempts, 5);
+    assert.equal(commandNext(paths, {}, config).done, true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('status ignores stale failures that are not in the current index', () => {
+  const { root, paths } = tempPaths(1);
+  try {
+    writeJsonl(paths.failures, [
+      { media_id: 'pdf-1', attempts: 5, failure_code: 'ANSWER_TIMEOUT' },
+      { media_id: 'stale-pdf', attempts: 0, failure_code: 'LOGIN_REQUIRED' },
+    ]);
+    const status = statusReport(paths, { max_attempts: 5 });
+    assert.equal(status.retryable_failures, 0);
+    assert.equal(status.terminal_failures, 1);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

@@ -82,6 +82,206 @@ function stripCitationArtifacts(value) {
     .trim();
 }
 
+const SECTION_ALIASES = new Map([
+  ['文件名', 'source_title'],
+  ['报告文件名', 'source_title'],
+  ['核心摘要', 'executive_summary'],
+  ['摘要', 'executive_summary'],
+  ['关键结论', 'key_findings'],
+  ['主要结论', 'key_findings'],
+  ['重要数字', 'data_points'],
+  ['关键数字', 'data_points'],
+  ['重要数据', 'data_points'],
+  ['关键实体与标签', 'entities'],
+  ['关键实体和标签', 'entities'],
+  ['关键实体/标签', 'entities'],
+  ['关键实体、标签', 'entities'],
+  ['关键实体', 'entities'],
+  ['实体与标签', 'entities'],
+]);
+
+const TAG_KEYWORDS = new Map([
+  ['financials', ['财务', '业绩', '营收', '收入', '利润', '毛利', '现金流']],
+  ['guidance', ['指引', '展望', 'guidance', '预期区间']],
+  ['rating_valuation', ['评级', '目标价', '估值', 'valuation', '买入', '增持', '中性']],
+  ['segment_product', ['分部', '业务线', '产品线', '产品结构']],
+  ['supply_demand', ['供需', '需求', '供给', '产能', '库存', '订单', '价格']],
+  ['consensus_comparison', ['一致预期', '市场预期', 'consensus', '超预期', '低于预期']],
+  ['catalysts_risks', ['催化', '风险', '不确定性', '下行', '上行风险']],
+  ['macro_policy', ['宏观', '政策', '关税', '利率', '汇率', '财政', '监管']],
+  ['industry_structure', ['竞争格局', '份额', '行业结构', '集中度', '壁垒']],
+]);
+
+const BASIS_KEYWORDS = new Map([
+  ['actual', ['实际', '实绩', '已实现', '同比', '环比', '报告期']],
+  ['forecast', ['预测', '预计', '我们预期', '模型', 'E)', '26E', '27E']],
+  ['guidance', ['指引', '公司预计', '管理层预期']],
+  ['valuation', ['估值', '目标价', 'PE', 'PB', 'EV/EBITDA', 'DCF']],
+]);
+
+function normalizeHeadingLine(line) {
+  return String(line || '')
+    .replace(/^\s*[#>*\-•·]+\s*/, '')
+    .replace(/\*\*/g, '')
+    .replace(/^\s*\d+[.、)]\s*/, '')
+    .replace(/[：:]\s*$/, '')
+    .trim();
+}
+
+function stripBullet(line) {
+  return String(line || '')
+    .replace(/\*\*/g, '')
+    .replace(/^\s*[-*•·–—]\s*/, '')
+    .replace(/^\s*\d+[.、)]\s*/, '')
+    .trim();
+}
+
+function normalizeTitleForCompare(value) {
+  return String(value || '')
+    .replace(/[《》"'\s]/g, '')
+    .replace(/\.pdf$/i, '')
+    .replace(/[（(]/g, '(')
+    .replace(/[）)]/g, ')')
+    .replace(/[，,]/g, ',')
+    .toLowerCase();
+}
+
+function splitSections(rawAnswer) {
+  const text = stripCitationArtifacts(rawAnswer);
+  const sections = new Map();
+  let current = null;
+  for (const line of text.split(/\r?\n/)) {
+    const heading = SECTION_ALIASES.get(normalizeHeadingLine(line));
+    if (heading) {
+      current = heading;
+      if (!sections.has(current)) sections.set(current, []);
+      continue;
+    }
+    if (current && line.trim()) sections.get(current).push(line.trim());
+  }
+  return sections;
+}
+
+function classifyEntityLine(item, entities, contentTags) {
+  const lowered = item.toLowerCase();
+  let matched = false;
+  for (const [tag, keywords] of TAG_KEYWORDS) {
+    if (keywords.some((keyword) => lowered.includes(keyword.toLowerCase()))) {
+      if (!contentTags.includes(tag)) contentTags.push(tag);
+      matched = true;
+    }
+  }
+  if (!matched && item.length <= 40 && !entities.includes(item)) entities.push(item);
+}
+
+function parseDataPointLine(line) {
+  const context = stripBullet(line);
+  if (!context) return null;
+  let basis = '';
+  for (const [key, keywords] of BASIS_KEYWORDS) {
+    if (keywords.some((keyword) => context.includes(keyword))) {
+      basis = key;
+      break;
+    }
+  }
+  const separator = context.search(/[：:]/);
+  const metric = separator > 0 ? context.slice(0, separator).trim() : '';
+  const remainder = separator > 0 ? context.slice(separator + 1).trim() : context;
+  const valueMatch = remainder.match(/[-+]?\d[\d,.]*\s*(?:%|亿|万亿|万|美元|元|日元|欧元|港元|倍|个百分点|bps|pp)?/i);
+  const periodMatch = context.match(/(20\d{2}\s*[-—/]?\s*(?:年)?(?:[1-4]?Q|[一二三四]季度|H[12]|上半年|下半年)?E?|[1-4]Q\s*?20\d{2}|FY\s*?20\d{2}|20\d{2}E)/i);
+  return {
+    metric: metric || context.slice(0, 24),
+    value_text: valueMatch ? valueMatch[0].trim() : '',
+    period: periodMatch ? periodMatch[0].trim() : '',
+    basis,
+    context,
+  };
+}
+
+function parseSectionAnswer(rawAnswer, expectedTitle) {
+  const text = stripCitationArtifacts(rawAnswer);
+  if (/^\s*NO_CONTENT\s*$/m.test(text) && text.replace(/\s/g, '').length <= 40) {
+    return {
+      title: expectedTitle,
+      failure_code: 'CONTENT_UNREADABLE',
+      error: 'answer is NO_CONTENT',
+    };
+  }
+
+  const sections = splitSections(text);
+  const warnings = ['section_answer_parsed'];
+  const summary = (sections.get('executive_summary') || [])
+    .map(stripBullet)
+    .filter(Boolean)
+    .join('');
+  if (/^NO_CONTENT$/i.test(summary)) {
+    return {
+      title: expectedTitle,
+      failure_code: 'CONTENT_UNREADABLE',
+      error: 'core summary is NO_CONTENT',
+    };
+  }
+  if (!summary) {
+    return {
+      title: expectedTitle,
+      failure_code: 'MISSING_SUMMARY_SECTION',
+      error: 'no 核心摘要 section',
+    };
+  }
+
+  const answerTitleRaw = (sections.get('source_title') || [])
+    .map(stripBullet)
+    .filter(Boolean)
+    .join(' ');
+  let sourceTitle = expectedTitle;
+  if (!answerTitleRaw) {
+    warnings.push('source_title_section_missing');
+  } else if (normalizeTitleForCompare(answerTitleRaw) !== normalizeTitleForCompare(expectedTitle)) {
+    return {
+      title: expectedTitle,
+      failure_code: 'SOURCE_TITLE_MISMATCH',
+      error: `answer title: ${answerTitleRaw}`,
+    };
+  } else if (answerTitleRaw.replace(/[《》]/g, '') !== expectedTitle) {
+    warnings.push('source_title_normalized');
+  }
+
+  const keyFindings = (sections.get('key_findings') || [])
+    .map(stripBullet)
+    .filter(Boolean);
+  if (!keyFindings.length) warnings.push('empty_key_findings_section');
+
+  const dataPoints = (sections.get('data_points') || [])
+    .map(parseDataPointLine)
+    .filter(Boolean);
+  if (!dataPoints.length) warnings.push('empty_data_points_section');
+
+  const entities = [];
+  const contentTags = [];
+  for (const line of sections.get('entities') || []) {
+    const items = stripBullet(line).split(/[、,，/｜|]/).map((part) => part.trim()).filter(Boolean);
+    for (const item of items) classifyEntityLine(item, entities, contentTags);
+  }
+  if (!entities.length) warnings.push('empty_entities_section');
+  if (!sections.has('entities')) warnings.push('answer_possibly_truncated');
+
+  return {
+    title: expectedTitle,
+    report: {
+      source_title: sourceTitle,
+      report_type: 'other',
+      research_subject: '',
+      executive_summary: summary,
+      key_findings: keyFindings,
+      content_tags: contentTags,
+      data_points: dataPoints,
+      entities,
+      evidence: [],
+    },
+    warnings,
+  };
+}
+
 function escapeUnescapedInteriorQuotes(value) {
   let output = '';
   let inString = false;
@@ -275,7 +475,7 @@ function validateAndNormalizeSuccess(record, indexRecord) {
   const executiveSummary = normalizeText(record.executive_summary);
   if (!researchSubject) warnings.push('empty_research_subject');
   if (!executiveSummary) errors.push('EMPTY_EXECUTIVE_SUMMARY');
-  if (executiveSummary && (executiveSummary.length < 120 || executiveSummary.length > 200)) {
+  if (executiveSummary && (executiveSummary.length < 80 || executiveSummary.length > 600)) {
     warnings.push(`executive_summary_length:${executiveSummary.length}`);
   }
 
@@ -327,7 +527,7 @@ function validateAndNormalizeSuccess(record, indexRecord) {
     data_points: dataPoints,
     entities,
     evidence,
-    prompt_version: normalizeText(record.prompt_version || 'ima-download-screen-summary-batch-v2'),
+    prompt_version: normalizeText(record.prompt_version || 'ima-download-screen-summary-batch-v6'),
     model_version: normalizeText(record.model_version || 'ima-web-hy3-fast'),
     generated_at: normalizeText(record.generated_at || new Date().toISOString()),
     elapsed_ms: Number.isFinite(Number(record.elapsed_ms)) ? Number(record.elapsed_ms) : null,
@@ -360,7 +560,7 @@ function normalizeFailure(record, indexRecord) {
     data_points: [],
     entities: [],
     evidence: [],
-    prompt_version: normalizeText(record && record.prompt_version) || 'ima-download-screen-summary-batch-v2',
+    prompt_version: normalizeText(record && record.prompt_version) || 'ima-download-screen-summary-batch-v6',
     model_version: normalizeText(record && record.model_version) || 'ima-web-hy3-fast',
     generated_at: normalizeText(record && (record.generated_at || record.failed_at)),
     elapsed_ms: Number.isFinite(Number(record && record.elapsed_ms)) ? Number(record.elapsed_ms) : null,
@@ -506,6 +706,8 @@ module.exports = {
   readJsonl,
   writeJsonlAtomic,
   stripCitationArtifacts,
+  parseSectionAnswer,
+  splitSections,
   parseStrictJson,
   mapBatchReports,
   validateAndNormalizeSuccess,
