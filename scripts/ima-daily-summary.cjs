@@ -54,6 +54,7 @@ function usage() {
   node scripts/ima-daily-summary.cjs next [--date YYYYMMDD] [--batch-size 5] [--surface browser|app]
   pbpaste | node scripts/ima-daily-summary.cjs ingest [--date YYYYMMDD] [--elapsed-ms N] [--surface browser|app]
   node scripts/ima-daily-summary.cjs fail-batch [--date YYYYMMDD] --code <CODE> [--message <text>] [--surface browser|app] [--terminal]
+  node scripts/ima-daily-summary.cjs invalidate-reviewed [--date YYYYMMDD] --media-ids <id,id,...> [--reason <text>]
   node scripts/ima-daily-summary.cjs finalize [--date YYYYMMDD] [--skip-rank]
   node scripts/ima-daily-summary.cjs status [--date YYYYMMDD]
 
@@ -363,23 +364,113 @@ function readStdin() {
   return fs.readFileSync(0, 'utf8').trim();
 }
 
+function normalizeBatchTitle(value) {
+  return String(value || '')
+    .replace(/[《》"'\s]/g, '')
+    .replace(/\.pdf$/i, '')
+    .replace(/[（(]/g, '(')
+    .replace(/[）)]/g, ')')
+    .replace(/[，,]/g, ',')
+    .toLowerCase();
+}
+
+function isFilenameHeading(line) {
+  return String(line || '')
+    .replace(/^\s*[#>*\-•·]+\s*/, '')
+    .replace(/\*\*/g, '')
+    .replace(/[：:]\s*$/, '')
+    .trim() === '文件名';
+}
+
+function isCoreSummaryHeading(line) {
+  return String(line || '')
+    .replace(/^\s*[#>*\-•·]+\s*/, '')
+    .replace(/\*\*/g, '')
+    .replace(/[：:]\s*$/, '')
+    .trim() === '核心摘要';
+}
+
 function parseSectionBatchAnswer(rawAnswer, titles) {
-  const blocks = String(rawAnswer || '')
-    .split(/(?:^|\r?\n)\s*(?:#{1,6}\s*)?(?:\*\*)?文件名(?:\*\*)?\s*[：:]?\s*(?:\r?\n)/)
-    .slice(1)
-    .map((block) => `文件名\n${block.trim()}`)
-    .filter((block) => block !== '文件名');
-  if (blocks.length === 0) throw new Error('Batch section answer has no 文件名 blocks');
+  const lines = String(rawAnswer || '').split(/\r?\n/);
+  const titleByNormalized = new Map(titles.map((title) => [normalizeBatchTitle(title), title]));
+  const headingIndexes = lines
+    .map((line, index) => (isFilenameHeading(line) ? index : -1))
+    .filter((index) => index >= 0);
+
+  const matched = new Map();
+  if (headingIndexes.length === 0) {
+    const titleIndexes = lines
+      .map((line, index) => {
+        const title = titleByNormalized.get(normalizeBatchTitle(line));
+        if (!title) return null;
+        const firstContentLine = lines.slice(index + 1).find((candidate) => candidate.trim())?.trim() || '';
+        if (!isCoreSummaryHeading(firstContentLine) && !/^NO_CONTENT$/i.test(firstContentLine)) return null;
+        return { index, title };
+      })
+      .filter(Boolean);
+    if (!titleIndexes.length) throw new Error('Batch section answer has no exact titled blocks');
+    for (let position = 0; position < titleIndexes.length; position += 1) {
+      const { index, title } = titleIndexes[position];
+      const nextTitleIndex = titleIndexes[position + 1]?.index ?? lines.length;
+      const contentLines = lines.slice(index + 1, nextTitleIndex);
+      const nonEmptyContent = contentLines.map((line) => line.trim()).filter(Boolean);
+      const parsed = nonEmptyContent.length === 1 && /^NO_CONTENT$/i.test(nonEmptyContent[0])
+        ? parseSectionAnswer('NO_CONTENT', title)
+        : parseSectionAnswer(`文件名\n${title}\n${contentLines.join('\n').trim()}`, title);
+      const entries = matched.get(title) || [];
+      entries.push(parsed);
+      matched.set(title, entries);
+    }
+  }
+
+  for (let position = 0; position < headingIndexes.length; position += 1) {
+    const headingIndex = headingIndexes[position];
+    const nextHeadingIndex = headingIndexes[position + 1] ?? lines.length;
+    const previousHeadingIndex = headingIndexes[position - 1] ?? -1;
+    const beforeLines = lines.slice(previousHeadingIndex + 1, headingIndex)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const afterLines = lines.slice(headingIndex + 1, nextHeadingIndex);
+    const firstAfter = afterLines.find((line) => line.trim())?.trim() || '';
+    const lastBefore = beforeLines.at(-1) || '';
+    const afterTitle = titleByNormalized.get(normalizeBatchTitle(firstAfter));
+    const beforeTitle = titleByNormalized.get(normalizeBatchTitle(lastBefore));
+    const title = afterTitle || beforeTitle;
+    if (!title) continue;
+
+    let payloadLines = [...afterLines];
+    if (beforeTitle && position + 1 < headingIndexes.length) {
+      const trailingTitle = payloadLines.findLastIndex((line) => line.trim());
+      if (trailingTitle >= 0 && titleByNormalized.has(normalizeBatchTitle(payloadLines[trailingTitle]))) {
+        payloadLines = payloadLines.slice(0, trailingTitle);
+      }
+    }
+    const contentLines = afterTitle
+      ? payloadLines.slice(payloadLines.indexOf(firstAfter) + 1)
+      : payloadLines;
+    const nonEmptyContent = contentLines.map((line) => line.trim()).filter(Boolean);
+    const parsed = nonEmptyContent.length === 1 && /^NO_CONTENT$/i.test(nonEmptyContent[0])
+      ? parseSectionAnswer('NO_CONTENT', title)
+      : parseSectionAnswer(`文件名\n${title}\n${contentLines.join('\n').trim()}`, title);
+    const entries = matched.get(title) || [];
+    entries.push(parsed);
+    matched.set(title, entries);
+  }
 
   return titles.map((title) => {
-    for (const block of blocks) {
-      const parsed = parseSectionAnswer(block, title);
-      if (parsed.report || parsed.failure_code !== 'SOURCE_TITLE_MISMATCH') return parsed;
+    const entries = matched.get(title) || [];
+    if (entries.length === 1) return entries[0];
+    if (entries.length > 1) {
+      return {
+        title,
+        failure_code: 'BATCH_REPORT_DUPLICATE',
+        error: 'duplicate 文件名 sections',
+      };
     }
     return {
       title,
       failure_code: 'BATCH_REPORT_MISSING',
-      error: 'no matching 文件名 section',
+      error: 'no exact matching 文件名 section',
     };
   });
 }
@@ -577,6 +668,39 @@ function commandFailBatch(paths, opts, config = loadConfig()) {
   };
 }
 
+function commandInvalidateReviewed(paths, opts) {
+  const inputs = readInputs(paths);
+  const mediaIds = String(opts['media-ids'] || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (!mediaIds.length) throw new Error('--media-ids is required');
+  const requested = new Set(mediaIds);
+  const indexIds = new Set(inputs.index.map((record) => record.media_id));
+  const unknown = mediaIds.filter((mediaId) => !indexIds.has(mediaId));
+  if (unknown.length) throw new Error(`Unknown media_id: ${unknown.join(', ')}`);
+
+  const removedProgress = inputs.progress.filter((record) => requested.has(record.media_id));
+  const removedFailures = inputs.failures.filter((record) => requested.has(record.media_id));
+  writeJsonlAtomic(paths.progress, inputs.progress.filter((record) => !requested.has(record.media_id)));
+  writeJsonlAtomic(paths.failures, inputs.failures.filter((record) => !requested.has(record.media_id)));
+  appendJsonl(paths.batches, {
+    batch_id: `invalidate-${paths.date.compact}-${Date.now()}`,
+    status: 'invalidated',
+    date: paths.date.iso,
+    invalidated_at: new Date().toISOString(),
+    media_ids: mediaIds,
+    reason: String(opts.reason || '').trim(),
+  });
+  return {
+    command: 'invalidate-reviewed',
+    date: paths.date.iso,
+    invalidated: mediaIds.length,
+    removed_progress: removedProgress.length,
+    removed_failures: removedFailures.length,
+  };
+}
+
 function statusReport(paths, config = loadConfig()) {
   const inputs = readInputs(paths);
   const snapshot = buildSnapshot(inputs.index, inputs.progress, inputs.failures);
@@ -633,7 +757,15 @@ function commandFinalize(paths, opts) {
 
 async function main(argv = process.argv.slice(2)) {
   const opts = parseArgs(argv);
-  if (opts.help || !['prepare', 'next', 'ingest', 'fail-batch', 'finalize', 'status'].includes(opts.command)) {
+  if (opts.help || ![
+    'prepare',
+    'next',
+    'ingest',
+    'fail-batch',
+    'invalidate-reviewed',
+    'finalize',
+    'status',
+  ].includes(opts.command)) {
     usage();
     if (!opts.help && opts.command) process.exitCode = 1;
     return;
@@ -645,6 +777,7 @@ async function main(argv = process.argv.slice(2)) {
   if (opts.command === 'next') result = commandNext(paths, opts, config);
   if (opts.command === 'ingest') result = await commandIngest(paths, opts, config);
   if (opts.command === 'fail-batch') result = commandFailBatch(paths, opts, config);
+  if (opts.command === 'invalidate-reviewed') result = commandInvalidateReviewed(paths, opts);
   if (opts.command === 'finalize') result = commandFinalize(paths, opts);
   if (opts.command === 'status') result = statusReport(paths, config);
   console.log(JSON.stringify(result, null, 2));
@@ -670,6 +803,7 @@ module.exports = {
   commandNext,
   commandIngest,
   commandFailBatch,
+  commandInvalidateReviewed,
   statusReport,
   main,
 };

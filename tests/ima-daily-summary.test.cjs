@@ -11,6 +11,7 @@ const {
   commandNext,
   commandIngest,
   commandFailBatch,
+  commandInvalidateReviewed,
   statusReport,
 } = require('../scripts/ima-daily-summary.cjs');
 
@@ -232,6 +233,148 @@ test('ingest maps multi-report section answers by exact source title', async () 
   }
 });
 
+test('ingest maps IMA copied sections when the source title precedes 文件名', async () => {
+  const { root, paths } = tempPaths(2);
+  try {
+    const config = { max_batch_size: 5, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const answer = `《报告2.pdf》
+文件名
+核心摘要
+报告二分析独立的云计算需求、资本开支和盈利传导，认为新增订单将推动未来收入增长，同时提示竞争加剧风险。
+
+关键结论
+- 报告二结论
+
+重要数字
+- 收入增长：2027E 预计增长30%
+
+关键实体与标签
+- 报告二公司、云计算
+
+《报告1.pdf》
+文件名
+核心摘要
+报告一分析独立的半导体设备需求、产能和盈利传导，认为订单释放将推动未来收入增长，同时提示价格风险。
+
+关键结论
+- 报告一结论
+
+重要数字
+- 收入增长：2026E 预计增长20%
+
+关键实体与标签
+- 报告一公司、半导体设备`;
+    const result = await commandIngest(paths, {}, config, answer);
+    assert.equal(result.reviewed, 2);
+    assert.equal(result.failed, 0);
+    const saved = readLines(paths.progress);
+    const first = saved.find((record) => record.title === '报告1.pdf');
+    const second = saved.find((record) => record.title === '报告2.pdf');
+    assert.match(first.executive_summary, /半导体设备/);
+    assert.match(second.executive_summary, /云计算/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ingest maps exact titled blocks when IMA omits the 文件名 heading', async () => {
+  const { root, paths } = tempPaths(2);
+  try {
+    const config = { max_batch_size: 5, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const answer = `以下为两篇研报摘要：
+《报告2.pdf》
+核心摘要
+报告二分析云计算需求和资本开支，认为新增订单将推动未来收入增长，同时提示竞争风险。
+
+关键结论
+- 报告二结论
+
+重要数字
+- 收入增长：2027E 预计增长30%
+
+关键实体与标签
+- 报告二公司、云计算
+
+《报告1.pdf》
+核心摘要
+报告一分析半导体设备需求和产能，认为订单释放将推动未来收入增长，同时提示价格风险。
+
+关键结论
+- 报告一结论
+
+重要数字
+- 收入增长：2026E 预计增长20%
+
+关键实体与标签
+- 报告一公司、半导体设备`;
+    const result = await commandIngest(paths, {}, config, answer);
+    assert.equal(result.reviewed, 2);
+    assert.equal(result.failed, 0);
+    const saved = readLines(paths.progress);
+    assert.match(saved.find((record) => record.title === '报告1.pdf').executive_summary, /半导体设备/);
+    assert.match(saved.find((record) => record.title === '报告2.pdf').executive_summary, /云计算/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ingest does not reuse a section when its exact source title is missing', async () => {
+  const { root, paths } = tempPaths(2);
+  try {
+    const config = { max_batch_size: 5, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const answer = `文件名
+核心摘要
+这段摘要没有任何可核对的真实文件名，因此不得映射给任一期望报告。
+
+关键结论
+- 不应保存`;
+    const result = await commandIngest(paths, {}, config, answer);
+    assert.equal(result.reviewed, 0);
+    assert.equal(result.failed, 2);
+    assert.equal(readLines(paths.progress).length, 0);
+    assert.ok(readLines(paths.failures).every((record) =>
+      record.failure_code === 'BATCH_REPORT_MISSING'
+    ));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ingest isolates NO_CONTENT in the title-before-heading format', async () => {
+  const { root, paths } = tempPaths(2);
+  try {
+    const config = { max_batch_size: 5, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const answer = `《报告1.pdf》
+文件名
+NO_CONTENT
+
+《报告2.pdf》
+文件名
+核心摘要
+报告二分析独立的云计算需求、资本开支和盈利传导，认为新增订单将推动未来收入增长，同时提示竞争风险。
+
+关键结论
+- 报告二结论
+
+重要数字
+- 收入增长：2027E 预计增长30%
+
+关键实体与标签
+- 报告二公司、云计算`;
+    const result = await commandIngest(paths, {}, config, answer);
+    assert.equal(result.reviewed, 1);
+    assert.equal(result.failed, 1);
+    assert.equal(readLines(paths.progress)[0].title, '报告2.pdf');
+    assert.equal(readLines(paths.failures)[0].failure_code, 'CONTENT_UNREADABLE');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('ingest rejects chatter without a core summary section', async () => {
   const { root, paths } = tempPaths(1);
   try {
@@ -319,6 +462,33 @@ test('terminal batch failure skips the report without another retry', () => {
     }, config);
     assert.equal(failed.outcomes[0].attempts, 5);
     assert.equal(commandNext(paths, {}, config).done, true);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('invalidate-reviewed removes polluted progress and makes reports pending again', () => {
+  const { root, paths } = tempPaths(3);
+  try {
+    writeJsonl(paths.progress, [
+      { ...indexRecord(1), status: 'reviewed' },
+      { ...indexRecord(2), status: 'reviewed' },
+    ]);
+    writeJsonl(paths.failures, [
+      { ...indexRecord(2), status: 'UNREVIEWED', attempts: 2, failure_code: 'INVALID_JSON' },
+    ]);
+    const result = commandInvalidateReviewed(paths, {
+      'media-ids': 'pdf-2',
+      reason: 'polluted summary',
+    });
+    assert.equal(result.removed_progress, 1);
+    assert.equal(result.removed_failures, 1);
+    assert.deepEqual(readLines(paths.progress).map((record) => record.media_id), ['pdf-1']);
+    assert.deepEqual(commandNext(paths, {}, {
+      max_batch_size: 5,
+      max_attempts: 4,
+      model_version: 'ima-app-hy3-fast',
+    }).records.map((record) => record.media_id), ['pdf-2', 'pdf-3']);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
