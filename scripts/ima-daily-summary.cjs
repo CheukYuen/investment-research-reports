@@ -21,6 +21,7 @@ const {
 } = require('./report-summaries.cjs');
 
 const DEFAULT_KB = '环球研报直通车';
+const DEFAULT_BROWSER_URL = 'https://ima.qq.com/wikis?knowledgeBaseId=7442602265681522';
 const PROMPT_PATH = path.join(ROOT, 'prompts', 'ima-download-screen-summary-batch-v6.txt');
 const PROMPT_VERSION = 'ima-download-screen-summary-batch-v6';
 const BROWSER_MODEL_VERSION = 'ima-web-hy3-fast';
@@ -33,6 +34,7 @@ const GLOBAL_STOP_CODES = new Set(['GLOBAL_LIMIT', 'LOGIN_REQUIRED']);
 function loadConfig() {
   const defaults = {
     knowledge_base: DEFAULT_KB,
+    browser_url: DEFAULT_BROWSER_URL,
     interaction_order: ['browser', 'app'],
     browser_model_version: BROWSER_MODEL_VERSION,
     app_model_version: APP_MODEL_VERSION,
@@ -51,14 +53,14 @@ function loadConfig() {
 function usage() {
   console.log(`Usage:
   node scripts/ima-daily-summary.cjs prepare [--date YYYYMMDD] [--skip-index]
-  node scripts/ima-daily-summary.cjs next [--date YYYYMMDD] [--batch-size 5] [--surface browser|app]
-  pbpaste | node scripts/ima-daily-summary.cjs ingest [--date YYYYMMDD] [--elapsed-ms N] [--surface browser|app]
+  node scripts/ima-daily-summary.cjs next [--date YYYYMMDD] [--batch-size 5] [--surface browser|app] [--compact]
+  node scripts/ima-daily-summary.cjs ingest [--date YYYYMMDD] [--elapsed-ms N] [--surface browser|app] [--input-file PATH]
   node scripts/ima-daily-summary.cjs fail-batch [--date YYYYMMDD] --code <CODE> [--message <text>] [--surface browser|app] [--terminal]
   node scripts/ima-daily-summary.cjs invalidate-reviewed [--date YYYYMMDD] --media-ids <id,id,...> [--reason <text>]
   node scripts/ima-daily-summary.cjs finalize [--date YYYYMMDD] [--skip-rank]
   node scripts/ima-daily-summary.cjs status [--date YYYYMMDD]
 
-The default date is today in Asia/Shanghai. IMA answers are read from stdin by ingest.`);
+The default date is today in Asia/Shanghai. ingest reads --input-file when provided, otherwise stdin.`);
 }
 
 function parseArgs(argv) {
@@ -229,7 +231,7 @@ function surfaceModelVersion(surface, config = loadConfig()) {
   return String(config.app_model_version || APP_MODEL_VERSION);
 }
 
-function batchPayload(batch, resumed = false) {
+function batchPayload(batch, resumed = false, config = loadConfig()) {
   return {
     done: false,
     resumed,
@@ -238,10 +240,33 @@ function batchPayload(batch, resumed = false) {
     prompt_version: batch.prompt_version,
     model_version: batch.model_version,
     interaction_surface: batch.interaction_surface,
+    browser_url: String(config.browser_url || DEFAULT_BROWSER_URL),
     folder_path: batch.folder_path,
     records: batch.records,
     prompt: batch.prompt,
   };
+}
+
+function compactNextPayload(payload) {
+  if (payload.done) {
+    return {
+      done: true,
+      indexed: payload.indexed,
+      reviewed: payload.reviewed,
+      terminal_failures: payload.terminal_failures,
+    };
+  }
+  return {
+    done: false,
+    batch_id: payload.batch_id,
+    batch_size: payload.batch_size,
+    browser_url: payload.browser_url,
+    folder_path: payload.folder_path,
+  };
+}
+
+function nextPayload(payload, opts) {
+  return opts.compact ? compactNextPayload(payload) : payload;
 }
 
 function commandPrepare(paths, opts, config = loadConfig()) {
@@ -301,7 +326,7 @@ function commandNext(paths, opts, config = loadConfig()) {
           previous_interaction_surface: open.interaction_surface || null,
         });
       }
-      return batchPayload(resumedBatch, true);
+      return nextPayload(batchPayload(resumedBatch, true, config), opts);
     }
     appendJsonl(paths.batches, {
       ...open,
@@ -318,14 +343,14 @@ function commandNext(paths, opts, config = loadConfig()) {
     Number(config.max_attempts || MAX_ATTEMPTS),
   );
   if (pending.length === 0) {
-    return {
+    return nextPayload({
       done: true,
       indexed: inputs.index.length,
       reviewed: reviewedIds.size,
       terminal_failures: inputs.failures.filter((record) =>
         Number(record.attempts || 0) >= Number(config.max_attempts || MAX_ATTEMPTS)
       ).length,
-    };
+    }, opts);
   }
   const size = Math.min(
     safeBatchSize(opts['batch-size'], config.max_batch_size),
@@ -357,11 +382,23 @@ function commandNext(paths, opts, config = loadConfig()) {
     prompt: renderPrompt(selected),
   };
   appendJsonl(paths.batches, batch);
-  return batchPayload(batch);
+  return nextPayload(batchPayload(batch, false, config), opts);
 }
 
 function readStdin() {
   return fs.readFileSync(0, 'utf8').trim();
+}
+
+function readIngestAnswer(opts, suppliedAnswer) {
+  if (opts['input-file']) {
+    if (suppliedAnswer != null) {
+      throw new Error('Use either --input-file or a supplied answer, not both');
+    }
+    const inputPath = path.resolve(String(opts['input-file']));
+    if (!fs.existsSync(inputPath)) throw new Error(`Input file not found: ${inputPath}`);
+    return fs.readFileSync(inputPath, 'utf8').trim();
+  }
+  return suppliedAnswer == null ? readStdin() : String(suppliedAnswer).trim();
 }
 
 function normalizeBatchTitle(value) {
@@ -484,6 +521,21 @@ function parseBatchAnswer(rawAnswer, titles) {
   }
 }
 
+function validateAnswerTransport(rawAnswer, expectedTitles) {
+  const text = String(rawAnswer || '').trim();
+  if (expectedTitles.length === 1 && /^NO_CONTENT$/i.test(text)) return null;
+  const normalizedAnswer = normalizeBatchTitle(text);
+  const matchedTitle = expectedTitles.some((title) =>
+    normalizedAnswer.includes(normalizeBatchTitle(title))
+  );
+  const hasAnswerStructure = /核心摘要|executive_summary|NO_CONTENT/i.test(text);
+  if (matchedTitle || hasAnswerStructure) return null;
+  return {
+    failure_code: 'INPUT_NOT_COPIED',
+    message: '输入中未发现本批报告标题或任何摘要结构',
+  };
+}
+
 function upsert(records, record) {
   return [...records.filter((item) => item.media_id !== record.media_id), record];
 }
@@ -492,9 +544,18 @@ async function commandIngest(paths, opts, config = loadConfig(), suppliedAnswer 
   const inputs = readInputs(paths);
   const open = latestOpenBatch(inputs.batches);
   if (!open) throw new Error('No planned batch. Run next before ingest.');
-  const rawAnswer = suppliedAnswer == null ? readStdin() : String(suppliedAnswer).trim();
+  const rawAnswer = readIngestAnswer(opts, suppliedAnswer);
   if (!rawAnswer) throw new Error('ingest requires the complete IMA answer on stdin');
   const expected = open.records.map((record) => record.title);
+  const transportFailure = validateAnswerTransport(rawAnswer, expected);
+  if (transportFailure) {
+    return {
+      command: 'ingest',
+      accepted: false,
+      batch_id: open.batch_id,
+      ...transportFailure,
+    };
+  }
   let mapped;
   try {
     mapped = parseBatchAnswer(rawAnswer, expected);

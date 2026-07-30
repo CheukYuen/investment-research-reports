@@ -1,5 +1,6 @@
 {
   "knowledge_base": "环球研报直通车",
+  "browser_url": "https://ima.qq.com/wikis?knowledgeBaseId=7442602265681522",
   "interaction_order": ["browser", "app"],
   "browser_model_version": "ima-web-hy3-fast",
   "app_model_version": "ima-app-hy3-fast",

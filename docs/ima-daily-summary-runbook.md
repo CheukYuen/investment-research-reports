@@ -19,6 +19,7 @@ IMA 摘要的角色固定为 `routing_candidate`：它只用于主题路由、PD
 仓库配置位于 `config/ima-daily-summary.json`：
 
 - `max_batch_size`：每次最多 5 篇；
+- `browser_url`：IMA Web 的固定目标知识库入口；Browser 必须直接打开该地址，不从公共首页猜测知识库路径；
 - `max_attempts`：单篇累计重试上限；
 - `interaction_order`：固定为 `browser,app`，Browser 是主路径，App 仅为兜底；
 - `browser_model_version` / `app_model_version`：记录摘要实际来自哪个界面；
@@ -86,7 +87,7 @@ node scripts/ima-daily-summary.cjs prepare \
 
 每个批次都必须完整执行以下状态机，不得在旧对话中追问：
 
-1. 优先连接已登录的 Codex 内置 Browser，打开 IMA Web，并进入 `YYYY年国际顶级投行研报 / M月 / M.D` 当天目录。
+1. 优先连接已登录的 Codex 内置 Browser，直接打开配置中的 `browser_url`，并进入 `YYYY年国际顶级投行研报 / M月 / M.D` 当天目录。
 2. 确认问答范围是当前文件夹。
 3. 选择内置模型 `Hy3`，思考模式为 `快速`，关闭联网搜索。
 4. 在当天目录中点击右上角“新建对话”。
@@ -94,17 +95,23 @@ node scripts/ima-daily-summary.cjs prepare \
 6. 在终端执行 Browser 批次命令，取得本批 Prompt：
 
    ```bash
-   node scripts/ima-daily-summary.cjs next --surface browser
+   node scripts/ima-daily-summary.cjs next --surface browser --compact
    ```
 
-7. 将返回 JSON 的 `prompt` 完整粘贴到 IMA，只发送一次。
-8. 等待回答停止生成，并确认回答底部的操作图标已经出现；不要用固定睡眠代替完成检测。
-9. 从本次新增回答气泡的 DOM 提取完整回答文本；不得读取旧回答，也不得只取可视区域。必要时可点击回答的复制按钮取得同一份完整文本。
-10. 立即把完整回答通过 stdin 写入仓库进度，并显式记录 Browser：
+   完整 Prompt 与报告清单保存在 `batches` 文件对应的最新 `planned` 批次中。Browser 控制端直接读取该行，不把完整 Prompt 和记录再次打印到工具输出。
+
+7. 将该批次的 `prompt` 完整粘贴到 IMA，只发送一次。
+8. 等待回答停止生成，并确认“生成脑图”或回答底部操作图标已经出现；不要用固定睡眠代替完成检测。正常轮询只检查目标完成信号，不重复输出完整 DOM。
+9. 点击本次新增回答右下角“复制”，从 Browser 自身剪贴板读取完整文本并写入仓库外的临时 UTF-8 文件。不得读取旧回答，也不得只取可视区域；只有找不到目标控件或页面结构变化时才读取一次 DOM 快照或截图。
+10. 立即从临时文件写入仓库进度，并显式记录 Browser：
 
     ```bash
-    pbpaste | node scripts/ima-daily-summary.cjs ingest --surface browser
+    node scripts/ima-daily-summary.cjs ingest \
+      --surface browser \
+      --input-file /tmp/ima-answer.txt
     ```
+
+    `ingest` 会先排除既没有本批标题、也没有任何摘要结构的明显错误剪贴板文本。若返回 `INPUT_NOT_COPIED`，说明复制或传输错误；当前批次保持打开、失败次数不增加，应重新点击同一回答的“复制”后再次 ingest，不得向 IMA 重复提问。只要文本呈现 IMA 回答结构，就继续由正式解析器判断来源错配、缺篇或内容失败。
 
 11. 再次执行 `next`。若 `done=false`，回到第 4 步另开新对话；若 `done=true`，进入最终对账。
 
@@ -126,6 +133,8 @@ node scripts/ima-daily-summary.cjs next --surface app
 ```bash
 pbpaste | node scripts/ima-daily-summary.cjs ingest --surface app
 ```
+
+`pbpaste` 仅用于 IMA App 兜底；Browser 主路径必须使用 Browser 剪贴板和 `--input-file`，避免两个剪贴板不同步。
 
 来源不符、回答内容质量差、IMA 全局限流或资料额度耗尽，不属于 Browser 故障，不得靠切换 App 绕过。
 

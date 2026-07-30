@@ -79,6 +79,21 @@ test('dynamic prompt keeps core content requirements and substitutes report titl
   assert.doesNotMatch(prompt, /\{\{REPORT_COUNT\}\}|\{\{FILE_LIST\}\}/);
 });
 
+test('next exposes the configured fixed IMA knowledge-base browser URL', () => {
+  const { root, paths } = tempPaths(1);
+  try {
+    const browserUrl = 'https://ima.qq.com/wikis?knowledgeBaseId=7442602265681522';
+    const result = commandNext(paths, {}, {
+      max_batch_size: 1,
+      max_attempts: 5,
+      browser_url: browserUrl,
+    });
+    assert.equal(result.browser_url, browserUrl);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 function sectionAnswer(title = '报告1.pdf') {
   return `文件名
 ${title}
@@ -375,15 +390,33 @@ NO_CONTENT
   }
 });
 
-test('ingest rejects chatter without a core summary section', async () => {
+test('ingest rejects an uncopied answer without consuming a retry', async () => {
   const { root, paths } = tempPaths(1);
   try {
     const config = { max_batch_size: 1, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
-    commandNext(paths, {}, config);
+    const planned = commandNext(paths, {}, config);
     const result = await commandIngest(paths, {}, config, '我没有找到该文件');
-    assert.equal(result.failed, 1);
+    assert.equal(result.accepted, false);
+    assert.equal(result.failure_code, 'INPUT_NOT_COPIED');
     assert.equal(readLines(paths.progress).length, 0);
-    assert.equal(readLines(paths.failures)[0].failure_code, 'MISSING_SUMMARY_SECTION');
+    assert.equal(readLines(paths.failures).length, 0);
+    assert.equal(commandNext(paths, {}, config).batch_id, planned.batch_id);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ingest reads a complete Browser answer from --input-file', async () => {
+  const { root, paths } = tempPaths(1);
+  try {
+    const config = { max_batch_size: 1, max_attempts: 5, model_version: 'ima-web-hy3-fast' };
+    commandNext(paths, {}, config);
+    const inputFile = path.join(root, 'browser-answer.txt');
+    fs.writeFileSync(inputFile, sectionAnswer(), 'utf8');
+    const result = await commandIngest(paths, { 'input-file': inputFile }, config);
+    assert.equal(result.reviewed, 1);
+    assert.equal(result.failed, 0);
+    assert.equal(readLines(paths.progress)[0].source_title, '报告1.pdf');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -400,6 +433,28 @@ test('next creates five-item batches and resumes an open batch without duplicati
     assert.equal(second.batch_id, first.batch_id);
     assert.equal(second.resumed, true);
     assert.equal(fs.readFileSync(paths.batches, 'utf8').trim().split('\n').length, 1);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('compact next omits prompt and records while preserving the full planned batch', () => {
+  const { root, paths } = tempPaths(2);
+  try {
+    const config = {
+      max_batch_size: 5,
+      max_attempts: 4,
+      browser_url: 'https://ima.qq.com/wikis?knowledgeBaseId=7442602265681522',
+    };
+    const result = commandNext(paths, { compact: true }, config);
+    assert.equal(result.done, false);
+    assert.equal(result.batch_size, 2);
+    assert.equal(result.browser_url, config.browser_url);
+    assert.equal(result.prompt, undefined);
+    assert.equal(result.records, undefined);
+    const saved = readLines(paths.batches)[0];
+    assert.equal(saved.records.length, 2);
+    assert.match(saved.prompt, /读这2篇研报/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
