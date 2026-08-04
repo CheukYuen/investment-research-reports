@@ -403,7 +403,7 @@ function readIngestAnswer(opts, suppliedAnswer) {
 
 function normalizeBatchTitle(value) {
   return String(value || '')
-    .replace(/[《》"'\s]/g, '')
+    .replace(/[《》"'“”‘’\s]/g, '')
     .replace(/\.pdf$/i, '')
     .replace(/[（(]/g, '(')
     .replace(/[）)]/g, ')')

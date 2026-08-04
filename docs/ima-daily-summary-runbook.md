@@ -183,7 +183,7 @@ node scripts/ima-daily-summary.cjs finalize
 node scripts/ima-daily-summary.cjs status
 ```
 
-`finalize` 总是先写入一行对应一个 `media_id` 的权威摘要快照，再调用 DeepSeek 做唯一一次正文排序，生成日期化摘要队列，并汇总当月所有日期化摘要队列覆盖更新月度 P0–P3 HTML。不再生成标题排序基线、第二轮 rerank 或标题/正文对照。进入正文排序的最低条件是：
+`finalize` 总是先写入一行对应一个 `media_id` 的权威摘要快照，再调用 DeepSeek 直接基于正文摘要排序，生成日期化摘要队列，并汇总当月所有日期化摘要队列覆盖更新月度 P0–P3 HTML。用户明确要求时，允许对同一日期重新排序；新结果原子覆盖该日期队列并刷新月度页面。不得生成标题排序基线、标题/正文对照，或把一次排序拆成标题召回与 P0/P1 二阶段 rerank。进入正文排序的最低条件是：
 
 - `status=reviewed`；
 - `summary_role=routing_candidate`；
@@ -198,7 +198,7 @@ node scripts/ima-daily-summary.cjs status
 - 实际使用 Browser / App 的批次数及切换原因；
 - 索引总数、`reviewed` / `UNREVIEWED`；
 - 可重试失败 / 终止失败；
-- 单轮正文排序模型及 P0/P1/P2/P3 数量；
+- 正文排序模型、是否属于明确要求的重新排序，以及 P0/P1/P2/P3 数量；
 - 当月 HTML 路径；
 - 当日下载额度开始 / 结束用量；
 - 各优先级下载成功数；

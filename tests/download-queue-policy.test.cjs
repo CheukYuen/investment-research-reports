@@ -9,7 +9,7 @@ const {
   shanghaiDateKey,
 } = require('../scripts/sync-kb-pdfs.cjs');
 
-test('AI ranking is a single summary-based pass', async () => {
+test('AI ranking directly uses body summaries without a second-stage rerank', async () => {
   const prompt = rankingSystemPrompt();
   assert.match(prompt, /通用摘要/);
   assert.match(prompt, /正文证据/);

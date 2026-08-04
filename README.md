@@ -33,12 +33,12 @@ HTML 仅供人工复核，不是机器读取的主数据源。跨机器引用 PD
 
 ## 排序与过滤规则
 
-主路径只服务 **AI Infrastructure** 主题。IMA 先逐篇生成行业无关通用摘要，DeepSeek 随后只做一次正文排序。IMA 摘要本身不判断 P0—P3，主题评级由 `rank-ai --summary-source` 完成。
+主路径只服务 **AI Infrastructure** 主题。IMA 先逐篇生成行业无关通用摘要，DeepSeek 随后直接基于正文摘要排序。用户明确要求时，可以对同一日期重新排序并覆盖当日队列；IMA 摘要本身不判断 P0—P3，主题评级由 `rank-ai --summary-source` 完成。
 
 ```mermaid
 flowchart LR
   indexJsonl["index-YYYYMMDD.jsonl"] --> imaSummary["IMA 通用摘要<br/>DS 快速 DeepSeek-V4-Flash 每批最多5篇"]
-  imaSummary --> summaryRank["DeepSeek 一轮正文排序"]
+  imaSummary --> summaryRank["DeepSeek 正文排序"]
   summaryRank --> queue["P0/P1优先 P2补足"]
 ```
 

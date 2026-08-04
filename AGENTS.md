@@ -110,6 +110,6 @@ IMA 摘要的 `summary_role=routing_candidate`，只用于路由和下载筛选�
 
 `manifests/ai-ranking-analysis-YYYYMM.html` 是当月唯一的 P0–P3 排序页面；每日覆盖更新，必须保留并提交。
 
-DeepSeek 排序只允许读取 `report-summaries-YYYYMMDD.jsonl` 做一轮正文排序。不得再运行标题-only 召回、P0/P1 二次 rerank 或标题/正文对照流程。
+DeepSeek 排序只允许读取 `report-summaries-YYYYMMDD.jsonl`，每次调用直接完成正文排序。用户明确要求时，允许对同一日期重新排序并覆盖该日期队列、刷新月度页面；不得运行标题-only 召回、P0/P1 二阶段 rerank 或标题/正文对照流程。
 
 不要提交 `.env`。

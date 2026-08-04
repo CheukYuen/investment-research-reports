@@ -139,7 +139,7 @@ const pdfPath = path.join(repoRoot, 'downloads', record.local_relative_path);
 
 读取标题、通用摘要、关键结论、内容标签、原始关键数字、实体和证据后生成的 AI Infrastructure 正文排序。只接收 `reviewed + source_match + executive_summary` 记录；失败项不会由标题评级静默补齐。
 
-该队列保留索引身份和下载字段，可直接作为 `download-queue` 的输入。每篇只经过一次 DeepSeek 分类，`ranking_mode=single_summary_pass`；不再生成标题基线或标题/正文对照。
+该队列保留索引身份和下载字段，可直接作为 `download-queue` 的输入。每次排序调用都直接按正文摘要分类，`ranking_mode=single_summary_pass` 描述的是单次调用内没有标题召回或二阶段 rerank，并不限制同一日期以后重新排序。用户明确要求重新排序时，覆盖该日期队列并刷新月度页面。
 
 ### `manifests/downloaded.jsonl`
 
@@ -208,7 +208,7 @@ const pdfPath = path.join(repoRoot, 'downloads', record.local_relative_path);
 | `llm_provider` | LLM 提供方，目前为 `deepseek` |
 | `ranking_evidence` | 排序直接引用的摘要原文证据 |
 | `false_positive_checks` | 数据中心地产、租赁、并购等假阳性检查 |
-| `ranking_mode` | 固定为 `single_summary_pass` |
+| `ranking_mode` | 固定为 `single_summary_pass`，表示本次调用为正文摘要直排；不表示该日期禁止重新排序 |
 | `llm_model` | 实际使用的单一 DeepSeek 模型 |
 | `ranked_at` | 排序生成时间 |
 

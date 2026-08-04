@@ -229,6 +229,24 @@ test('ingest accepts a normalized source title and records a warning', async () 
   }
 });
 
+test('ingest treats straight and curly title quotes as equivalent', async () => {
+  const { root, paths } = tempPaths(1);
+  try {
+    const index = readLines(paths.index);
+    index[0].title = '报告“增持”1.pdf';
+    fs.writeFileSync(paths.index, `${JSON.stringify(index[0])}\n`);
+    const config = { max_batch_size: 1, max_attempts: 5, model_version: 'ima-app-hy3-fast' };
+    commandNext(paths, {}, config);
+    const result = await commandIngest(paths, {}, config, sectionAnswer('报告"增持"1.pdf'));
+    assert.equal(result.reviewed, 1);
+    const saved = readLines(paths.progress)[0];
+    assert.equal(saved.source_title, '报告“增持”1.pdf');
+    assert.ok(saved.validation_warnings.includes('source_title_normalized'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('ingest maps multi-report section answers by exact source title', async () => {
   const { root, paths } = tempPaths(2);
   try {
