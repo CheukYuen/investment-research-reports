@@ -14,7 +14,7 @@
 
 ```
 ima-daily-summary.cjs next   → 渲染 prompt（PROMPT_PATH）
-IMA（Hy3 快速模式，当天目录，1 篇/对话，只问一次）
+IMA（DS 快速模式，DeepSeek-V4-Flash，当天目录，1 篇/对话，只问一次）
 ima-daily-summary.cjs ingest → parseBatchAnswer → validateAndNormalizeSuccess
                              → manifests/report-summaries-YYYYMMDD.jsonl
 sync-kb-pdfs.cjs rank-ai     → DeepSeek 正文排序 → ai-ranked-queue-summary-YYYYMMDD.jsonl
@@ -354,7 +354,7 @@ node --test tests/*.test.cjs
 素材用 7.24：`manifests/report-summary-browser-failures-20260724.jsonl` 有 38 条 `ANSWER_TIMEOUT`，
 正好是 v2 强约束下卡住的样本，是最严格的回归集。
 
-必须遵守 `docs/ima-daily-summary-runbook.md` 和 CLAUDE.md：当天目录、Hy3 快速模式、关闭联网搜索、
+必须遵守 `docs/ima-daily-summary-runbook.md` 和 CLAUDE.md：当天目录、DS 快速模式（DeepSeek-V4-Flash）、关闭联网搜索、
 **每篇新建独立对话且只问一次**，不在原对话追问。
 
 ```bash

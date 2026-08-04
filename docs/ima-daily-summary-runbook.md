@@ -6,7 +6,7 @@
 
 ```text
 当天索引
-→ IMA Hy3 快速模式分批生成通用摘要
+→ IMA DS 快速模式（DeepSeek-V4-Flash）分批生成通用摘要
 → 逐篇写入可恢复进度
 → 生成权威日期快照
 → 基于摘要做 AI Infrastructure 正文排序
@@ -89,7 +89,7 @@ node scripts/ima-daily-summary.cjs prepare \
 
 1. 优先连接已登录的 Codex 内置 Browser，直接打开配置中的 `browser_url`，并进入 `YYYY年国际顶级投行研报 / M月 / M.D` 当天目录。
 2. 确认问答范围是当前文件夹。
-3. 选择内置模型 `Hy3`，思考模式为 `快速`，关闭联网搜索。
+3. 选择内置模型 `DS`，思考模式为 `快速`，确认底层模型为 `DeepSeek-V4-Flash`，关闭联网搜索。
 4. 在当天目录中点击右上角“新建对话”。
 5. 确认新对话没有历史问答。
 6. 在终端执行 Browser 批次命令，取得本批 Prompt：

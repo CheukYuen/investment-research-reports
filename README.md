@@ -37,7 +37,7 @@ HTML 仅供人工复核，不是机器读取的主数据源。跨机器引用 PD
 
 ```mermaid
 flowchart LR
-  indexJsonl["index-YYYYMMDD.jsonl"] --> imaSummary["IMA 通用摘要<br/>Hy3 快速 每批最多5篇"]
+  indexJsonl["index-YYYYMMDD.jsonl"] --> imaSummary["IMA 通用摘要<br/>DS 快速 DeepSeek-V4-Flash 每批最多5篇"]
   imaSummary --> summaryRank["DeepSeek 一轮正文排序"]
   summaryRank --> queue["P0/P1优先 P2补足"]
 ```
@@ -118,7 +118,7 @@ node scripts/sync-kb-pdfs.cjs index \
 
 ### 每日 IMA 正文摘要与可恢复排序
 
-仓库已将“当天目录、Hy3 快速、Browser 优先且 App 兜底、每批最多 5 篇、每批新建独立对话、提取完整 JSON、逐篇写进度、断点续跑、正文排序”固化为日期参数化任务：
+仓库已将“当天目录、DS 快速（DeepSeek-V4-Flash）、Browser 优先且 App 兜底、每批最多 5 篇、每批新建独立对话、提取完整 JSON、逐篇写进度、断点续跑、正文排序”固化为日期参数化任务：
 
 ```bash
 node scripts/ima-daily-summary.cjs prepare
