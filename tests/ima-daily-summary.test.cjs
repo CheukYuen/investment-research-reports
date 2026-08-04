@@ -353,6 +353,66 @@ test('ingest maps exact titled blocks when IMA omits the 文件名 heading', asy
   }
 });
 
+test('ingest tolerates numbered report headings and leading IMA narration', async () => {
+  const { root, paths } = tempPaths(2);
+  try {
+    const config = { max_batch_size: 5, max_attempts: 5, model_version: 'ima-web-deepseek-v4-flash' };
+    commandNext(paths, {}, config);
+    const answer = `我先逐一读取这2篇研报，然后整理结果。
+
+1. 报告1.pdf
+核心摘要
+报告一分析半导体设备需求和产能，认为订单释放将推动收入增长，同时提示价格竞争风险。
+
+关键结论
+核心产品需求持续增长
+新产能释放构成主要催化剂
+
+重要数字
+收入增长：2026E预计增长20%
+
+关键实体与标签
+测试公司、半导体设备、产能
+
+## 2、**《报告2.pdf》**
+核心摘要
+报告二分析云计算需求和资本开支，认为新增订单将推动收入增长，同时提示竞争加剧风险。
+
+关键结论
+- 云计算需求持续增长
+
+重要数字
+- 收入增长：2027E预计增长30%
+
+关键实体与标签
+- 报告二公司、云计算`;
+    const result = await commandIngest(paths, {}, config, answer);
+    assert.equal(result.reviewed, 2);
+    assert.equal(result.failed, 0);
+    const saved = readLines(paths.progress);
+    assert.match(saved.find((record) => record.title === '报告1.pdf').executive_summary, /半导体设备/);
+    assert.match(saved.find((record) => record.title === '报告2.pdf').executive_summary, /云计算/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('ingest reports an accurate format error for an unrecognized multi-report answer', async () => {
+  const { root, paths } = tempPaths(2);
+  try {
+    const config = { max_batch_size: 5, max_attempts: 5, model_version: 'ima-web-deepseek-v4-flash' };
+    commandNext(paths, {}, config);
+    const result = await commandIngest(paths, {}, config, '核心摘要\n有摘要结构，但没有任何可核对的报告标题。');
+    assert.equal(result.reviewed, 0);
+    assert.equal(result.failed, 2);
+    assert.ok(readLines(paths.failures).every((record) =>
+      record.failure_code === 'BATCH_FORMAT_UNRECOGNIZED'
+    ));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('ingest does not reuse a section when its exact source title is missing', async () => {
   const { root, paths } = tempPaths(2);
   try {

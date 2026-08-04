@@ -10,10 +10,16 @@ const {
 } = require('../scripts/sync-kb-pdfs.cjs');
 
 test('AI ranking directly uses body summaries without a second-stage rerank', async () => {
+  const source = require('node:fs').readFileSync(
+    require.resolve('../scripts/sync-kb-pdfs.cjs'),
+    'utf8',
+  );
   const prompt = rankingSystemPrompt();
   assert.match(prompt, /通用摘要/);
   assert.match(prompt, /正文证据/);
   assert.doesNotMatch(prompt, /第一轮|第二轮|只根据研报 PDF 标题和路径/);
+  assert.match(source, /defaultModel:\s*'deepseek-v4-flash'/);
+  assert.doesNotMatch(source, /deepseek-v4-pro/);
   await assert.rejects(runRankAi({}), /requires --summary-source/);
 });
 

@@ -336,7 +336,7 @@ function deepSeekConfig(overrides = {}) {
       process.env[modelEnv] ||
       process.env[fallbackModelEnv] ||
       overrides.defaultModel ||
-      'deepseek-v4-pro',
+      'deepseek-v4-flash',
     requestTimeoutMs: parsePositiveInteger(
       process.env.DEEPSEEK_REQUEST_TIMEOUT_MS,
       'DEEPSEEK_REQUEST_TIMEOUT_MS',
@@ -794,7 +794,7 @@ async function runRankAiSummary(opts) {
   const config = reviewed.length > 0 ? deepSeekConfig({
     modelEnv: 'DEEPSEEK_RANK_MODEL',
     fallbackModelEnv: 'DEEPSEEK_RERANK_MODEL',
-    defaultModel: 'deepseek-v4-pro',
+    defaultModel: 'deepseek-v4-flash',
   }) : null;
 
   const rankedAt = new Date().toISOString();

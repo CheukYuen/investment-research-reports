@@ -44,7 +44,7 @@ flowchart LR
 
 ### 一轮排序
 
-模型默认 `deepseek-v4-pro`，可用 `DEEPSEEK_RANK_MODEL` 覆盖；为兼容旧环境，未设置时仍读取 `DEEPSEEK_RERANK_MODEL`。输入是标题、报告类型、通用摘要、关键结论、内容标签、关键数字、实体和原文证据。一次输出 P0–P3、score、理由与证据。
+模型默认 `deepseek-v4-flash`，可用 `DEEPSEEK_RANK_MODEL` 覆盖；为兼容旧环境，未设置时仍读取 `DEEPSEEK_RERANK_MODEL`。输入是标题、报告类型、通用摘要、关键结论、内容标签、关键数字、实体和原文证据。一次输出 P0–P3、score、理由与证据。
 
 最终按 `priority`（P0→P3）→ `score` 降序 → 标题排序，并赋予从 1 开始的 `rank`。
 
@@ -89,7 +89,7 @@ DeepSeek 配置从 `.env` 读取（不提交）：
 
 ```bash
 DEEPSEEK_API_KEY=...
-DEEPSEEK_RANK_MODEL=deepseek-v4-pro
+DEEPSEEK_RANK_MODEL=deepseek-v4-flash
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
 

@@ -22,8 +22,8 @@ const {
 
 const DEFAULT_KB = '环球研报直通车';
 const DEFAULT_BROWSER_URL = 'https://ima.qq.com/wikis?knowledgeBaseId=7442602265681522';
-const PROMPT_PATH = path.join(ROOT, 'prompts', 'ima-download-screen-summary-batch-v6.txt');
-const PROMPT_VERSION = 'ima-download-screen-summary-batch-v6';
+const PROMPT_PATH = path.join(ROOT, 'prompts', 'ima-download-screen-summary-batch-v7.txt');
+const PROMPT_VERSION = 'ima-download-screen-summary-batch-v7';
 const BROWSER_MODEL_VERSION = 'ima-web-deepseek-v4-flash';
 const APP_MODEL_VERSION = 'ima-app-deepseek-v4-flash';
 const INTERACTION_SURFACES = new Set(['browser', 'app']);
@@ -403,6 +403,10 @@ function readIngestAnswer(opts, suppliedAnswer) {
 
 function normalizeBatchTitle(value) {
   return String(value || '')
+    .replace(/^\s*(?:#{1,6}\s*)?(?:[-*•·]\s*)?(?:\*\*)?/, '')
+    .replace(/^\s*(?:第\s*)?(?:\d+|[一二三四五六七八九十]+)\s*[.、:：)）-]\s*/, '')
+    .replace(/^\s*(?:\*\*)?/, '')
+    .replace(/(?:\*\*)?\s*[：:]?\s*$/, '')
     .replace(/[《》"'“”‘’\s]/g, '')
     .replace(/\.pdf$/i, '')
     .replace(/[（(]/g, '(')
@@ -445,7 +449,11 @@ function parseSectionBatchAnswer(rawAnswer, titles) {
         return { index, title };
       })
       .filter(Boolean);
-    if (!titleIndexes.length) throw new Error('Batch section answer has no exact titled blocks');
+    if (!titleIndexes.length) {
+      const error = new Error('Batch section answer has no exact titled blocks');
+      error.failureCode = 'BATCH_FORMAT_UNRECOGNIZED';
+      throw error;
+    }
     for (let position = 0; position < titleIndexes.length; position += 1) {
       const { index, title } = titleIndexes[position];
       const nextTitleIndex = titleIndexes[position + 1]?.index ?? lines.length;
@@ -562,7 +570,9 @@ async function commandIngest(paths, opts, config = loadConfig(), suppliedAnswer 
   } catch (error) {
     mapped = open.records.map((record) => ({
       title: record.title,
-      failure_code: 'INVALID_JSON',
+      failure_code: error && error.failureCode
+        ? error.failureCode
+        : 'BATCH_ANSWER_UNPARSEABLE',
       error: error && error.message ? error.message : String(error),
     }));
   }
