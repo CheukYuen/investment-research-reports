@@ -10,5 +10,5 @@
   "download_priorities": ["P0", "P1", "P2"],
   "quota_probe_extra": 1,
   "auto_download": true,
-  "auto_git_commit": false
+  "auto_git_commit": true
 }
