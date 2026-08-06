@@ -21,6 +21,21 @@ const PRIORITY_ORDER = new Map([
   ['P2', 2],
   ['P3', 3],
 ]);
+const REPORT_TYPES = new Set(['company', 'industry', 'strategy', 'macro', 'commodity', 'other']);
+const SECTORS_CN_TO_EN = new Map([
+  ['能源', 'Energy'],
+  ['原材料', 'Materials'],
+  ['工业', 'Industrials'],
+  ['可选消费', 'Consumer Discretionary'],
+  ['主要消费', 'Consumer Staples'],
+  ['医药卫生', 'Health Care'],
+  ['金融', 'Financials'],
+  ['信息技术', 'Information Technology'],
+  ['通信服务', 'Communication Services'],
+  ['公用事业', 'Utilities'],
+  ['房地产', 'Real Estate'],
+]);
+const MAX_SECTORS = 3;
 
 function usage() {
   console.log(`Usage:
@@ -415,12 +430,14 @@ async function callDeepSeekJson(config, messages) {
 }
 
 function rankingSystemPrompt() {
-  return `你是严谨的买方科技研究审稿人。请只根据输入中的研报标题、报告类型、通用摘要、关键结论、内容标签、关键数据、实体和正文证据，对 AI Infrastructure 投资研究价值做正文优先排序。
+  return `你是严谨的买方科技研究审稿人。请只根据输入中的研报标题、通用摘要、关键结论、内容标签、关键数据、实体和正文证据，对 AI Infrastructure 投资研究价值做正文优先排序，并在同一次输出中完成报告类型分类和一级行业分类。
 
 输出必须是严格 JSON object：
-{"results":[{"priority":"P0|P1|P2|P3","score":0-100,"topics":["..."],"reasons":["..."],"evidence":["..."],"false_positive_checks":["..."]}]}
+{"results":[{"priority":"P0|P1|P2|P3","score":0-100,"report_type":"company|industry|strategy|macro|commodity|other","report_type_reason":"一句话分类依据","sectors_cn":["..."],"topics":["..."],"reasons":["..."],"evidence":["..."],"false_positive_checks":["..."]}]}
 
 results 必须与输入数组等长、同顺序。不要输出 markdown，不要使用公司常识补充输入中不存在的信息。
+
+## AI Infrastructure 排序
 
 P0（85-100）：正文明确以 AI 数据中心资本开支、AI 服务器/GPU/ASIC/HBM/先进封装、数据中心光互联/网络、电力/冷却或人形机器人核心硬件为主要投资逻辑。
 P1（65-84）：正文有明确、可投资的 AI 基建需求、供给、价格、产能或业绩传导证据，但不是全文唯一主线；也包括强相关半导体设备材料、PCB、光纤光缆、工业自动化。
@@ -428,15 +445,39 @@ P2（35-64）：正文仅有泛 AI、应用或间接敞口，缺少清晰基建�
 P3（0-34）：正文没有实质 AI 基建证据，或只是普通宏观、消费、金融、医药、地产、汽车等。
 
 通用摘要、关键结论、关键数据、实体都是尚未经过 PDF 级正式验证的路由候选。evidence 可能为空，为空时以通用摘要和关键结论中的具体事实与数字为准，不得因缺少原文引文而系统性压低评级。
-必须在 reasons/evidence 中引用输入给出的具体事实或数字。标题与正文冲突时以正文为准。存在“数据中心”但实际只是地产/租赁/并购时主动检查假阳性。`;
+必须在 reasons/evidence 中引用输入给出的具体事实或数字。标题与正文冲突时以正文为准。存在“数据中心”但实际只是地产/租赁/并购时主动检查假阳性。
+
+## 报告类型分类（report_type，六选一）
+
+- company（公司研究）：单一公司、评级、目标价、盈利预测；
+- industry（行业研究）：行业、产业链、供需、多公司比较；
+- strategy（投资策略）：资产配置、市场风格、仓位、交易策略；
+- macro（宏观经济）：经济体、央行、财政货币政策；
+- commodity（大宗商品）：实物商品价格、供需、库存；
+- other（其他研究）：已理解内容后，确认无法归入以上类型，例如无主导研究对象的多主题合集、研究方法或数据产品说明、会议日程和索引类行政材料。
+
+判定顺序（命中第一条即停，行业数量和 topics 不得反向决定 report_type）：
+1. 主要结论锚定单一公司、评级、目标价或盈利预测 → company；
+2. 主要对象是实物商品价格、供需、库存或贸易流 → commodity；
+3. 主要对象是经济体、央行、通胀、就业或财政货币政策 → macro；
+4. 核心交付物是配置、仓位、组合、风格或交易建议 → strategy；
+5. 主要对象是行业、产业链、竞争格局或多家公司比较 → industry；
+6. 确实无法归入以上类型 → other。
+
+report_type_reason 必须是一句话，引用输入中的具体事实说明依据。无法可靠判断时，report_type 留空字符串或省略该字段，不得猜测填入 other。
+
+## 一级行业分类（sectors_cn，0-3 个，只用中文，主行业排第一）
+
+只允许从以下 11 个中文行业名中选择，不得自造名称：
+能源、原材料、工业、可选消费、主要消费、医药卫生、金融、信息技术、通信服务、公用事业、房地产。
+
+宏观或综合策略类报告的 sectors_cn 可以为空数组。`;
 }
 
 async function classifyBatchWithDeepSeek(config, batch) {
   const inputs = batch.map((record) => ({
     media_id: record.media_id,
     title: record.title,
-    report_type: record.report_type,
-    research_subject: record.research_subject,
     executive_summary: record.executive_summary,
     key_findings: record.key_findings,
     content_tags: record.content_tags,
@@ -444,27 +485,78 @@ async function classifyBatchWithDeepSeek(config, batch) {
     entities: record.entities,
     evidence: record.evidence,
   }));
-  const parsed = await callDeepSeekJson(config, [
+  const messages = [
     { role: 'system', content: rankingSystemPrompt() },
     {
       role: 'user',
       content: `请按正文证据排序以下研报，返回 results 与输入同顺序、同长度：\n${JSON.stringify(inputs, null, 2)}`,
     },
-  ]);
-  if (!parsed || !Array.isArray(parsed.results) || parsed.results.length !== batch.length) {
-    throw new Error(`Rank LLM returned ${parsed && Array.isArray(parsed.results) ? parsed.results.length : 0} results for ${batch.length} inputs`);
+  ];
+
+  let lastError;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      const parsed = await callDeepSeekJson(config, messages);
+      if (!parsed || !Array.isArray(parsed.results) || parsed.results.length !== batch.length) {
+        throw new Error(`Rank LLM returned ${parsed && Array.isArray(parsed.results) ? parsed.results.length : 0} results for ${batch.length} inputs`);
+      }
+      return parsed.results.map((result, index) => normalizeRanking(result, batch[index]));
+    } catch (err) {
+      lastError = err;
+      if (attempt < 2) continue;
+      throw lastError;
+    }
   }
-  return parsed.results.map((result, index) => ({
-    ...normalizeRanking(result, batch[index]),
-    evidence: normalizeStringArray(result.evidence, []),
-    false_positive_checks: normalizeStringArray(result.false_positive_checks, []),
-  }));
+  throw lastError;
 }
 
 function normalizeStringArray(value, fallback) {
   if (Array.isArray(value)) return value.map((item) => String(item)).filter(Boolean);
   if (typeof value === 'string' && value.trim()) return [value.trim()];
   return fallback;
+}
+
+function normalizeClassification(result) {
+  const warnings = [];
+  const rawReportType = typeof result.report_type === 'string' ? result.report_type.trim() : '';
+  let reportType = null;
+  let reportTypeReason = null;
+  if (rawReportType && REPORT_TYPES.has(rawReportType)) {
+    const rawReason = typeof result.report_type_reason === 'string' ? result.report_type_reason.trim() : '';
+    if (rawReason) {
+      reportType = rawReportType;
+      reportTypeReason = rawReason;
+    } else {
+      warnings.push('missing_report_type_reason');
+    }
+  } else if (rawReportType) {
+    warnings.push(`invalid_report_type:${rawReportType}`);
+  }
+
+  const rawSectors = Array.isArray(result.sectors_cn) ? result.sectors_cn : [];
+  const sectors = [];
+  for (const raw of rawSectors) {
+    const nameCn = typeof raw === 'string' ? raw.trim() : '';
+    if (!nameCn) continue;
+    if (!SECTORS_CN_TO_EN.has(nameCn)) {
+      warnings.push(`invalid_sector_removed:${nameCn}`);
+      continue;
+    }
+    if (sectors.some((sector) => sector.name_cn === nameCn)) continue;
+    sectors.push({ name_cn: nameCn, name_en: SECTORS_CN_TO_EN.get(nameCn) });
+  }
+  let finalSectors = sectors;
+  if (sectors.length > MAX_SECTORS) {
+    warnings.push(`sectors_truncated:${sectors.length}->${MAX_SECTORS}`);
+    finalSectors = sectors.slice(0, MAX_SECTORS);
+  }
+
+  return {
+    report_type: reportType,
+    report_type_reason: reportTypeReason,
+    sectors: finalSectors,
+    classification_warnings: warnings,
+  };
 }
 
 function normalizeRanking(result, record) {
@@ -476,11 +568,19 @@ function normalizeRanking(result, record) {
   if (!Number.isFinite(score)) {
     throw new Error(`LLM returned invalid score for ${record.title}: ${result.score}`);
   }
+  const classification = normalizeClassification(result);
   return {
     priority,
     score: Math.max(0, Math.min(100, Math.round(score))),
+    report_type: classification.report_type,
+    report_type_reason: classification.report_type_reason,
+    sectors: classification.sectors,
+    classification_source: 'deepseek_rank',
+    classification_warnings: classification.classification_warnings,
     topics: normalizeStringArray(result.topics, []),
     reasons: normalizeStringArray(result.reasons || result.reason, []),
+    evidence: normalizeStringArray(result.evidence, []),
+    false_positive_checks: normalizeStringArray(result.false_positive_checks, []),
   };
 }
 
@@ -812,6 +912,11 @@ async function runRankAiSummary(opts) {
         ...batch[batchIndex],
         priority: rankings[batchIndex].priority,
         score: rankings[batchIndex].score,
+        report_type: rankings[batchIndex].report_type,
+        report_type_reason: rankings[batchIndex].report_type_reason,
+        sectors: rankings[batchIndex].sectors,
+        classification_source: rankings[batchIndex].classification_source,
+        classification_warnings: rankings[batchIndex].classification_warnings,
         topics: rankings[batchIndex].topics,
         reasons: rankings[batchIndex].reasons,
         ranking_evidence: rankings[batchIndex].evidence,
@@ -1016,4 +1121,10 @@ module.exports = {
   rankingSystemPrompt,
   runRankAi,
   shanghaiDateKey,
+  REPORT_TYPES,
+  SECTORS_CN_TO_EN,
+  MAX_SECTORS,
+  normalizeClassification,
+  normalizeRanking,
+  classifyBatchWithDeepSeek,
 };

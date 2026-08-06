@@ -117,7 +117,8 @@ const pdfPath = path.join(repoRoot, 'downloads', record.local_relative_path);
 | `media_id` / `title` / `source_path` / `local_relative_path` | 从当天索引继承的稳定身份与后续下载定位 |
 | `status` | `reviewed` 或 `UNREVIEWED` |
 | `summary_role` | 固定为 `routing_candidate`，不得当作正式 PDF 提取结果 |
-| `report_type` / `research_subject` / `executive_summary` | 报告类型、研究主体和通用摘要 |
+| `report_type` / `report_type_reason` / `sectors` / `topics` | 摘要阶段恒为 `null` / `null` / `[]` / `[]`；分类权威只在 `ai-ranked-queue-summary-YYYYMMDD.jsonl` 由 DeepSeek 排序阶段产出，摘要阶段不承担分类 |
+| `research_subject` / `executive_summary` | 研究主体和通用摘要 |
 | `key_findings` / `content_tags` | 关键结论和内容覆盖标签 |
 | `data_points` | 最多 4 条原始口径关键数字；未做单位或指标标准化 |
 | `entities` / `evidence` | 路由实体和对应报告的连续原文线索 |
@@ -203,7 +204,12 @@ const pdfPath = path.join(repoRoot, 'downloads', record.local_relative_path);
 | `priority` | `P0`、`P1`、`P2`、`P3`；P0 最高 |
 | `rank` | 全队列排序，从 1 开始 |
 | `score` | 0-100 下载优先分 |
-| `topics` | 英文主题标签数组 |
+| `report_type` | 报告类型，六选一或 `null`；见下方枚举 |
+| `report_type_reason` | 一句话分类依据；`report_type` 为 `null` 时同为 `null` |
+| `sectors` | 一级行业数组，元素为 `{name_cn, name_en}`，0–3 个，主行业排第一；见下方枚举 |
+| `classification_source` | 分类来源，成功分类时为 `deepseek_rank`；未分类时为 `null` |
+| `classification_warnings` | 分类校验警告，例如非法行业被删除、报告类型缺失依据 |
+| `topics` | 英文/中文混合的自由主题标签数组，半导体、GPU、HBM、光模块等细分主题放这里，不提升为一级行业 |
 | `reasons` | 排序理由数组 |
 | `llm_provider` | LLM 提供方，目前为 `deepseek` |
 | `ranking_evidence` | 排序直接引用的摘要原文证据 |
@@ -218,6 +224,23 @@ const pdfPath = path.join(repoRoot, 'downloads', record.local_relative_path);
 - `P1`：强相关上游或投资线索，例如半导体设备/材料、ABF、PCB、MLCC、AI PC、AI 基建相关 IT 支出、机器人或 AI 产能相关工业自动化
 - `P2`：泛 AI 或间接主题，例如 AI 应用、企业 AI 渗透率、互联网/云应用、生产率、科技硬件但基建指向不强
 - `P3`：弱相关或无关
+
+### `report_type` 枚举（研究产品类型，六选一，与行业正交）
+
+- `company`（公司研究）：单一公司、评级、目标价、盈利预测
+- `industry`（行业研究）：行业、产业链、供需、多公司比较
+- `strategy`（投资策略）：资产配置、市场风格、仓位、交易策略
+- `macro`（宏观经济）：经济体、央行、财政货币政策
+- `commodity`（大宗商品）：实物商品价格、供需、库存
+- `other`（其他研究）：已理解内容后，确认无法归入以上类型
+
+`report_type: null` 表示技术性分类缺失（解析失败、模型未给出依据、返回非法值），与 `other`（有效业务分类）严格区分，任何路径都不得把 `null` 静默写成 `other`。
+
+### `sectors[].name_cn` 枚举（一级行业，中证/GICS 一级，0–3 个）
+
+能源、原材料、工业、可选消费、主要消费、医药卫生、金融、信息技术、通信服务、公用事业、房地产。
+
+`name_en` 由脚本按固定映射表补齐，不采信模型输出的英文名。半导体、GPU、HBM、AI 服务器、光模块、光互联、PCB、液冷、数据中心等细分主题不提升为一级行业，只出现在 `topics` 中。
 
 常见 `topics`：
 

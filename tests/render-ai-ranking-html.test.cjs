@@ -88,3 +88,64 @@ test('monthly HTML lists all priority bands and removes manual Top 20 concepts',
   assert.match(html, /月度研报排序/);
   assert.doesNotMatch(html, /手动下载优先|Top 20|manual_rank|manual_tier|二次排序/);
 });
+
+test('normalizeRecord shows null report_type as 未分类 and keeps it distinct from other (其他研究)', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-ranking-html-'));
+  try {
+    writeJsonl(path.join(root, 'ai-ranked-queue-summary-20260805.jsonl'), [
+      { ...report('unclassified', 'P2', 1), report_type: null, sectors: [] },
+      { ...report('other', 'P2', 2), report_type: 'other', sectors: [] },
+    ]);
+    const { records } = collectMonthlyRecords(root, '202608');
+    const unclassified = records.find((record) => record.media_id === 'unclassified');
+    const other = records.find((record) => record.media_id === 'other');
+    assert.equal(unclassified.report_type, null);
+    assert.equal(unclassified.report_type_label, '未分类');
+    assert.equal(other.report_type, 'other');
+    assert.equal(other.report_type_label, '其他研究');
+    assert.notEqual(unclassified.report_type_label, other.report_type_label);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('sectors are normalized to an array and default to empty when absent', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-ranking-html-'));
+  try {
+    writeJsonl(path.join(root, 'ai-ranked-queue-summary-20260805.jsonl'), [
+      { ...report('with-sectors', 'P1', 1), sectors: [{ name_cn: '信息技术', name_en: 'Information Technology' }] },
+      { ...report('no-sectors', 'P1', 2) },
+    ]);
+    const { records } = collectMonthlyRecords(root, '202608');
+    const withSectors = records.find((record) => record.media_id === 'with-sectors');
+    const noSectors = records.find((record) => record.media_id === 'no-sectors');
+    assert.deepEqual(withSectors.sectors, [{ name_cn: '信息技术', name_en: 'Information Technology' }]);
+    assert.deepEqual(noSectors.sectors, []);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('HTML renders a sector filter select and 未分类/其他研究 both appear when both are present', () => {
+  const records = [
+    { ...report('p0', 'P0', 1), report_type: null, report_type_label: '未分类', report_type_reason: '', sectors: [] },
+    { ...report('p1', 'P1', 2), report_type: 'other', report_type_label: '其他研究', report_type_reason: '', sectors: [{ name_cn: '公用事业', name_en: 'Utilities' }] },
+  ].map((record) => ({
+    ...record,
+    snapshot_date: '2026-07-24',
+    research_subject: '',
+    content_tags: [],
+    topics: [],
+    reasons: [],
+    ranking_evidence: [],
+    false_positive_checks: [],
+    evidence: [],
+    failure_code: '',
+    downloaded: false,
+    download_href: '',
+  }));
+  const html = renderHtml(records, { month: '202607', sourceCount: 1 });
+  assert.match(html, /id="sector"/);
+  assert.match(html, /未分类/);
+  assert.match(html, /其他研究/);
+});

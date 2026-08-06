@@ -7,6 +7,15 @@ const ROOT = path.resolve(__dirname, '..');
 const MANIFESTS_DIR = path.join(ROOT, 'manifests');
 const PRIORITIES = ['P0', 'P1', 'P2', 'P3', 'UNREVIEWED'];
 const PRIORITY_ORDER = new Map(PRIORITIES.map((priority, index) => [priority, index]));
+const REPORT_TYPE_LABELS = {
+  company: '公司研究',
+  industry: '行业研究',
+  strategy: '投资策略',
+  macro: '宏观经济',
+  commodity: '大宗商品',
+  other: '其他研究',
+};
+const UNCLASSIFIED_LABEL = '未分类';
 
 function parseArgs(argv) {
   const opts = {};
@@ -105,7 +114,10 @@ function normalizeRecord(record, snapshotDate) {
     priority,
     rank: Number.isFinite(Number(record.rank)) ? Number(record.rank) : null,
     score: Number.isFinite(Number(record.score)) ? Number(record.score) : null,
-    report_type: record.report_type || 'other',
+    report_type: record.report_type || null,
+    report_type_label: REPORT_TYPE_LABELS[record.report_type] || UNCLASSIFIED_LABEL,
+    report_type_reason: record.report_type_reason || '',
+    sectors: Array.isArray(record.sectors) ? record.sectors : [],
     research_subject: record.research_subject || '',
     executive_summary: record.executive_summary || '',
     key_findings: Array.isArray(record.key_findings) ? record.key_findings : [],
@@ -378,6 +390,10 @@ function renderHtml(records, meta) {
           <select id="reportType"><option value="">全部类型</option></select>
         </div>
         <div class="filter">
+          <label for="sector">行业</label>
+          <select id="sector"><option value="">全部行业</option></select>
+        </div>
+        <div class="filter">
           <label for="local">本地 PDF</label>
           <select id="local">
             <option value="">全部</option>
@@ -394,12 +410,13 @@ function renderHtml(records, meta) {
   <script>
     const records = JSON.parse(document.getElementById('records').textContent);
     const priorities = ${JSON.stringify(PRIORITIES)};
-    const state = { search: '', priority: '', date: '', reportType: '', local: '' };
+    const state = { search: '', priority: '', date: '', reportType: '', sector: '', local: '' };
     const els = {
       search: document.getElementById('search'),
       priority: document.getElementById('priority'),
       date: document.getElementById('date'),
       reportType: document.getElementById('reportType'),
+      sector: document.getElementById('sector'),
       local: document.getElementById('local'),
       groups: document.getElementById('groups'),
       resultCount: document.getElementById('result-count'),
@@ -416,13 +433,16 @@ function renderHtml(records, meta) {
     });
     addOptions(els.priority, priorities.filter((priority) => records.some((record) => record.priority === priority)));
     addOptions(els.date, unique(records.map((record) => record.snapshot_date)).reverse());
-    addOptions(els.reportType, unique(records.map((record) => record.report_type)));
+    addOptions(els.reportType, unique(records.map((record) => record.report_type_label)));
+    addOptions(els.sector, unique(records.flatMap((record) => (record.sectors || []).map((sector) => sector.name_cn))));
 
     function textBlob(record) {
       return [
         record.title, record.research_subject, record.executive_summary, record.source_path,
+        record.report_type_reason,
         ...(record.key_findings || []), ...(record.content_tags || []), ...(record.topics || []),
         ...(record.entities || []), ...(record.reasons || []), ...(record.ranking_evidence || []),
+        ...(record.sectors || []).flatMap((sector) => [sector.name_cn, sector.name_en]),
         ...(record.data_points || []).flatMap((point) => [point.metric, point.value_text, point.period, point.context]),
       ].join(' ').toLowerCase();
     }
@@ -431,7 +451,8 @@ function renderHtml(records, meta) {
       return records.filter((record) => {
         if (state.priority && record.priority !== state.priority) return false;
         if (state.date && record.snapshot_date !== state.date) return false;
-        if (state.reportType && record.report_type !== state.reportType) return false;
+        if (state.reportType && record.report_type_label !== state.reportType) return false;
+        if (state.sector && !(record.sectors || []).some((sector) => sector.name_cn === state.sector)) return false;
         if (state.local === 'yes' && !record.downloaded) return false;
         if (state.local === 'no' && record.downloaded) return false;
         return !query || textBlob(record).includes(query);
@@ -457,12 +478,15 @@ function renderHtml(records, meta) {
         ? '<div class="evidence">排序证据：' + escapeHtml(record.ranking_evidence.join(' / ')) + '</div>'
         : '';
       const failure = record.failure_code ? '<div class="evidence">状态：' + escapeHtml(record.failure_code) + '</div>' : '';
+      const sectorNames = (record.sectors || []).map((sector) => sector.name_cn);
       return '<article class="card">' +
         '<div class="rank"><strong>#' + escapeHtml(record.rank ?? '-') + '</strong><span>当日排序</span></div>' +
         '<div><div class="meta"><span class="badge ' + record.priority.toLowerCase() + '">' + escapeHtml(record.priority) + '</span>' +
-        local + '<span class="tag">score ' + escapeHtml(record.score ?? '-') + '</span><span class="tag">' + escapeHtml(record.report_type) + '</span></div>' +
+        local + '<span class="tag">score ' + escapeHtml(record.score ?? '-') + '</span><span class="tag">' + escapeHtml(record.report_type_label) + '</span></div>' +
         '<h3 class="title">' + escapeHtml(record.title) + '</h3>' +
         (record.research_subject ? '<div class="subject">研究主体：' + escapeHtml(record.research_subject) + '</div>' : '') +
+        (sectorNames.length ? '<div class="tags">' + renderTags(sectorNames) + '</div>' : '') +
+        (record.report_type_reason ? '<div class="reason">类型依据：' + escapeHtml(record.report_type_reason) + '</div>' : '') +
         '<div class="tags">' + renderTags([...(record.content_tags || []), ...(record.topics || [])]) + '</div>' +
         (record.reasons.length ? '<div class="reason">排序理由：' + escapeHtml(record.reasons.join('；')) + '</div>' : '') +
         (record.executive_summary ? '<p class="summary"><strong>IMA 摘要：</strong>' + escapeHtml(record.executive_summary) + '</p>' : '') +

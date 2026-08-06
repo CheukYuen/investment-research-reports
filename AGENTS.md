@@ -70,6 +70,8 @@ AI Infrastructure 主题筛选必须先索引，再运行：
 
 允许 `rank-ai` 将 IMA 通用摘要中的标题、摘要、关键结论、标签、关键数字、实体和证据发送给 DeepSeek，无需逐次确认；不得直接发送整份 PDF 正文。
 
+`rank-ai` 在同一次 DeepSeek 调用中同时完成 P0–P3 排序、报告类型分类（`company`/`industry`/`strategy`/`macro`/`commodity`/`other` 六选一）和一级行业分类（中证/GICS 11 类，DeepSeek 只输出中文，英文由脚本补齐）。IMA 摘要阶段不承担分类，恒为 `report_type: null`、`sectors: []`。分类失败或模型返回非法值时保持 `null`，不得静默写成 `other`；`other` 是模型确认理解内容后给出的有效业务分类。分类校验失败不影响该记录的排序结果保存。
+
 每日正式筛选优先运行仓库内可恢复摘要任务：
 
 `scripts/ima-daily-summary.cjs`

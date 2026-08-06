@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   validateAndNormalizeSuccess,
+  normalizeFailure,
   buildSnapshot,
   buildPending,
   audit,
@@ -88,14 +89,41 @@ test('preserves exact answer source title across snapshot revalidation', () => {
   assert.equal(secondPass.status, 'reviewed');
 });
 
-test('normalizes invalid report type and preserves unknown content tags as warnings', () => {
-  const raw = { ...validRecord(), report_type: 'equity', content_tags: ['financials', 'ai_theme'] };
+test('summary stage never assigns classification and preserves unknown content tags as warnings', () => {
+  const raw = { ...validRecord(), report_type: 'company', content_tags: ['financials', 'ai_theme'] };
   const result = validateAndNormalizeSuccess(raw, indexRecord());
   assert.equal(result.status, 'reviewed');
-  assert.equal(result.report_type, 'other');
+  assert.equal(result.report_type, null);
+  assert.equal(result.report_type_reason, null);
+  assert.deepEqual(result.sectors, []);
+  assert.deepEqual(result.topics, []);
   assert.deepEqual(result.content_tags, ['financials', 'ai_theme']);
-  assert.ok(result.validation_warnings.includes('report_type_normalized_to_other:equity'));
   assert.ok(result.validation_warnings.includes('unknown_content_tags_preserved:ai_theme'));
+});
+
+test('classification fields stay null across repeated normalization (idempotent for finalize rebuilds)', () => {
+  const raw = validRecord();
+  const firstPass = validateAndNormalizeSuccess(raw, indexRecord());
+  const secondPass = validateAndNormalizeSuccess(firstPass, indexRecord());
+  assert.equal(firstPass.report_type, null);
+  assert.equal(secondPass.report_type, null);
+  assert.deepEqual(secondPass.sectors, []);
+  assert.deepEqual(secondPass.topics, []);
+  assert.equal(secondPass.research_subject, '测试公司');
+});
+
+test('research_subject is preserved unchanged, not part of the classification contract', () => {
+  const raw = { ...validRecord(), research_subject: '艾迈斯欧司朗' };
+  const result = validateAndNormalizeSuccess(raw, indexRecord());
+  assert.equal(result.research_subject, '艾迈斯欧司朗');
+});
+
+test('failure records also carry null classification fields, never other', () => {
+  const result = normalizeFailure({ media_id: 'pdf-1', failure_code: 'ANSWER_TIMEOUT' }, indexRecord());
+  assert.equal(result.report_type, null);
+  assert.equal(result.report_type_reason, null);
+  assert.deepEqual(result.sectors, []);
+  assert.deepEqual(result.topics, []);
 });
 
 test('deterministically truncates capped arrays and records warnings', () => {
@@ -128,6 +156,19 @@ test('resume skips terminal failures after four attempts', () => {
   const index = [indexRecord(1), indexRecord(2)];
   const failures = [{ media_id: 'pdf-1', failure_code: 'ANSWER_TIMEOUT', attempts: 4 }];
   assert.deepEqual(buildPending(index, [], failures).map((item) => item.media_id), ['pdf-2']);
+});
+
+test('structured_parse_rate ignores report_type and reflects summary success even when classification is null', () => {
+  const index = [indexRecord(1), indexRecord(2)];
+  const progress = [
+    validateAndNormalizeSuccess(validRecord(1), index[0]),
+    validateAndNormalizeSuccess(validRecord(2), index[1]),
+  ];
+  assert.ok(progress.every((record) => record.report_type === null));
+  const snapshot = buildSnapshot(index, progress, []);
+  const report = audit(index, snapshot, progress, []);
+  assert.equal(report.reviewed, 2);
+  assert.equal(report.structured_parse_rate, 1);
 });
 
 test('snapshot has one authoritative row per index record', () => {

@@ -4,7 +4,6 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const REPORT_TYPES = new Set(['company', 'industry', 'strategy', 'macro', 'commodity', 'other']);
 const CONTENT_TAGS = new Set([
   'financials',
   'guidance',
@@ -269,7 +268,7 @@ function parseSectionAnswer(rawAnswer, expectedTitle) {
     title: expectedTitle,
     report: {
       source_title: sourceTitle,
-      report_type: 'other',
+      report_type: null,
       research_subject: '',
       executive_summary: summary,
       key_findings: keyFindings,
@@ -277,6 +276,8 @@ function parseSectionAnswer(rawAnswer, expectedTitle) {
       data_points: dataPoints,
       entities,
       evidence: [],
+      sectors: [],
+      topics: [],
     },
     warnings,
   };
@@ -465,12 +466,6 @@ function validateAndNormalizeSuccess(record, indexRecord) {
   if (!sourceMatch) warnings.push('target_not_in_source_list');
   if (sourceMetadataMatch && !sourceExclusive) warnings.push(`non_exclusive_sources:${sourceCount}`);
 
-  const rawReportType = normalizeText(record.report_type);
-  const reportType = REPORT_TYPES.has(rawReportType) ? rawReportType : 'other';
-  if (!REPORT_TYPES.has(rawReportType)) {
-    warnings.push(`report_type_normalized_to_other:${rawReportType || 'empty'}`);
-  }
-
   const researchSubject = normalizeText(record.research_subject);
   const executiveSummary = normalizeText(record.executive_summary);
   if (!researchSubject) warnings.push('empty_research_subject');
@@ -519,7 +514,10 @@ function validateAndNormalizeSuccess(record, indexRecord) {
     source_match: sourceMatch,
     source_exclusive: sourceExclusive,
     summary_role: 'routing_candidate',
-    report_type: reportType,
+    report_type: null,
+    report_type_reason: null,
+    sectors: [],
+    topics: [],
     research_subject: researchSubject,
     executive_summary: executiveSummary,
     key_findings: keyFindings,
@@ -552,7 +550,10 @@ function normalizeFailure(record, indexRecord) {
     source_match: sourceMatch,
     source_exclusive: sourceCount === 1 && sourceTitles.length === 1,
     summary_role: 'routing_candidate',
-    report_type: '',
+    report_type: null,
+    report_type_reason: null,
+    sectors: [],
+    topics: [],
     research_subject: '',
     executive_summary: '',
     key_findings: [],
@@ -599,7 +600,7 @@ function audit(index, snapshot, progress, failures) {
     unreviewed: unreviewed.length,
     success_rate: index.length ? reviewed.length / index.length : 0,
     structured_parse_rate: index.length ? reviewed.filter((record) =>
-      record.report_type && record.executive_summary && record.source_match
+      record.executive_summary && record.source_match
     ).length / index.length : 0,
     duplicate_index_media_ids: duplicateValues(index, 'media_id'),
     duplicate_index_titles: duplicateValues(index, 'title'),
@@ -698,7 +699,6 @@ function main(argv = process.argv.slice(2)) {
 if (require.main === module) main();
 
 module.exports = {
-  REPORT_TYPES,
   CONTENT_TAGS,
   BASIS,
   LIMITS,
