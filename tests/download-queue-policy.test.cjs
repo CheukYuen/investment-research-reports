@@ -161,6 +161,12 @@ test('zero probe preserves the hard daily budget', () => {
   assert.equal(classifyQuotaSlot(30, 30, 0), 'stop');
 });
 
+test('explicit user-authorized override permits attempts after the probe limit', () => {
+  assert.equal(classifyQuotaSlot(31, 30, 1, true), 'override');
+  assert.equal(classifyQuotaSlot(45, 30, 1, true), 'override');
+  assert.equal(classifyQuotaSlot(31, 30, 1, false), 'stop');
+});
+
 test('download ordering always prefers P0 and P1 before P2', () => {
   const records = [
     { priority: 'P2', rank: 1 },

@@ -43,7 +43,7 @@ function usage() {
   node scripts/sync-kb-pdfs.cjs download --kb <name> [--source-path <path>] [--limit <n>]
   node scripts/sync-kb-pdfs.cjs sync --kb <name> [--source-path <path>] [--strip-source-prefix <path>] [--local-prefix <path>] [--limit <n>]
   node scripts/sync-kb-pdfs.cjs rank-ai --summary-source <summaries.jsonl> --queue <queue.jsonl> [--batch-size <n>]
-  node scripts/sync-kb-pdfs.cjs download-queue --kb <name> --queue <path> [--priorities <P0,P1,P2>] [--daily-budget <n>] [--quota-probe-extra <n>]
+  node scripts/sync-kb-pdfs.cjs download-queue --kb <name> --queue <path> [--priorities <P0,P1,P2>] [--daily-budget <n>] [--quota-probe-extra <n>] [--allow-over-quota]
 
 Examples:
   node scripts/sync-kb-pdfs.cjs sync --kb "环球研报直通车" --source-path "2026年国际顶级投行研报/7月" --strip-source-prefix "2026年国际顶级投行研报" --local-prefix "2026"
@@ -271,9 +271,10 @@ function loadDailyQuotaState(knowledgeBaseName, now = new Date()) {
   };
 }
 
-function classifyQuotaSlot(used, dailyBudget, quotaProbeExtra) {
+function classifyQuotaSlot(used, dailyBudget, quotaProbeExtra, allowOverQuota = false) {
   if (used < dailyBudget) return 'budget';
   if (used < dailyBudget + quotaProbeExtra) return 'probe';
+  if (allowOverQuota) return 'override';
   return 'stop';
 }
 
@@ -966,6 +967,7 @@ async function runDownloadQueue(opts) {
     '--quota-probe-extra',
     0,
   );
+  const allowOverQuota = opts['allow-over-quota'] === true;
   const state = loadDownloadState();
   const quotaState = loadDailyQuotaState(knowledgeBaseName);
   const queue = readJsonl(queuePath)
@@ -984,6 +986,8 @@ async function runDownloadQueue(opts) {
     daily_used_at_end: quotaState.used,
     daily_budget_remaining_at_start: Math.max(0, dailyBudget - quotaState.used),
     quota_probe_extra: quotaProbeExtra,
+    allow_over_quota: allowOverQuota,
+    override_attempted: 0,
     probe_attempted: 0,
     probe_succeeded: false,
     probe_quota_rejected: false,
@@ -1004,7 +1008,7 @@ async function runDownloadQueue(opts) {
     const willConsumeBudget = !fs.existsSync(record.saved_path);
     let quotaSlot = null;
     if (willConsumeBudget) {
-      quotaSlot = classifyQuotaSlot(dailyUsed, dailyBudget, quotaProbeExtra);
+      quotaSlot = classifyQuotaSlot(dailyUsed, dailyBudget, quotaProbeExtra, allowOverQuota);
       if (quotaSlot === 'stop') {
         stats.stopped_budget = dailyUsed >= dailyBudget && quotaProbeExtra === 0;
         stats.stopped_probe_limit = dailyUsed >= dailyBudget + quotaProbeExtra && quotaProbeExtra > 0;
@@ -1027,6 +1031,7 @@ async function runDownloadQueue(opts) {
       stats.daily_used_at_end = dailyUsed;
       if (quotaSlot === 'budget') stats.budget_used += 1;
       if (quotaSlot === 'probe') stats.probe_attempted += 1;
+      if (quotaSlot === 'override') stats.override_attempted += 1;
     }
 
     stats.attempted += 1;

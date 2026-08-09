@@ -230,4 +230,6 @@ node scripts/sync-kb-pdfs.cjs download-queue \
 - 第 31 篇返回 IMA 获取上限：记录拒绝并立即停止；
 - 第 31 篇发生其他失败：同样停止，不用另一篇替代探测。
 
+只有用户在当前任务中明确要求解除 30+1 停止条件并继续下载时，才允许人工追加 `--allow-over-quota`。该参数不得写入每日自动任务配置，也不得由自动任务自行推断。启用后，超额真实尝试必须以 `quota_slot=override` 逐篇写入 `download-attempts.jsonl`；仍须按 queue 顺序下载，并在 IMA 获取上限、登录失效或全局限流时立即停止。
+
 默认不自动提交 Git。只有 `auto_git_commit=true` 时，自动任务才可只暂存当天日期产物和本次新增下载，运行 `git diff --cached --check` 后创建窄提交。不得提交 `.env`、旧日期未跟踪文件或运行前已有的无关改动。
