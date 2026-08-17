@@ -30,6 +30,7 @@
  *   16         WebVideo         add via URL (not a file; Bilibili/YouTube unsupported)
  *   19         Podcast          add via URL (not a file)
  *   20         HTML             file upload                 ← this script
+ *   21         EPUB             file upload                 ← this script
  *   98         Code             created inside IMA
  *   99         Folder           organizational only
  *
@@ -109,6 +110,7 @@ const EXT_MAP = {
   wav: { media_type: 15, content_type: 'audio/wav' },
   aac: { media_type: 15, content_type: 'audio/aac' },
   html: { media_type: 20, content_type: 'text/html' },
+  epub: { media_type: 21, content_type: 'application/epub+zip' },
 };
 
 // ─── Content-Type → media_type (reverse lookup) ─────────────────────────────
@@ -139,6 +141,7 @@ const SIZE_LIMITS = {
   14: 10 * MB, // Xmind
   20: 10 * MB, // HTML
   9: 30 * MB, // Image
+  21: 50 * MB, // EPUB
 };
 const DEFAULT_SIZE_LIMIT = 200 * MB; // PDF, Word, PPT, Audio, etc.
 
