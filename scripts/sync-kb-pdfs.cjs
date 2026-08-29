@@ -13,6 +13,7 @@ const INDEX_PATH = path.join(MANIFESTS_DIR, 'index.jsonl');
 const DOWNLOADED_PATH = path.join(MANIFESTS_DIR, 'downloaded.jsonl');
 const FAILED_PATH = path.join(MANIFESTS_DIR, 'failed.jsonl');
 const DOWNLOAD_ATTEMPTS_PATH = path.join(MANIFESTS_DIR, 'download-attempts.jsonl');
+const RANKING_HTML_RENDERER = path.join(ROOT, 'scripts', 'render-ai-ranking-html.cjs');
 const PDF_MEDIA_TYPE = 1;
 const FOLDER_MEDIA_TYPE = 99;
 const PRIORITY_ORDER = new Map([
@@ -125,6 +126,33 @@ function readJsonl(filePath) {
 function resolveRootPath(input, defaultPath) {
   const value = input || defaultPath;
   return path.isAbsolute(value) ? value : path.join(ROOT, value);
+}
+
+function rankingMonthFromQueuePath(queuePath) {
+  const match = path.basename(queuePath).match(/^ai-ranked-queue-summary-(\d{6})\d{2}\.jsonl$/);
+  return match ? match[1] : null;
+}
+
+function refreshRankingHtml(queuePath, runner = spawnSync) {
+  const month = rankingMonthFromQueuePath(queuePath);
+  if (!month) return null;
+
+  const outputPath = path.join(MANIFESTS_DIR, `ai-ranking-analysis-${month}.html`);
+  const result = runner(process.execPath, [
+    RANKING_HTML_RENDERER,
+    '--month', month,
+    '--out', outputPath,
+  ], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (result.status !== 0) {
+    const detail = String(result.stderr || result.stdout || '').trim();
+    throw new Error(`download records were saved, but monthly ranking HTML refresh failed${detail ? `: ${detail}` : ''}`);
+  }
+  const stdout = String(result.stdout || '').trim();
+  return stdout ? JSON.parse(stdout) : { output: outputPath, month };
 }
 
 function parseEnvValue(value) {
@@ -1077,6 +1105,8 @@ async function runDownloadQueue(opts) {
     }
   }
 
+  stats.html = refreshRankingHtml(queuePath);
+
   return stats;
 }
 
@@ -1132,4 +1162,6 @@ module.exports = {
   normalizeClassification,
   normalizeRanking,
   classifyBatchWithDeepSeek,
+  rankingMonthFromQueuePath,
+  refreshRankingHtml,
 };

@@ -1,5 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const path = require('node:path');
+
+const ROOT = path.resolve(__dirname, '..');
 
 const {
   classifyQuotaSlot,
@@ -13,6 +16,8 @@ const {
   normalizeClassification,
   normalizeRanking,
   classifyBatchWithDeepSeek,
+  rankingMonthFromQueuePath,
+  refreshRankingHtml,
 } = require('../scripts/sync-kb-pdfs.cjs');
 
 test('AI ranking directly uses body summaries without a second-stage rerank', async () => {
@@ -184,4 +189,35 @@ test('download ordering always prefers P0 and P1 before P2', () => {
 test('quota dates use Asia/Shanghai rather than UTC', () => {
   assert.equal(shanghaiDateKey('2026-07-23T15:59:59.000Z'), '20260723');
   assert.equal(shanghaiDateKey('2026-07-23T16:00:00.000Z'), '20260724');
+});
+
+test('download queue refresh targets the monthly ranking page for dated summary queues', () => {
+  const queuePath = '/tmp/ai-ranked-queue-summary-20260828.jsonl';
+  let invocation = null;
+  const result = refreshRankingHtml(queuePath, (command, args, options) => {
+    invocation = { command, args, options };
+    return {
+      status: 0,
+      stdout: JSON.stringify({ month: '202608', downloaded: 1 }),
+      stderr: '',
+    };
+  });
+
+  assert.equal(rankingMonthFromQueuePath(queuePath), '202608');
+  assert.equal(result.month, '202608');
+  assert.equal(invocation.command, process.execPath);
+  assert.deepEqual(invocation.args.slice(-4), [
+    '--month', '202608',
+    '--out', path.join(ROOT, 'manifests', 'ai-ranking-analysis-202608.html'),
+  ]);
+  assert.equal(invocation.options.cwd, ROOT);
+});
+
+test('download queue skips monthly refresh for non-summary queue names', () => {
+  let called = false;
+  const result = refreshRankingHtml('/tmp/custom-queue.jsonl', () => {
+    called = true;
+  });
+  assert.equal(result, null);
+  assert.equal(called, false);
 });
