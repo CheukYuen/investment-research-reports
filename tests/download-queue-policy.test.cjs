@@ -191,26 +191,34 @@ test('quota dates use Asia/Shanghai rather than UTC', () => {
   assert.equal(shanghaiDateKey('2026-07-23T16:00:00.000Z'), '20260724');
 });
 
-test('download queue refresh targets the monthly ranking page for dated summary queues', () => {
+test('download queue refresh targets the monthly ranking page then the hub', () => {
   const queuePath = '/tmp/ai-ranked-queue-summary-20260828.jsonl';
-  let invocation = null;
+  const invocations = [];
   const result = refreshRankingHtml(queuePath, (command, args, options) => {
-    invocation = { command, args, options };
+    invocations.push({ command, args, options });
     return {
       status: 0,
-      stdout: JSON.stringify({ month: '202608', downloaded: 1 }),
+      stdout: JSON.stringify(args.includes('--hub')
+        ? { hub: true, records: 2 }
+        : { month: '202608', downloaded: 1 }),
       stderr: '',
     };
   });
 
   assert.equal(rankingMonthFromQueuePath(queuePath), '202608');
   assert.equal(result.month, '202608');
-  assert.equal(invocation.command, process.execPath);
-  assert.deepEqual(invocation.args.slice(-4), [
+  assert.equal(invocations.length, 2);
+  assert.equal(invocations[0].command, process.execPath);
+  assert.deepEqual(invocations[0].args.slice(-4), [
     '--month', '202608',
     '--out', path.join(ROOT, 'manifests', 'ai-ranking-analysis-202608.html'),
   ]);
-  assert.equal(invocation.options.cwd, ROOT);
+  assert.deepEqual(invocations[1].args.slice(-3), [
+    '--hub',
+    '--out', path.join(ROOT, 'manifests', 'ai-ranking-analysis.html'),
+  ]);
+  assert.equal(result.hub.hub, true);
+  assert.equal(invocations[0].options.cwd, ROOT);
 });
 
 test('download queue skips monthly refresh for non-summary queue names', () => {

@@ -10,7 +10,7 @@
 → 逐篇写入可恢复进度
 → 生成权威日期快照
 → 基于摘要做 AI Infrastructure 正文排序
-→ 生成当日排序队列并更新当月 P0–P3 HTML
+→ 生成当日排序队列并更新当月 P0–P3 HTML 与跨月份汇总导航
 → P0/P1 优先下载，P2 补足普通额度
 ```
 
@@ -40,6 +40,7 @@ manifests/report-summary-browser-failures-YYYYMMDD.jsonl
 manifests/report-summary-batches-YYYYMMDD.jsonl
 manifests/report-summaries-YYYYMMDD.jsonl
 manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl
+manifests/ai-ranking-analysis.html
 manifests/ai-ranking-analysis-YYYYMM.html
 ```
 
@@ -224,7 +225,7 @@ node scripts/sync-kb-pdfs.cjs download-queue \
 
 下载仍必须按 `media_id` 重新调用 `get_media_info`，保持原目录和文件名，成功/失败立即写入既有下载清单。`manifests/download-attempts.jsonl` 按上海日期记录普通额度基线和后续每次真实尝试，使中断续跑不会重新获得 30 次本地预算。
 
-`download-queue` 结束后会根据日期化 queue 自动重新生成对应月份的 `ai-ranking-analysis-YYYYMM.html`，以最新文件和 `downloaded.jsonl` 状态刷新“本地已有”标记。即使本次没有新的候选或因额度停止，也会执行刷新，避免页面停留在下载前快照。
+`download-queue` 结束后会根据日期化 queue 自动重新生成对应月份的 `ai-ranking-analysis-YYYYMM.html`，并覆盖更新跨月份主入口 `ai-ranking-analysis.html`，以最新文件和 `downloaded.jsonl` 状态刷新“本地已有”标记。即使本次没有新的候选或因额度停止，也会执行刷新，避免页面停留在下载前快照。
 
 普通额度累计达到 30 次后，只允许第 31 篇作为上限探测：
 

@@ -801,6 +801,7 @@ function commandFinalize(paths, opts) {
   const report = audit(inputs.index, snapshot, inputs.progress, inputs.failures);
   let ranking = null;
   let html = null;
+  let hub = null;
   if (!opts['skip-rank']) {
     const args = [
       'scripts/sync-kb-pdfs.cjs',
@@ -815,6 +816,11 @@ function commandFinalize(paths, opts) {
       '--month', paths.date.compact.slice(0, 6),
       '--out', relative(paths.summaryHtml),
     ]);
+    hub = runNode([
+      'scripts/render-ai-ranking-html.cjs',
+      '--hub',
+      '--out', 'manifests/ai-ranking-analysis.html',
+    ]);
   }
   return {
     command: 'finalize',
@@ -823,6 +829,7 @@ function commandFinalize(paths, opts) {
     ...report,
     ranking,
     html,
+    hub,
   };
 }
 

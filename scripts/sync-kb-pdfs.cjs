@@ -133,26 +133,35 @@ function rankingMonthFromQueuePath(queuePath) {
   return match ? match[1] : null;
 }
 
-function refreshRankingHtml(queuePath, runner = spawnSync) {
-  const month = rankingMonthFromQueuePath(queuePath);
-  if (!month) return null;
-
-  const outputPath = path.join(MANIFESTS_DIR, `ai-ranking-analysis-${month}.html`);
-  const result = runner(process.execPath, [
-    RANKING_HTML_RENDERER,
-    '--month', month,
-    '--out', outputPath,
-  ], {
+function runRankingHtmlRenderer(args, runner = spawnSync) {
+  const result = runner(process.execPath, [RANKING_HTML_RENDERER, ...args], {
     cwd: ROOT,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   if (result.status !== 0) {
     const detail = String(result.stderr || result.stdout || '').trim();
-    throw new Error(`download records were saved, but monthly ranking HTML refresh failed${detail ? `: ${detail}` : ''}`);
+    const kind = args.includes('--hub') ? 'hub' : 'monthly';
+    throw new Error(`download records were saved, but ${kind} ranking HTML refresh failed${detail ? `: ${detail}` : ''}`);
   }
   const stdout = String(result.stdout || '').trim();
-  return stdout ? JSON.parse(stdout) : { output: outputPath, month };
+  return stdout ? JSON.parse(stdout) : {};
+}
+
+function refreshRankingHtml(queuePath, runner = spawnSync) {
+  const month = rankingMonthFromQueuePath(queuePath);
+  if (!month) return null;
+
+  const outputPath = path.join(MANIFESTS_DIR, `ai-ranking-analysis-${month}.html`);
+  const hubPath = path.join(MANIFESTS_DIR, 'ai-ranking-analysis.html');
+  const monthly = runRankingHtmlRenderer(['--month', month, '--out', outputPath], runner);
+  const hub = runRankingHtmlRenderer(['--hub', '--out', hubPath], runner);
+  return {
+    output: outputPath,
+    month,
+    ...monthly,
+    hub,
+  };
 }
 
 function parseEnvValue(value) {
