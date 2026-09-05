@@ -42,6 +42,7 @@ manifests/report-summaries-YYYYMMDD.jsonl
 manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl
 manifests/ai-ranking-analysis.html
 manifests/ai-ranking-analysis-YYYYMM.html
+manifests/search-index-YYYYMM.jsonl
 ```
 
 `progress` 保存每篇完整 IMA 原始回答和结构化摘要；`failures` 保存失败原因与累计尝试次数；`batches` 保存每次 Prompt、批次文件和批次状态。三者共同构成断点，不依赖 Codex 聊天记录。
@@ -184,7 +185,7 @@ node scripts/ima-daily-summary.cjs finalize
 node scripts/ima-daily-summary.cjs status
 ```
 
-`finalize` 总是先写入一行对应一个 `media_id` 的权威摘要快照，再调用 DeepSeek 直接基于正文摘要排序，生成日期化摘要队列，并汇总当月所有日期化摘要队列覆盖更新月度 P0–P3 HTML。用户明确要求时，允许对同一日期重新排序；新结果原子覆盖该日期队列并刷新月度页面。不得生成标题排序基线、标题/正文对照，或把一次排序拆成标题召回与 P0/P1 二阶段 rerank。进入正文排序的最低条件是：
+`finalize` 总是先写入一行对应一个 `media_id` 的权威摘要快照，再调用 DeepSeek 直接基于正文摘要排序，生成日期化摘要队列，汇总当月所有日期化摘要队列覆盖更新月度 P0–P3 HTML，最后重建主题检索索引 `manifests/search-index-YYYYMM.jsonl`。用户明确要求时，允许对同一日期重新排序；新结果原子覆盖该日期队列并刷新月度页面。不得生成标题排序基线、标题/正文对照，或把一次排序拆成标题召回与 P0/P1 二阶段 rerank。进入正文排序的最低条件是：
 
 - `status=reviewed`；
 - `summary_role=routing_candidate`；
@@ -225,7 +226,7 @@ node scripts/sync-kb-pdfs.cjs download-queue \
 
 下载仍必须按 `media_id` 重新调用 `get_media_info`，保持原目录和文件名，成功/失败立即写入既有下载清单。`manifests/download-attempts.jsonl` 按上海日期记录普通额度基线和后续每次真实尝试，使中断续跑不会重新获得 30 次本地预算。
 
-`download-queue` 结束后会根据日期化 queue 自动重新生成对应月份的 `ai-ranking-analysis-YYYYMM.html`，并覆盖更新跨月份主入口 `ai-ranking-analysis.html`，以最新文件和 `downloaded.jsonl` 状态刷新“本地已有”标记。即使本次没有新的候选或因额度停止，也会执行刷新，避免页面停留在下载前快照。
+`download-queue` 结束后会根据日期化 queue 自动重新生成对应月份的 `ai-ranking-analysis-YYYYMM.html`，覆盖更新跨月份主入口 `ai-ranking-analysis.html`，并重建主题检索索引 `manifests/search-index-YYYYMM.jsonl`，以最新文件和 `downloaded.jsonl` 状态刷新“本地已有”标记。过期的检索索引比没有索引更糟，因此这一步与 HTML 刷新绑定执行。即使本次没有新的候选或因额度停止，也会执行刷新，避免页面停留在下载前快照。
 
 普通额度累计达到 30 次后，只允许第 31 篇作为上限探测：
 

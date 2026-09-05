@@ -116,4 +116,28 @@ IMA 摘要的 `summary_role=routing_candidate`，只用于路由和下载筛选�
 
 DeepSeek 排序只允许读取 `report-summaries-YYYYMMDD.jsonl`，每次调用直接完成正文排序。用户明确要求时，允许对同一日期重新排序并覆盖该日期队列、刷新月度页面；不得运行标题-only 召回、P0/P1 二阶段 rerank 或标题/正文对照流程。
 
+主题检索（行业、公司、概念，例如“光纤”）必须先运行：
+
+`node scripts/search-reports.cjs query '<关键词>'`
+
+命中偏少时加 `--facets`，先看这批数据实际用什么词描述该主题（例如“光纤”会带出 光模块 / 光通信 / CPO），再换词重查。
+
+不要 grep `manifests/ai-ranking-analysis*.html`。
+
+不要遍历 `downloads/` 或逐个读 PDF。
+
+不要跨日期逐个读 `report-summaries-*.jsonl` 或 `ai-ranked-queue-summary-*.jsonl`。
+
+检索索引为 `manifests/search-index-YYYYMM.jsonl`，由 `scripts/search-reports.cjs build` 生成，按月分片，每日同步后自动重建，必须保留并提交。
+
+兜底可直接 `rg '<关键词>' manifests/search-index-*.jsonl`；rg 匹配整行，召回范围比 `query` 宽，可能多召，不等价。
+
+跨项目检索走 `skills/report-search/`（`~/.claude/skills/report-search` 软链到它），任何项目里 `/report-search <关键词>` 即可；也可以直接 `@` 仓库根目录的 `SEARCH.md`（软链到同一份 `SKILL.md`）。
+
+skill 内容与代码同仓版本化，改检索行为时必须同步更新 `skills/report-search/SKILL.md`。
+
+行业与报告类型分类只在 `ai-ranked-queue-summary-*.jsonl` 有值；`report-summaries-*.jsonl` 的 `report_type` / `sectors` / `topics` 恒为空，是设计如此，不是数据损坏。
+
+`query` 结果来自 IMA 路由摘要（`summary_role=routing_candidate`），只用于定位 PDF；正式数字、页码和证据必须回到 `downloads/<local_relative_path>` 的 PDF 核对。
+
 不要提交 `.env`。

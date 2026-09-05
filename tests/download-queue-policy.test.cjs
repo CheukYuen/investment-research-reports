@@ -191,11 +191,14 @@ test('quota dates use Asia/Shanghai rather than UTC', () => {
   assert.equal(shanghaiDateKey('2026-07-23T16:00:00.000Z'), '20260724');
 });
 
-test('download queue refresh targets the monthly ranking page then the hub', () => {
+test('download queue refresh targets the monthly page, the hub, then the search index', () => {
   const queuePath = '/tmp/ai-ranked-queue-summary-20260828.jsonl';
   const invocations = [];
   const result = refreshRankingHtml(queuePath, (command, args, options) => {
     invocations.push({ command, args, options });
+    if (args.includes('build')) {
+      return { status: 0, stdout: JSON.stringify({ total: 6218, shards: [] }), stderr: '' };
+    }
     return {
       status: 0,
       stdout: JSON.stringify(args.includes('--hub')
@@ -207,7 +210,7 @@ test('download queue refresh targets the monthly ranking page then the hub', () 
 
   assert.equal(rankingMonthFromQueuePath(queuePath), '202608');
   assert.equal(result.month, '202608');
-  assert.equal(invocations.length, 2);
+  assert.equal(invocations.length, 3);
   assert.equal(invocations[0].command, process.execPath);
   assert.deepEqual(invocations[0].args.slice(-4), [
     '--month', '202608',
@@ -217,8 +220,21 @@ test('download queue refresh targets the monthly ranking page then the hub', () 
     '--hub',
     '--out', path.join(ROOT, 'manifests', 'ai-ranking-analysis.html'),
   ]);
+  assert.deepEqual(invocations[2].args.slice(-2), ['build', '--json']);
+  assert.match(invocations[2].args[0], /search-reports\.cjs$/);
   assert.equal(result.hub.hub, true);
+  assert.equal(result.search_index.total, 6218);
   assert.equal(invocations[0].options.cwd, ROOT);
+});
+
+test('download queue surfaces a failed search index rebuild', () => {
+  assert.throws(
+    () => refreshRankingHtml('/tmp/ai-ranked-queue-summary-20260828.jsonl', (command, args) => {
+      if (args.includes('build')) return { status: 1, stdout: '', stderr: 'boom' };
+      return { status: 0, stdout: '{}', stderr: '' };
+    }),
+    /search index rebuild failed: boom/,
+  );
 });
 
 test('download queue skips monthly refresh for non-summary queue names', () => {

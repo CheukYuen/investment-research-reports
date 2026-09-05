@@ -14,6 +14,7 @@ const DOWNLOADED_PATH = path.join(MANIFESTS_DIR, 'downloaded.jsonl');
 const FAILED_PATH = path.join(MANIFESTS_DIR, 'failed.jsonl');
 const DOWNLOAD_ATTEMPTS_PATH = path.join(MANIFESTS_DIR, 'download-attempts.jsonl');
 const RANKING_HTML_RENDERER = path.join(ROOT, 'scripts', 'render-ai-ranking-html.cjs');
+const SEARCH_INDEX_BUILDER = path.join(ROOT, 'scripts', 'search-reports.cjs');
 const PDF_MEDIA_TYPE = 1;
 const FOLDER_MEDIA_TYPE = 99;
 const PRIORITY_ORDER = new Map([
@@ -148,6 +149,21 @@ function runRankingHtmlRenderer(args, runner = spawnSync) {
   return stdout ? JSON.parse(stdout) : {};
 }
 
+// 主题检索索引与两份 HTML 同源，必须一起刷新：过期索引比没有索引更糟，LLM 会信它。
+function rebuildSearchIndex(runner = spawnSync) {
+  const result = runner(process.execPath, [SEARCH_INDEX_BUILDER, 'build', '--json'], {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  if (result.status !== 0) {
+    const detail = String(result.stderr || result.stdout || '').trim();
+    throw new Error(`download records were saved, but search index rebuild failed${detail ? `: ${detail}` : ''}`);
+  }
+  const stdout = String(result.stdout || '').trim();
+  return stdout ? JSON.parse(stdout) : {};
+}
+
 function refreshRankingHtml(queuePath, runner = spawnSync) {
   const month = rankingMonthFromQueuePath(queuePath);
   if (!month) return null;
@@ -156,11 +172,13 @@ function refreshRankingHtml(queuePath, runner = spawnSync) {
   const hubPath = path.join(MANIFESTS_DIR, 'ai-ranking-analysis.html');
   const monthly = runRankingHtmlRenderer(['--month', month, '--out', outputPath], runner);
   const hub = runRankingHtmlRenderer(['--hub', '--out', hubPath], runner);
+  const searchIndex = rebuildSearchIndex(runner);
   return {
     output: outputPath,
     month,
     ...monthly,
     hub,
+    search_index: searchIndex,
   };
 }
 

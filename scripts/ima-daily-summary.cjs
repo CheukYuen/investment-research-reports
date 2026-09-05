@@ -802,6 +802,7 @@ function commandFinalize(paths, opts) {
   let ranking = null;
   let html = null;
   let hub = null;
+  let searchIndex = null;
   if (!opts['skip-rank']) {
     const args = [
       'scripts/sync-kb-pdfs.cjs',
@@ -821,6 +822,11 @@ function commandFinalize(paths, opts) {
       '--hub',
       '--out', 'manifests/ai-ranking-analysis.html',
     ]);
+    searchIndex = runNode([
+      'scripts/search-reports.cjs',
+      'build',
+      '--json',
+    ]);
   }
   return {
     command: 'finalize',
@@ -830,6 +836,7 @@ function commandFinalize(paths, opts) {
     ranking,
     html,
     hub,
+    search_index: searchIndex,
   };
 }
 

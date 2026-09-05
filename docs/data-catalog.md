@@ -20,6 +20,7 @@
 - DeepSeek 基于摘要正文的一轮排序：保存在 `manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl`
 - 月度 P0–P3 排序看板：保存在 `manifests/ai-ranking-analysis-YYYYMM.html`
 - 跨月份研报导航主入口：保存在 `manifests/ai-ranking-analysis.html`
+- 主题检索索引：保存在 `manifests/search-index-YYYYMM.jsonl`
 
 当前快照（2026-07-06）：
 
@@ -51,6 +52,7 @@ manifests/
   ai-ranked-queue-summary-YYYYMMDD.jsonl
   ai-ranking-analysis.html
   ai-ranking-analysis-YYYYMM.html
+  search-index-YYYYMM.jsonl
 ```
 
 项目约定保留 ima 知识库中的原始目录结构和原始文件名。其他项目引用 PDF 时，推荐使用：
@@ -143,6 +145,64 @@ const pdfPath = path.join(repoRoot, 'downloads', record.local_relative_path);
 读取标题、通用摘要、关键结论、内容标签、原始关键数字、实体和证据后生成的 AI Infrastructure 正文排序。只接收 `reviewed + source_match + executive_summary` 记录；失败项不会由标题评级静默补齐。
 
 该队列保留索引身份和下载字段，可直接作为 `download-queue` 的输入。每次排序调用都直接按正文摘要分类，`ranking_mode=single_summary_pass` 描述的是单次调用内没有标题召回或二阶段 rerank，并不限制同一日期以后重新排序。用户明确要求重新排序时，覆盖该日期队列并刷新月度页面。
+
+### `manifests/search-index-YYYYMM.jsonl`
+
+主题检索索引。把按日期切分的队列、摘要和知识库索引合并成一篇研报一行的扁平结构，
+让"查某个行业/公司/概念的研报"变成一次调用，而不是跨 60+ 个日期文件逐个读。
+
+生成与查询：
+
+```bash
+node scripts/search-reports.cjs build
+node scripts/search-reports.cjs query '光纤' --facets
+```
+
+按月分片，`media_id` 唯一。历史月份的分片内容稳定，每日重建只有当月分片产生 diff。
+每行同时是一条完整可用记录，所以 `rg '光纤' manifests/search-index-*.jsonl` 是可用的兜底路径。
+注意两者不等价：`query` 只匹配检索字段，`rg` 匹配整行（含 `media_id`、`summary_role`、`snapshot_month` 等），召回范围更宽。
+
+`tier` 标记数据完整度，三层来自不同上游：
+
+| tier | 来源 | 有分类与优先级 |
+| --- | --- | --- |
+| `ranked` | `ai-ranked-queue-summary-YYYYMMDD.jsonl` | 有 |
+| `summary_only` | `report-summaries-YYYYMMDD.jsonl` 中未进排序队列的记录 | 无，`priority` 为 `UNREVIEWED` |
+| `index_only` | `index.jsonl` 中从未进入摘要管线的记录 | 无，只有标题和路径可搜 |
+
+字段：
+
+| 字段 | 含义 |
+| --- | --- |
+| `media_id` / `title` / `tier` | 主键、原始文件名与数据完整度分层 |
+| `snapshot_date` / `snapshot_month` | 快照日期与所属分片；`index_only` 的月份由 `local_relative_path` 推导 |
+| `priority` / `rank` / `score` | 来自排序队列 |
+| `report_type` / `report_type_label` / `report_type_reason` | 报告类型及中文标签 |
+| `sectors_cn` | 一级行业中文名数组，由 `sectors[].name_cn` 扁平化 |
+| `company_label` | 与 hub 页一致的公司标签，仅 `report_type=company` 时非空 |
+| `topics` / `content_tags` / `entities` | 细分主题、内容标签与路由实体，主题检索的主要命中来源 |
+| `research_subject` / `executive_summary` / `key_findings` | 摘要正文 |
+| `ranking_evidence` | 排序直接引用的摘要原文证据 |
+| `data_points` | `metric` / `value_text` / `period` / `context` 四字段，未做单位标准化 |
+| `downloaded` | 是否出现在 `downloaded.jsonl`，不做磁盘校验，保持机器无关 |
+| `pdf_path` | `downloads/<local_relative_path>`，无条件输出 |
+| `summary_role` | 恒为 `routing_candidate` |
+
+不收进索引的字段及原因：
+
+- `raw_answer`：每条都含整批 IMA 原始回答，重复且体积巨大
+- `evidence[].quote`：多为英文原文，对中文主题检索无增量
+- `reasons`：DeepSeek 排序理由会逐字复制排序 prompt 里的判据样板句
+  （例如"也包括强相关半导体设备材料、PCB、光纤光缆、工业自动化"），
+  收进索引会让无关研报在主题检索里假命中；真实证据走 `ranking_evidence`
+- `saved_path`：当前机器的绝对路径，不可跨机器
+
+索引是派生数据，权威始终是上游 manifests。它与两份 HTML 同源、同时刷新：
+`download-queue` 和每日 `finalize` 在渲染 HTML 之后都会重建一次索引。
+
+`downloaded.jsonl` 的事件数与 `downloads/` 下的实际文件数存在少量差异
+（可能来自重复下载记录或事后删除），索引沿用 `downloaded.jsonl` 的口径。
+若 `pdf_path` 指向的文件实际不存在，按 `media_id` 重新走 `download-queue`。
 
 ### `manifests/downloaded.jsonl`
 
@@ -266,6 +326,47 @@ const pdfPath = path.join(repoRoot, 'downloads', record.local_relative_path);
 
 ## 推荐接入方式
 
+### 按主题检索研报（首选）
+
+```bash
+# 字面检索
+node scripts/search-reports.cjs query '光纤'
+
+# 命中偏少时先看这批数据实际用什么词描述该主题，再换词重查
+node scripts/search-reports.cjs query '光纤' --facets
+
+# 组合筛选与结构化输出
+node scripts/search-reports.cjs query '光纤' --priority P0,P1 --downloaded --json
+```
+
+结果自带 `pdf_path`，未下载的会标 `NOT_DOWNLOADED` 并给出 `media_id`。
+需要自定义筛选逻辑时才退回下面的 `readJsonl` + `.filter()` 写法。
+
+#### 跨项目调用
+
+从任意目录运行本脚本的绝对路径即可，无需 `cd` 进本仓库：
+
+```bash
+node /Users/leon/Stock/investment-research-reports/scripts/search-reports.cjs query '光纤' --facets
+```
+
+路径处理约定：
+
+- 索引里的 `pdf_path` 恒为仓库相对路径（`downloads/...`），保持机器无关、可跨机器提交
+- 文本输出会在 cwd 位于本仓库之外时自动改印绝对路径，调用方可直接打开
+- `--json` 额外返回 `abs_path`（可直接打开）和 `repo_root`（本仓库根目录）
+
+其他项目的 agent 配置里加上这段即可让它知道有这条路：
+
+```text
+研报数据在 /Users/leon/Stock/investment-research-reports。
+查某个行业、公司或概念的研报，运行：
+  node /Users/leon/Stock/investment-research-reports/scripts/search-reports.cjs query '<关键词>' --facets
+结果自带 pdf_path（跨项目调用时为绝对路径），未下载的标 NOT_DOWNLOADED。
+不要遍历 downloads/，不要 grep manifests/*.html，不要逐个读日期化 JSONL。
+query 结果来自 IMA 路由摘要，只用于定位 PDF；正式数字和证据须回到 PDF 核对。
+```
+
 ### 发现全部可用研报
 
 读取 `manifests/index.jsonl`：
@@ -356,6 +457,12 @@ node scripts/render-ai-ranking-html.cjs \
   --out manifests/ai-ranking-analysis.html
 ```
 
+重建主题检索索引（`download-queue` 与每日 `finalize` 会自动执行）：
+
+```bash
+node scripts/search-reports.cjs build
+```
+
 按 queue 下载 PDF：
 
 ```bash
@@ -387,7 +494,7 @@ node scripts/sync-kb-pdfs.cjs download-queue \
 ## 这个项目不提供的数据
 
 - 不保存 IMA 临时下载 URL 或 headers
-- 不保存 PDF 正文抽取文本
+- 不保存 PDF 正文抽取文本（`search-index-YYYYMM.jsonl` 只索引 IMA 路由摘要，不是正文全文检索）
 - 不保存 embedding 或向量索引
 - 不保存研报结构化财务数据
 - 不保证 `saved_path` 在其他机器可用
