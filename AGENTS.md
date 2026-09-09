@@ -4,140 +4,55 @@ investment-research-reports
 
 # Purpose
 
-同步腾讯 ima 知识库中的 PDF。
+同步腾讯 IMA 知识库中的 PDF 研报。
 
 # Primary Skill
 
-ima-skills
+ima-skill
+
+# Source of Truth
+
+- 每日摘要、排序、下载和 Git 流程：`docs/ima-daily-summary-runbook.md`
+- 当前运行参数：`config/ima-daily-summary.json`
+- IMA OpenAPI 操作：`.agents/skills/@tencent-adm/ima-skills/SKILL.md`
+- 本地研报检索：`.agents/skills/report-search/SKILL.md`
+
+执行每日任务时必须完整读取 Runbook 和配置，不在本文件重复其 Browser/App 状态机、批次、额度、finalize 或提交细节。
 
 # Workspace
 
-`downloads/`
+- `downloads/`：PDF，保持 IMA 原始目录结构和文件名。
+- `manifests/`：索引、日期进度、排序队列、下载和失败审计。
+- `manifests/index.jsonl`：知识库 PDF 索引。
 
-保存 PDF。
+# Sync Invariants
 
-`manifests/`
+- 同步前先索引；批量操作使用 `scripts/sync-kb-pdfs.cjs`，不自行实现 IMA 接口或批量 `curl`。
+- 如文件已存在则跳过。下载必须按 `media_id`，每个文件下载前重新调用 `get_media_info`，并使用返回的 `url_info.url` 和 `headers`。
+- 每个成功或失败结果立即写入对应 manifest；所有同步任务必须支持断点恢复。
+- 除每日自动任务或用户明确要求外，不运行 `download-queue`；除非明确要求全量同步，不直接全量下载。
+- 登录失效、全局限流、IMA 资料获取上限和 `30+1` 停止条件严格按 Runbook 执行，不自行放宽。
 
-保存同步状态。
+# Ranking and Evidence
 
-`manifests/index.jsonl`
+- AI Infrastructure 正式筛选路径是：索引 → IMA 通用摘要 → `rank-ai` 正文摘要排序 → 按 queue 下载。
+- 允许 `rank-ai` 将 IMA 通用摘要中的标题、摘要、关键结论、标签、关键数字、实体和证据发送给 DeepSeek，无需逐次确认；不得发送整份 PDF 正文。
+- IMA 摘要的 `summary_role=routing_candidate`，只用于路由和下载筛选；正式数字、页码和证据必须回到 `downloads/<local_relative_path>` 的 PDF 核对。
+- 正文排序失败项保持 `UNREVIEWED`，不用标题评级兜底。分类失败时 `report_type` 保持 `null`，不得静默写成 `other`。
+- `manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl`、`manifests/ai-ranking-analysis-YYYYMM.html`、`manifests/ai-ranking-analysis.html` 和 `manifests/search-index-YYYYMM.jsonl` 是必须保留的权威产物。
 
-保存知识库 PDF 索引。
+# Report Search
 
-# Rules
+- 主题检索先运行 `node scripts/search-reports.cjs query '<关键词>'`；命中偏少时加 `--facets` 查看实际词汇后重查。
+- 不要 grep `manifests/ai-ranking-analysis*.html`，不要遍历 `downloads/`，不要跨日期逐个读取摘要或队列 JSONL。
+- 兜底可用 `rg '<关键词>' manifests/search-index-*.jsonl`，但其整行匹配召回范围更宽，不等价于 `query`。
 
-保持原始目录结构。
+# Skill Layout
 
-保持原始文件名。
+- 项目 skill 唯一实体目录是 `.agents/skills/`；`.claude/skills/`、`skills/` 和 `SEARCH.md` 只能作为软链入口。
+- SkillHub 安装或覆盖更新 IMA skill 后，立即运行 `node scripts/normalize-ima-skill.cjs`。来源、版本和当前上游包的兼容限制见 README 的「Skill 管理」。
 
-如果文件已存在，则跳过。
+# Git
 
-同步前先索引目录：
-
-写入 `manifests/index.jsonl`。
-
-批量同步优先使用：
-
-`scripts/sync-kb-pdfs.cjs`
-
-不要绕过脚本自行批量 curl。
-
-下载必须按 `media_id` 执行。
-
-每个文件下载前：
-
-重新调用 `get_media_info`。
-
-使用 `get_media_info` 返回的 `url_info.url` 和 `headers` 下载。
-
-每下载成功一个文件：
-
-立即更新 `downloaded.jsonl`。
-
-下载失败：
-
-记录到 `failed.jsonl`。
-
-所有同步任务必须支持断点恢复。
-
-优先使用 ima Skill。
-
-不要自行实现知识库接口。
-
-AI Infrastructure 主题筛选必须先索引，再运行：
-
-`scripts/sync-kb-pdfs.cjs rank-ai`
-
-允许 `rank-ai` 将 IMA 通用摘要中的标题、摘要、关键结论、标签、关键数字、实体和证据发送给 DeepSeek，无需逐次确认；不得直接发送整份 PDF 正文。
-
-`rank-ai` 在同一次 DeepSeek 调用中同时完成 P0–P3 排序、报告类型分类（`company`/`industry`/`strategy`/`macro`/`commodity`/`other` 六选一）和一级行业分类（中证/GICS 11 类，DeepSeek 只输出中文，英文由脚本补齐）。IMA 摘要阶段不承担分类，恒为 `report_type: null`、`sectors: []`。分类失败或模型返回非法值时保持 `null`，不得静默写成 `other`；`other` 是模型确认理解内容后给出的有效业务分类。分类校验失败不影响该记录的排序结果保存。
-
-每日正式筛选优先运行仓库内可恢复摘要任务：
-
-`scripts/ima-daily-summary.cjs`
-
-必须遵守：
-
-`docs/ima-daily-summary-runbook.md`
-
-每日流程为：
-
-`当天索引 → IMA 通用摘要 → 摘要正文排序 → P0/P1 优先、P2 补足下载额度`
-
-IMA 问答优先使用已登录的内置 Browser；Browser 不可用、登录不可复用或无法稳定取得完整回答时，才切换 IMA App。两种界面都必须固定使用当天目录、DS 快速模式（DeepSeek-V4-Flash）、每批最多 5 篇、每批新建独立对话且只问一次。
-
-摘要进度、失败、批次和权威快照必须按日期保存；已 `reviewed` 跳过，失败优先，登录失效或全局限流立即停止。
-
-IMA 摘要的 `summary_role=routing_candidate`，只用于路由和下载筛选，不是正式 PDF 数据提取。
-
-正文排序失败项保持 `UNREVIEWED`，不得用标题评级静默兜底。
-
-再按 queue 下载。
-
-所有研报同步默认都必须先排序，再按 queue 下载。P0/P1 优先；当天普通额度不足 30 篇时，用 P2 补足，P3 不自动下载。
-
-除非用户明确要求全量同步，不直接全量下载。
-
-除每日自动任务或用户明确要求外，不运行：
-
-`scripts/sync-kb-pdfs.cjs download-queue`
-
-下载 queue 默认每日预算为 `--daily-budget 30`。
-
-每日自动任务使用 `--priorities P0,P1,P2` 和 `--quota-probe-extra 1`。跨续跑按上海日期累计已消耗次数；达到 30 次后只允许额外探测 1 篇。默认情况下，第 31 篇成功或失败后都必须停止，不得尝试第 32 篇。仅当用户在当前任务中明确要求解除该限制并继续下载时，允许人工运行 `download-queue --allow-over-quota`；自动任务不得自行添加该参数。override 仍须逐次记录真实尝试，遇到 IMA 获取上限、登录失效或全局限流立即停止。
-
-遇到 IMA “资料获取次数已达上限”等上限错误，必须立即停止下载。
-
-`manifests/ai-ranked-queue-summary-YYYYMMDD.jsonl` 是当天唯一筛选结果，必须保留并提交。
-
-`manifests/ai-ranking-analysis-YYYYMM.html` 是当月唯一的 P0–P3 排序页面；每日覆盖更新，必须保留并提交。
-
-`manifests/ai-ranking-analysis.html` 是跨月份研报导航主入口；每日覆盖更新，必须保留并提交。
-
-DeepSeek 排序只允许读取 `report-summaries-YYYYMMDD.jsonl`，每次调用直接完成正文排序。用户明确要求时，允许对同一日期重新排序并覆盖该日期队列、刷新月度页面；不得运行标题-only 召回、P0/P1 二阶段 rerank 或标题/正文对照流程。
-
-主题检索（行业、公司、概念，例如“光纤”）必须先运行：
-
-`node scripts/search-reports.cjs query '<关键词>'`
-
-命中偏少时加 `--facets`，先看这批数据实际用什么词描述该主题（例如“光纤”会带出 光模块 / 光通信 / CPO），再换词重查。
-
-不要 grep `manifests/ai-ranking-analysis*.html`。
-
-不要遍历 `downloads/` 或逐个读 PDF。
-
-不要跨日期逐个读 `report-summaries-*.jsonl` 或 `ai-ranked-queue-summary-*.jsonl`。
-
-检索索引为 `manifests/search-index-YYYYMM.jsonl`，由 `scripts/search-reports.cjs build` 生成，按月分片，每日同步后自动重建，必须保留并提交。
-
-兜底可直接 `rg '<关键词>' manifests/search-index-*.jsonl`；rg 匹配整行，召回范围比 `query` 宽，可能多召，不等价。
-
-跨项目检索走 `skills/report-search/`（`~/.claude/skills/report-search` 软链到它），任何项目里 `/report-search <关键词>` 即可；也可以直接 `@` 仓库根目录的 `SEARCH.md`（软链到同一份 `SKILL.md`）。
-
-skill 内容与代码同仓版本化，改检索行为时必须同步更新 `skills/report-search/SKILL.md`。
-
-行业与报告类型分类只在 `ai-ranked-queue-summary-*.jsonl` 有值；`report-summaries-*.jsonl` 的 `report_type` / `sectors` / `topics` 恒为空，是设计如此，不是数据损坏。
-
-`query` 结果来自 IMA 路由摘要（`summary_role=routing_candidate`），只用于定位 PDF；正式数字、页码和证据必须回到 `downloads/<local_relative_path>` 的 PDF 核对。
-
-不要提交 `.env`。
+- 不要提交 `.env`。
+- 只有用户明确要求或 Runbook 与当前配置授权时才提交；保持范围窄，排除运行前已有的无关改动。

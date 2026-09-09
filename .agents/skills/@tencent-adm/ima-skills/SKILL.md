@@ -6,8 +6,8 @@ description: |
   搜索知识库内容、搜索/浏览/创建/编辑笔记时，使用此 skill。
   即使用户没有明确说"知识库"或"笔记"，只要意图涉及文件上传到知识库、网页收藏、
   知识搜索、个人文档存取（如"帮我记一下"、"搜一下知识库里有没有XX"），也应触发此 skill。
-homepage: https://ima.qq.com
 metadata:
+  homepage: https://ima.qq.com
   openclaw:
     emoji: 🔧
     requires:
@@ -45,9 +45,9 @@ Unified IMA OpenAPI skill. Currently supports: **notes**, **knowledge-base**.
 
 | 用户意图                                                                                   | 模块           | 读取                      |
 | ------------------------------------------------------------------------------------------ | -------------- | ------------------------- |
-| 搜索笔记、浏览笔记本、获取笔记内容、创建笔记、追加内容                                     | notes          | `notes/SKILL.md`          |
-| 上传文件、添加网页链接、搜索知识库、浏览知识库内容、获取知识库信息、获取可添加的知识库列表 | knowledge-base | `knowledge-base/SKILL.md` |
-| 查看原文、分析原文、导出原文（需要 media_id）                                              | knowledge-base | `knowledge-base/SKILL.md` |
+| 搜索笔记、浏览笔记本、获取笔记内容、创建笔记、追加内容                                     | notes          | `notes/GUIDE.md`          |
+| 上传文件、添加网页链接、搜索知识库、浏览知识库内容、获取知识库信息、获取可添加的知识库列表 | knowledge-base | `knowledge-base/GUIDE.md` |
+| 查看原文、分析原文、导出原文（需要 media_id）                                              | knowledge-base | `knowledge-base/GUIDE.md` |
 
 ### ⚠️ 易混淆场景
 
@@ -63,13 +63,13 @@ Unified IMA OpenAPI skill. Currently supports: **notes**, **knowledge-base**.
 
 ### ⚠️ 跨模块任务 — 必须读取两个子模块
 
-某些意图跨越 notes 和 knowledge-base 两个模块。**不要只读取一个子模块就开始执行**，必须先读取两个模块的 SKILL.md 再按顺序操作。
+某些意图跨越 notes 和 knowledge-base 两个模块。**不要只读取一个子模块就开始执行**，必须先读取两个模块的 GUIDE.md 再按顺序操作。
 
 | 用户说的                             | 实际流程                                      | 读取顺序                                               |
 | ------------------------------------ | --------------------------------------------- | ------------------------------------------------------ |
-| "把知识库里的XX内容记到笔记"         | KB 搜索/读取 → Notes 创建/追加                | 先读 `knowledge-base/SKILL.md` → 再读 `notes/SKILL.md` |
-| "查看原文"（知识库中的笔记类型媒体） | KB `get_media_info` → Notes `get_doc_content` | 先读 `knowledge-base/SKILL.md` → 再读 `notes/SKILL.md` |
-| "把这篇笔记添加到知识库"             | Notes 搜索获取 note_id → KB `add_knowledge`   | 先读 `notes/SKILL.md` → 再读 `knowledge-base/SKILL.md` |
+| "把知识库里的XX内容记到笔记"         | KB 搜索/读取 → Notes 创建/追加                | 先读 `knowledge-base/GUIDE.md` → 再读 `notes/GUIDE.md` |
+| "查看原文"（知识库中的笔记类型媒体） | KB `get_media_info` → Notes `get_doc_content` | 先读 `knowledge-base/GUIDE.md` → 再读 `notes/GUIDE.md` |
+| "把这篇笔记添加到知识库"             | Notes 搜索获取 note_id → KB `add_knowledge`   | 先读 `notes/GUIDE.md` → 再读 `knowledge-base/GUIDE.md` |
 
 **规则**：如果用户意图同时涉及「笔记」和「知识库」，或者 API 响应揭示需要另一个模块（如 `media_type=11` 表示笔记类型），必须读取两个子模块再继续。
 

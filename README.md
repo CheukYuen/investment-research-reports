@@ -202,13 +202,26 @@ node scripts/sync-kb-pdfs.cjs sync \
 | 路径 | 说明 |
 | --- | --- |
 | [AGENTS.md](AGENTS.md) | Agent 唯一配置与硬规则 |
-| `skills/report-search/` | 主题检索 skill；`~/.claude/skills/report-search` 与 `.claude/skills/report-search` 都软链到这里 |
+| `.agents/skills/report-search/` | 主题检索 skill 的唯一实体；Claude 和旧路径均通过软链访问 |
 | [SEARCH.md](SEARCH.md) | 软链到上面的 `SKILL.md`；跨项目时 `@` 这一个文件即可 |
 | `CLAUDE.md` | 指向 `AGENTS.md` 的 symlink |
-| `ima-skill/` | ima OpenAPI Skill；`.claude/skills/ima-skill` 为其 symlink |
+| `.agents/skills/@tencent-adm/ima-skills/` | SkillHub 管理的 ima OpenAPI Skill 唯一实体；`.claude/skills/ima-skill` 为其软链 |
 | `scripts/sync-kb-pdfs.cjs` | 索引、排序、按 queue 下载 |
 | `scripts/render-ai-ranking-html.cjs` | 月度 P0–P3 HTML 快照与跨月份导航汇总页 |
 | `scripts/search-reports.cjs` | 主题检索：重建 `manifests/search-index-YYYYMM.jsonl`，`query` 按关键词查研报 |
 | [docs/data-catalog.md](docs/data-catalog.md) | 字段、路径约定、跨项目引用 |
+
+### Skill 管理
+
+项目 skill 只在 `.agents/skills/` 保留实体，`.claude/skills/`、`skills/` 和 `SEARCH.md` 只保留软链入口。Codex 按官方规范直接扫描 `.agents/skills/`。
+
+IMA skill 覆盖更新：
+
+```bash
+skillhub install ima-skills --namespace tencent-adm --dir .agents/skills --force
+node scripts/normalize-ima-skill.cjs
+```
+
+官方 `1.1.9` 包的两个子模块 `SKILL.md` 没有 frontmatter，且根 frontmatter 含 Codex 不支持的顶层 `homepage`。第二条命令会可重复地转换这些结构；因为本地内容与原始包不再逐字节一致，上游修复前 `skillhub verify` 会报 `content_mismatch`。
 
 同步与下载的完整约束（断点恢复、`media_id`、`get_media_info`、禁止自行批量 curl 等）见 [AGENTS.md](AGENTS.md)。

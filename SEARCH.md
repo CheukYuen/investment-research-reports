@@ -1,1 +1,1 @@
-skills/report-search/SKILL.md
+.agents/skills/report-search/SKILL.md

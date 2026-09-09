@@ -27,7 +27,7 @@ IMA 摘要的角色固定为 `routing_candidate`：它只用于主题路由、PD
 - `daily_budget`：普通下载额度为 30，跨同一天续跑累计；
 - `download_priorities`：默认 `P0,P1,P2`，按 P0、P1、P2 顺序消费额度；
 - `quota_probe_extra`：默认 1，普通额度用满后只探测第 31 篇一次；
-- `auto_git_commit`：默认 `false`，结果保存与 Git 提交分离。
+- `auto_git_commit`：是否由每日自动任务窄提交本次产物；当前仓库配置为 `true`。
 
 ## 2. 每日文件
 
@@ -235,4 +235,4 @@ node scripts/sync-kb-pdfs.cjs download-queue \
 
 只有用户在当前任务中明确要求解除 30+1 停止条件并继续下载时，才允许人工追加 `--allow-over-quota`。该参数不得写入每日自动任务配置，也不得由自动任务自行推断。启用后，超额真实尝试必须以 `quota_slot=override` 逐篇写入 `download-attempts.jsonl`；仍须按 queue 顺序下载，并在 IMA 获取上限、登录失效或全局限流时立即停止。
 
-默认不自动提交 Git。只有 `auto_git_commit=true` 时，自动任务才可只暂存本次处理的当天及昨日日期产物、受影响的月度页面/检索索引、导航和本次新增下载，运行 `git diff --cached --check` 后创建窄提交。不得提交 `.env`、其他旧日期未跟踪文件或运行前已有的无关改动。
+Git 自动提交由 `auto_git_commit` 决定。为 `true` 时，自动任务只可暂存本次处理的当天及昨日日期产物、受影响的月度页面/检索索引、导航和本次新增下载，运行 `git diff --cached --check` 后创建窄提交。不得提交 `.env`、其他旧日期未跟踪文件或运行前已有的无关改动。
