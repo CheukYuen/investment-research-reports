@@ -4,7 +4,7 @@
   "interaction_order": ["browser", "app"],
   "browser_model_version": "ima-web-deepseek-v4-flash",
   "app_model_version": "ima-app-deepseek-v4-flash",
-  "max_batch_size": 5,
+  "max_batch_size": 10,
   "max_attempts": 8,
   "daily_budget": 30,
   "download_priorities": ["P0", "P1", "P2"],

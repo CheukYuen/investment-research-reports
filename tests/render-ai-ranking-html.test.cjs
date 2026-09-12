@@ -70,6 +70,34 @@ test('monthly collection reads summary queues, keeps P0-P3, and deduplicates by 
   }
 });
 
+test('collection falls back from ranked records to summary-only and title-only dated records', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-ranking-html-tiered-'));
+  try {
+    writeJsonl(path.join(root, 'ai-ranked-queue-summary-20260911.jsonl'), [
+      report('ranked', 'P0', 1, '已排序报告'),
+    ]);
+    writeJsonl(path.join(root, 'report-summaries-20260911.jsonl'), [
+      { ...report('ranked', 'UNREVIEWED', null, '不应覆盖排序记录'), executive_summary: '旧摘要' },
+      { ...report('summary', 'UNREVIEWED', null, '仅摘要报告'), executive_summary: '可用摘要' },
+    ]);
+    writeJsonl(path.join(root, 'index-20260911.jsonl'), [
+      { media_id: 'ranked', title: '不应覆盖已排序标题.pdf' },
+      { media_id: 'title', title: '只有标题也要展示.pdf', source_path: '知识库 / 9月 / 9.11 / 只有标题也要展示.pdf' },
+    ]);
+
+    const result = collectMonthlyRecords(root, '202609');
+    assert.equal(result.records.length, 3);
+    assert.equal(result.records.find((record) => record.media_id === 'ranked').title, '已排序报告.pdf');
+    assert.equal(result.records.find((record) => record.media_id === 'ranked').data_tier, 'ranked');
+    assert.equal(result.records.find((record) => record.media_id === 'summary').data_tier, 'summary_only');
+    assert.equal(result.records.find((record) => record.media_id === 'summary').executive_summary, '可用摘要');
+    assert.equal(result.records.find((record) => record.media_id === 'title').data_tier, 'index_only');
+    assert.equal(result.records.find((record) => record.media_id === 'title').executive_summary, '');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('monthly HTML lists all priority bands and removes manual Top 20 concepts', () => {
   const records = [
     report('p0', 'P0', 1),
@@ -284,6 +312,27 @@ test('hub HTML is a compact navigation page and omits ranking evidence fields', 
   assert.match(html, /row-head/);
   assert.doesNotMatch(html, /should-not-embed/);
   assert.doesNotMatch(html, /ranking_evidence/);
+});
+
+test('hub HTML supports top date filtering, month-day details grouping, and title-only records', () => {
+  const records = [
+    toHubRecord({
+      ...report('title-only', 'UNREVIEWED', null, '只有标题也要展示'),
+      snapshot_date: '2026-09-11',
+      data_tier: 'index_only',
+      executive_summary: '',
+      report_type: null,
+      report_type_label: '未分类',
+      sectors: [],
+    }),
+  ];
+  const html = renderHubHtml(records, { sourceCount: 1 });
+  assert.match(html, /id="date"/);
+  assert.match(html, /class="month-group"/);
+  assert.match(html, /class="date-group"/);
+  assert.match(html, /2026-09-11/);
+  assert.match(html, /只有标题也要展示/);
+  assert.match(html, /暂无摘要，仅展示标题与索引信息/);
 });
 
 test('main --hub writes the undated hub file', () => {

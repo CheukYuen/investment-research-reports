@@ -1,0 +1,20 @@
+{
+  "date": "2026-09-11",
+  "reviewed_at": "2026-09-12T09:19:24+0800",
+  "source_type": "user_pasted_ima_answer",
+  "source_file": "/Users/leon/.codex/attachments/0fb68c8e-b7e3-4043-9e17-5dd2efd0c3fe/pasted-text.txt",
+  "source_sha256": "b1d6a73f4ea334fc8102a92e92b959c5b08b9f0342dd0300f8a2a9886c02b7e5",
+  "record_count": 10,
+  "structure_status": "PASS",
+  "title_match": "10/10 exact index titles",
+  "media_mapping_status": "PASS_WITH_WARNING",
+  "recording_status": "QUALITY_REVIEWED_NOT_INGESTED",
+  "recording_blocker": "The authoritative open batch is the earlier five-report batch; this answer covers the next ten reports and cannot be attributed to that batch.",
+  "warnings": [
+    "The answer states that reports 8 and 9 had initially swapped media_id values; the final report order is corrected, but formal ingestion still requires media_id plus source_title verification.",
+    "Several target prices are labeled as forecast rather than valuation, including Apple, Shopify, LNG coverage names, KGS/LBRT/PUMP, Bank of America, and Nokia.",
+    "Several market prices, yields, diesel prices, TTF prices, and report-date prices lack an explicit as-of date or time.",
+    "Some analyst sensitivities, model outputs, or policy plans are labeled actual or guidance; derived, plan, and sensitivity boundaries must be preserved.",
+    "The pasted answer alone cannot verify PDF evidence, page numbers, or numerical accuracy; it passes routing-summary structure only, not formal research fact validation."
+  ]
+}

@@ -48,10 +48,11 @@ function usage() {
   node scripts/render-ai-ranking-html.cjs --month YYYYMM [--out manifests/ai-ranking-analysis-YYYYMM.html]
   node scripts/render-ai-ranking-html.cjs --hub [--out manifests/ai-ranking-analysis.html]
 
---month reads that month's non-empty ai-ranked-queue-summary-YYYYMMDD.jsonl files
-and rebuilds the rolling monthly HTML snapshot.
+--month reads that month's dated ranking queues, summary snapshots, and indexes,
+then rebuilds the rolling monthly HTML snapshot.
 
---hub reads every dated summary queue, deduplicates by media_id, and rebuilds the
+--hub reads every dated ranking queue, summary snapshot, and index, deduplicates
+by media_id with ranked > summary-only > title-only precedence, and rebuilds the
 cross-month navigation hub.`);
 }
 
@@ -92,6 +93,37 @@ function readJsonl(filePath) {
 function snapshotDateFromQueueName(name) {
   const match = String(name || '').match(/^ai-ranked-queue-summary-(\d{4})(\d{2})(\d{2})\.jsonl$/);
   return match ? `${match[1]}-${match[2]}-${match[3]}` : '';
+}
+
+function datedDataSource(name) {
+  const patterns = [
+    { re: /^ai-ranked-queue-summary-(\d{4})(\d{2})(\d{2})\.jsonl$/, tier: 'ranked', tierOrder: 0 },
+    { re: /^report-summaries-(\d{4})(\d{2})(\d{2})\.jsonl$/, tier: 'summary_only', tierOrder: 1 },
+    { re: /^index-(\d{4})(\d{2})(\d{2})\.jsonl$/, tier: 'index_only', tierOrder: 2 },
+  ];
+  for (const pattern of patterns) {
+    const match = String(name || '').match(pattern.re);
+    if (!match) continue;
+    return {
+      name,
+      snapshotDate: `${match[1]}-${match[2]}-${match[3]}`,
+      month: `${match[1]}${match[2]}`,
+      tier: pattern.tier,
+      tierOrder: pattern.tierOrder,
+    };
+  }
+  return null;
+}
+
+function dataSourcePaths(manifestsDir, month = '') {
+  return fs.readdirSync(manifestsDir)
+    .map((name) => {
+      const source = datedDataSource(name);
+      if (!source || (month && source.month !== month)) return null;
+      return { ...source, path: path.join(manifestsDir, name) };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.tierOrder - b.tierOrder || a.name.localeCompare(b.name));
 }
 
 function monthlyQueuePaths(manifestsDir, month) {
@@ -175,6 +207,7 @@ function toHubRecord(record) {
     title: record.title || '',
     snapshot_date: record.snapshot_date || '',
     snapshot_month: snapshotMonth(record.snapshot_date),
+    data_tier: record.data_tier || 'ranked',
     priority: record.priority || 'UNREVIEWED',
     rank: record.rank ?? null,
     score: record.score ?? null,
@@ -270,7 +303,7 @@ function fileHref(filePath) {
   return `file://${encodeURI(filePath).replace(/#/g, '%23')}`;
 }
 
-function normalizeRecord(record, snapshotDate) {
+function normalizeRecord(record, snapshotDate, dataTier = 'ranked') {
   const savedPath = record.saved_path ||
     (record.local_relative_path ? path.join(ROOT, 'downloads', record.local_relative_path) : '');
   const downloaded = Boolean(savedPath && fs.existsSync(savedPath));
@@ -282,6 +315,7 @@ function normalizeRecord(record, snapshotDate) {
     local_relative_path: record.local_relative_path || '',
     saved_path: savedPath,
     snapshot_date: snapshotDate,
+    data_tier: dataTier,
     priority,
     rank: Number.isFinite(Number(record.rank)) ? Number(record.rank) : null,
     score: Number.isFinite(Number(record.score)) ? Number(record.score) : null,
@@ -320,10 +354,11 @@ function collectRecordsFromSources(sources) {
     if (sourceRecords.length === 0) continue;
     usedSources.push(source);
     for (const record of sourceRecords) {
-      const normalized = normalizeRecord(record, source.snapshotDate);
+      const normalized = normalizeRecord(record, source.snapshotDate, source.tier || 'ranked');
       const key = recordKey(normalized);
       if (!key) continue;
-      recordsByKey.set(key, normalized);
+      const existing = recordsByKey.get(key);
+      if (!existing || existing.data_tier === normalized.data_tier) recordsByKey.set(key, normalized);
     }
   }
   const records = [...recordsByKey.values()].sort((a, b) => {
@@ -339,11 +374,11 @@ function collectRecordsFromSources(sources) {
 }
 
 function collectMonthlyRecords(manifestsDir, month) {
-  return collectRecordsFromSources(monthlyQueuePaths(manifestsDir, month));
+  return collectRecordsFromSources(dataSourcePaths(manifestsDir, month));
 }
 
 function collectAllRecords(manifestsDir) {
-  return collectRecordsFromSources(allQueuePaths(manifestsDir));
+  return collectRecordsFromSources(dataSourcePaths(manifestsDir));
 }
 
 function htmlEscape(value) {
@@ -538,7 +573,7 @@ function renderHtml(records, meta) {
 <body>
   <header>
     <h1>AI Infrastructure 月度研报排序</h1>
-    <div class="subhead">${htmlEscape(monthLabel)} · 汇总 ${meta.sourceCount} 个日期化摘要排序队列。页面直接展示 DeepSeek 单轮排序结果。更新时间：${htmlEscape(generatedAt)} · <a href="ai-ranking-analysis.html">打开汇总导航</a></div>
+    <div class="subhead">${htmlEscape(monthLabel)} · 汇总 ${meta.sourceCount} 个日期数据文件（排序 / 摘要 / 索引）。有排序时展示 DeepSeek 单轮结果；无摘要时仍展示标题。更新时间：${htmlEscape(generatedAt)} · <a href="ai-ranking-analysis.html">打开汇总导航</a></div>
   </header>
   <main>
     <div class="metrics">
@@ -716,6 +751,7 @@ function renderHubHtml(records, meta) {
   const embedded = JSON.stringify(records).replace(/</g, '\\u003c');
   const generatedAt = new Date().toISOString();
   const months = [...new Set(records.map((record) => record.snapshot_month).filter(Boolean))].sort().reverse();
+  const dates = [...new Set(records.map((record) => record.snapshot_date).filter(Boolean))].sort().reverse();
   const downloaded = records.filter((record) => record.downloaded).length;
   const monthChips = months.map((month) => (
     `<button type="button" class="month-chip" data-month="${htmlEscape(month)}">${htmlEscape(monthChipLabel(month))}</button>`
@@ -773,6 +809,15 @@ function renderHubHtml(records, meta) {
       cursor: pointer;
     }
     .month-chip.active, .month-chip:hover { background: #175cd3; border-color: #175cd3; color: #fff; }
+    .top-filter {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 390px;
+      margin-top: 14px;
+    }
+    .top-filter label { margin: 0; color: #d0d5dd; white-space: nowrap; }
+    .top-filter select { min-height: 34px; }
     main { padding: 22px clamp(16px, 4vw, 58px) 52px; }
     .metrics {
       display: grid;
@@ -860,6 +905,26 @@ function renderHubHtml(records, meta) {
     }
     .panel-head h2 { margin: 0; font-size: 16px; }
     .rows { display: grid; }
+    .month-group, .date-group { border-bottom: 1px solid var(--line); }
+    .month-group:last-child, .date-group:last-child { border-bottom: 0; }
+    .group-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      background: #f8fafc;
+      cursor: pointer;
+      font-weight: 800;
+      list-style: none;
+    }
+    .group-summary::-webkit-details-marker { display: none; }
+    .group-summary::before { content: '›'; color: var(--muted); transform: rotate(0deg); transition: transform .15s ease; }
+    details[open] > .group-summary::before { transform: rotate(90deg); }
+    .group-summary .group-label { flex: 1; }
+    .date-group > .group-summary { padding-left: 28px; background: #fff; font-size: 13px; font-weight: 700; }
+    .date-group > .group-summary::before { margin-left: -14px; }
+    .date-rows { border-top: 1px solid #eef2f6; }
     .row { border-bottom: 1px solid var(--line); }
     .row:last-child { border-bottom: 0; }
     .row-head {
@@ -938,8 +1003,12 @@ function renderHubHtml(records, meta) {
 <body>
   <header>
     <h1>AI Infrastructure 研报导航</h1>
-    <div class="subhead">跨月份汇总入口 · ${htmlEscape(String(meta.sourceCount))} 个日期化摘要排序队列 · 左侧按类型 / 行业 / 公司看篇数，右侧点开详情。月度快照仍按月生成。更新时间：${htmlEscape(generatedAt)}</div>
+    <div class="subhead">跨月份汇总入口 · ${htmlEscape(String(meta.sourceCount))} 个日期数据文件（排序 / 摘要 / 索引） · 左侧按类型 / 行业 / 公司看篇数，右侧按月份 → 日期折叠浏览。更新时间：${htmlEscape(generatedAt)}</div>
     <div class="month-row" id="month-chips">${monthChips}</div>
+    <div class="top-filter">
+      <label for="date">按日查看</label>
+      <select id="date"><option value="">全部日期</option></select>
+    </div>
   </header>
   <main>
     <div class="metrics">
@@ -951,6 +1020,7 @@ function renderHubHtml(records, meta) {
       <div class="metric"><div class="label">UNREVIEWED</div><div class="value">${countPriority(records, 'UNREVIEWED')}</div></div>
       <div class="metric"><div class="label">本地已有</div><div class="value">${downloaded}</div></div>
       <div class="metric"><div class="label">月份</div><div class="value">${months.length}</div></div>
+      <div class="metric"><div class="label">日期</div><div class="value">${dates.length}</div></div>
     </div>
     <div class="layout">
       <aside>
@@ -994,10 +1064,11 @@ function renderHubHtml(records, meta) {
     const unclassifiedCompanyKey = ${JSON.stringify(UNCLASSIFIED_COMPANY_KEY)};
     const unclassifiedCompanyLabel = ${JSON.stringify(UNCLASSIFIED_COMPANY_LABEL)};
     const typeOrder = ${JSON.stringify(TYPE_ORDER)};
-    const state = { search: '', month: '', priority: '', local: '', type: '', sector: '', company: '', expanded: '' };
+    const state = { search: '', month: '', date: '', priority: '', local: '', type: '', sector: '', company: '', expanded: '' };
     const els = {
       search: document.getElementById('search'),
       month: document.getElementById('month'),
+      date: document.getElementById('date'),
       priority: document.getElementById('priority'),
       local: document.getElementById('local'),
       tree: document.getElementById('tree'),
@@ -1020,6 +1091,7 @@ function renderHubHtml(records, meta) {
     addOptions(els.priority, priorities.filter((priority) => records.some((record) => record.priority === priority)));
     const monthValues = unique(records.map((record) => record.snapshot_month)).reverse();
     addOptions(els.month, monthValues, monthValues.map(monthLabel));
+    addOptions(els.date, unique(records.map((record) => record.snapshot_date)).reverse());
 
     function compareLabels(a, b, unclassified) {
       if (a === unclassified && b !== unclassified) return 1;
@@ -1093,6 +1165,7 @@ function renderHubHtml(records, meta) {
       const query = state.search.trim().toLowerCase();
       return records.filter((record) => {
         if (state.month && record.snapshot_month !== state.month) return false;
+        if (state.date && record.snapshot_date !== state.date) return false;
         if (state.priority && record.priority !== state.priority) return false;
         if (state.local === 'yes' && !record.downloaded) return false;
         if (state.local === 'no' && record.downloaded) return false;
@@ -1161,11 +1234,13 @@ function renderHubHtml(records, meta) {
         : '';
       return '<div class="meta">' + local + '<span class="tag">score ' + escapeHtml(record.score ?? '-') +
         '</span><span class="tag">' + escapeHtml(record.report_type_label) + '</span>' +
+        '<span class="tag">' + escapeHtml(record.data_tier === 'ranked' ? '已排序' : record.data_tier === 'summary_only' ? '仅摘要' : '仅标题') + '</span>' +
         (record.company_label ? '<span class="tag">' + escapeHtml(record.company_label) + '</span>' : '') +
         '<span class="tag">' + escapeHtml(record.sector) + '</span></div>' +
         '<h3 class="title">' + escapeHtml(record.title) + '</h3>' +
         (record.report_type_reason ? '<div class="reason">类型依据：' + escapeHtml(record.report_type_reason) + '</div>' : '') +
         (record.executive_summary ? '<p class="summary"><strong>IMA 摘要：</strong>' + escapeHtml(record.executive_summary) + '</p>' : '') +
+        (!record.executive_summary ? '<div class="reason">暂无摘要，仅展示标题与索引信息。</div>' : '') +
         findings + numbers +
         '<div class="path">本地路径：' + escapeHtml(record.local_relative_path) + ' · ' + link + '</div>';
     }
@@ -1177,7 +1252,7 @@ function renderHubHtml(records, meta) {
         els.rows.innerHTML = '<div class="empty">没有符合筛选条件的研报</div>';
         return;
       }
-      els.rows.innerHTML = rows.map((record) => {
+      const renderRecord = (record) => {
         const open = state.expanded === record.media_id;
         const local = record.downloaded ? '<span class="badge local">本地</span>' : '';
         return '<article class="row' + (open ? ' open' : '') + '" data-id="' + escapeHtml(record.media_id) + '">' +
@@ -1188,6 +1263,23 @@ function renderHubHtml(records, meta) {
           '</button>' +
           (open ? '<div class="detail">' + renderDetail(record) + '</div>' : '') +
           '</article>';
+      };
+      const monthGroups = new Map();
+      for (const record of rows) {
+        if (!monthGroups.has(record.snapshot_month)) monthGroups.set(record.snapshot_month, new Map());
+        const dayGroups = monthGroups.get(record.snapshot_month);
+        if (!dayGroups.has(record.snapshot_date)) dayGroups.set(record.snapshot_date, []);
+        dayGroups.get(record.snapshot_date).push(record);
+      }
+      els.rows.innerHTML = [...monthGroups.entries()].map(([month, dayGroups]) => {
+        const monthRows = [...dayGroups.values()].flat();
+        const days = [...dayGroups.entries()].map(([date, dayRows]) =>
+          '<details class="date-group" open><summary class="group-summary"><span class="group-label">' + escapeHtml(date) +
+          '</span><span class="tag">' + dayRows.length + ' 篇</span></summary><div class="date-rows">' +
+          dayRows.map(renderRecord).join('') + '</div></details>'
+        ).join('');
+        return '<details class="month-group" open><summary class="group-summary"><span class="group-label">' +
+          escapeHtml(monthLabel(month)) + '</span><span class="tag">' + monthRows.length + ' 篇</span></summary>' + days + '</details>';
       }).join('');
     }
     function render() {
@@ -1198,6 +1290,7 @@ function renderHubHtml(records, meta) {
         chip.classList.toggle('active', chip.dataset.month === state.month);
       });
       els.month.value = state.month;
+      els.date.value = state.date;
     }
     els.tree.addEventListener('click', (event) => {
       const button = event.target.closest('button[data-type]');
@@ -1235,11 +1328,18 @@ function renderHubHtml(records, meta) {
       const chip = event.target.closest('.month-chip');
       if (!chip) return;
       state.month = state.month === chip.dataset.month ? '' : chip.dataset.month;
+      if (state.date && state.month && !state.date.startsWith(state.month.slice(0, 4) + '-' + state.month.slice(4, 6))) {
+        state.date = '';
+      }
       render();
     });
-    for (const key of ['search', 'month', 'priority', 'local']) {
+    for (const key of ['search', 'month', 'date', 'priority', 'local']) {
       els[key].addEventListener(key === 'search' ? 'input' : 'change', () => {
         state[key] = els[key].value;
+        if (key === 'date' && state.date) state.month = state.date.slice(0, 4) + state.date.slice(5, 7);
+        if (key === 'month' && state.date && !state.date.startsWith(state.month.slice(0, 4) + '-' + state.month.slice(4, 6))) {
+          state.date = '';
+        }
         render();
       });
     }

@@ -53,7 +53,7 @@ function loadConfig() {
 function usage() {
   console.log(`Usage:
   node scripts/ima-daily-summary.cjs prepare [--date YYYYMMDD] [--skip-index]
-  node scripts/ima-daily-summary.cjs next [--date YYYYMMDD] [--batch-size 5] [--surface browser|app] [--compact]
+  node scripts/ima-daily-summary.cjs next [--date YYYYMMDD] [--batch-size 10] [--surface browser|app] [--compact]
   node scripts/ima-daily-summary.cjs ingest [--date YYYYMMDD] [--elapsed-ms N] [--surface browser|app] [--input-file PATH]
   node scripts/ima-daily-summary.cjs fail-batch [--date YYYYMMDD] --code <CODE> [--message <text>] [--surface browser|app] [--terminal]
   node scripts/ima-daily-summary.cjs invalidate-reviewed [--date YYYYMMDD] --media-ids <id,id,...> [--reason <text>]

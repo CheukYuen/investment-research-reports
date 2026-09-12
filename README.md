@@ -27,8 +27,8 @@
 | `manifests/downloaded.jsonl` | 下载成功日志 |
 | `manifests/failed.jsonl` | 下载失败日志 |
 | `manifests/download-attempts.jsonl` | 上海日期口径的下载额度与第31篇探测审计日志 |
-| `manifests/ai-ranking-analysis.html` | 跨月份研报导航主入口；类型 / 行业 / 公司带篇数 |
-| `manifests/ai-ranking-analysis-YYYYMM.html` | 当月 P0–P3 排序看板快照；每日覆盖更新 |
+| `manifests/ai-ranking-analysis.html` | 跨月份研报导航主入口；支持日期筛选、月份 → 日期折叠，未摘要报告也显示标题 |
+| `manifests/ai-ranking-analysis-YYYYMM.html` | 当月 P0–P3 排序看板快照；支持按日查看，每日覆盖更新 |
 
 HTML 仅供人工复核，不是机器读取的主数据源。跨机器引用 PDF 时用 `local_relative_path`，不要依赖 `saved_path`。
 
@@ -125,7 +125,7 @@ node scripts/sync-kb-pdfs.cjs index \
 
 ### 每日 IMA 正文摘要与可恢复排序
 
-仓库已将“当天目录、DS 快速（DeepSeek-V4-Flash）、Browser 优先且 App 兜底、每批最多 5 篇、每批新建独立对话、提取完整 JSON、逐篇写进度、断点续跑、正文排序”固化为日期参数化任务：
+仓库已将“当天目录、DS 快速（DeepSeek-V4-Flash）、Browser 优先且 App 兜底、每批最多 10 篇、每批新建独立对话、提取完整 JSON、逐篇写进度、断点续跑、正文排序”固化为日期参数化任务：
 
 ```bash
 node scripts/ima-daily-summary.cjs prepare
@@ -159,7 +159,7 @@ node scripts/render-ai-ranking-html.cjs \
   --out manifests/ai-ranking-analysis.html
 ```
 
-`--month` 汇总当月所有日期化 summary queue，按 `media_id` 去重，并展示 P0、P1、P2、P3 和 `UNREVIEWED`。HTML 每月只保留一份快照。`--hub` 合并全部月份，生成类型 → 行业 → 公司导航主入口。打开主入口：
+`--month` 按“排序队列 → 摘要快照 → 日期索引”的优先级汇总当月数据，按 `media_id` 去重，并展示 P0、P1、P2、P3 和 `UNREVIEWED`；尚无摘要时仍展示标题。HTML 每月只保留一份快照。`--hub` 合并全部月份，提供日期筛选、月份 → 日期折叠以及类型 → 行业 → 公司导航。打开主入口：
 
 ```bash
 open manifests/ai-ranking-analysis.html

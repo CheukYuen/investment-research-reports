@@ -322,7 +322,7 @@ node scripts/search-reports.cjs query '光纤' --facets
 
 旧的 `ai-ranked-queue.jsonl`、`ai-ranked-queue-YYYYMMDD.jsonl`、`ai-ranking-comparison-YYYYMMDD.jsonl` 和非 summary HTML 仅保留作历史审计，不再更新，也不得作为新流程输入。
 
-月度 P0–P3 排序看板固定为 `manifests/ai-ranking-analysis-YYYYMM.html`。跨月份导航主入口固定为 `manifests/ai-ranking-analysis.html`。日期化 JSONL 保留审计轨迹；月度 HTML 每月仅维护一份并由每日任务覆盖更新，汇总页每日覆盖更新。
+月度 P0–P3 排序看板固定为 `manifests/ai-ranking-analysis-YYYYMM.html`。跨月份导航主入口固定为 `manifests/ai-ranking-analysis.html`，支持顶部日期筛选和“月份 → 日期”折叠。生成器按“排序队列 → 摘要快照 → 日期索引”的优先级合并数据，因此仅有摘要或仅有标题的记录也可展示。日期化 JSONL 保留审计轨迹；月度 HTML 每月仅维护一份并由每日任务覆盖更新，汇总页每日覆盖更新。
 
 ## 推荐接入方式
 
