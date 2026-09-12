@@ -1,5 +1,24 @@
 # IMA 每日摘要、正文排序与下载候选 Runbook
 
+## 当前入口：定时打印手动提问词（2026-09-12）
+
+每日定时任务改为北京时间 21:30 更新今天和昨天的日期索引，然后完整打印 IMA 短摘要提问词。用户手动在 IMA 提问、复制回答，再交给 Codex 或 Claude Code 处理。无需开发操作页面。此入口优先于下文保留的旧 Browser/App 全自动流程；定时运行到打印 Prompt 为止，不操作 IMA 问答界面，不调用排序、不下载、不提交 Git。
+
+每个日期依次运行：
+
+```bash
+node scripts/ima-daily-summary.cjs prepare --date YYYYMMDD
+node scripts/ima-manual-prompts.cjs --date YYYYMMDD
+```
+
+第二条命令只读取索引和已有摘要进度，不修改旧批次状态，按 `manual_batch_size`（默认30，可用 `--batch-size` 调小）生成全部待补报告的完整 Prompt。已有有效摘要跳过，失败或缺失摘要仍列出；不会因打印过 Prompt 就标记完成。30 是本轮手动操作参数，不代表已验证的 IMA 接口上限。昨天、今天按 Asia/Shanghai 计算，各自分批，不混合文件夹；索引失败如实报告，不用旧索引冒充本次更新结果。
+
+回答采用“文件名 / 核心摘要”分段格式。优先整理该文件已有 AI 摘要，仅信息缺失或不足以说明主题时补读正文；每篇2～3句、约80～150字，最多保留1～2个带单位、期间和属性的重要数字，信息少可更短。摘要首句注明实际来自“该文件已有AI摘要”“该文件正文”或两者；此说明原样保存在 `executive_summary`，不等于本地 PDF 原文核验。列表未显示或文件名日期不同不能作为不在目录的依据；每篇只输出一次，不重启第二版答案。来源信息和正文均无法获取时输出 `NO_CONTENT`，保持待补而不是编造内容。
+
+短摘要沿用 `executive_summary`、`summary_role=routing_candidate` 和现有排序、查询产物，不要求扩写或虚构缺失字段。手动 Prompt 不建立 `planned` 批次，收到用户回答后代理须按日期索引核对文件名，并通过现有 `report-summaries.cjs record` 接口逐篇保存合法结构化记录；不要直接调用依赖旧批次的 `ima-daily-summary.cjs ingest`，不要按顺序猜配标题或自行编造摘要。未匹配项保持待补。排序、下载分别等待用户指令，继续执行既有证据、额度和断点规则。
+
+当前 `auto_download=false`、`auto_git_commit=false`。下文描述的全自动路径仅供用户明确要求恢复时参考；其中旧默认值不能覆盖当前配置。
+
 执行硬约束：整个每日流程不得启动、激活或使用 Sublime Text、TextEdit 或其他文本编辑器，包括查看 Prompt、保存回答、检查临时文件和处理失败。不要用 `open`、`open -a`、`subl`、文件双击或“用默认应用打开”等方式打开文本文件。临时文件只通过程序直接读写，不在 GUI 中打开；复制或写入失败也不解除此限制。
 
 ## 1. 定位与边界
@@ -25,11 +44,11 @@ IMA 摘要的角色固定为 `routing_candidate`：它只用于主题路由、PD
 - `max_attempts`：单篇累计重试上限；
 - `interaction_order`：固定为 `browser,app`，Browser 是主路径，App 仅为兜底；
 - `browser_model_version` / `app_model_version`：记录摘要实际来自哪个界面；
-- `auto_download`：默认 `true`；
+- `auto_download`：当前 `false`，下载由用户单独发起；
 - `daily_budget`：普通下载额度为 30，跨同一天续跑累计；
 - `download_priorities`：默认 `P0,P1,P2`，按 P0、P1、P2 顺序消费额度；
 - `quota_probe_extra`：默认 1，普通额度用满后只探测第 31 篇一次；
-- `auto_git_commit`：是否由每日自动任务窄提交本次产物；当前仓库配置为 `true`。
+- `auto_git_commit`：是否由每日自动任务窄提交本次产物；当前仓库配置为 `false`。
 
 ## 2. 每日文件
 

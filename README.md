@@ -4,6 +4,14 @@
 
 这是一个 AI Workspace（上游数据源），不是传统应用程序。知识库访问与 PDF 下载通过 `ima-skill` + `scripts/sync-kb-pdfs.cjs` 完成，并保持 ima 中的原始目录结构和文件名。
 
+## 当前日常操作：手动 IMA 摘要
+
+定时任务每天北京时间 21:30 更新今天和昨天的索引，并打印每批最多30篇的短摘要 Prompt。你复制到 IMA 提问，再把回答交给 Codex 或 Claude Code。排序、下载分别发指令执行，不开发操作页面，不自动下载或提交 Git。完整步骤见 [Runbook](docs/ima-daily-summary-runbook.md)。
+
+手动打印某日全部待补 Prompt：`node scripts/ima-manual-prompts.cjs --date YYYYMMDD`。先用 `node scripts/ima-daily-summary.cjs prepare --date YYYYMMDD` 更新索引。可用 `--batch-size 20` 调小批量；只打印不会标记摘要已完成，也不创建旧自动批次。
+
+IMA 优先整理每份文件已有 AI 摘要，缺失时再补读正文；每篇2～3句、约80～150字，首句注明实际来源。保留“文件名 / 核心摘要”格式，每篇一次，无法取得内容时保留 `NO_CONTENT` 待补。
+
 ## 给其他项目 / LLM：30 秒速览
 
 | 问题 | 答案 |
@@ -44,7 +52,7 @@ open manifests/ai-ranking-analysis.html
 
 ```mermaid
 flowchart LR
-  indexJsonl["index-YYYYMMDD.jsonl"] --> imaSummary["IMA 通用摘要<br/>DS 快速 DeepSeek-V4-Flash 每批最多5篇"]
+  indexJsonl["index-YYYYMMDD.jsonl"] --> imaSummary["IMA 手动短摘要<br/>每批最多30篇"]
   imaSummary --> summaryRank["DeepSeek 正文排序"]
   summaryRank --> queue["P0/P1优先 P2补足"]
 ```
