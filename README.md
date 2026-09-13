@@ -6,7 +6,7 @@
 
 ## 当前日常操作：手动 IMA 摘要
 
-定时任务每天北京时间 21:30 更新今天和昨天的索引，并打印每批最多30篇的短摘要 Prompt。你复制到 IMA 提问，再把回答交给 Codex 或 Claude Code。排序、下载分别发指令执行，不开发操作页面，不自动下载或提交 Git。完整步骤见 [Runbook](docs/ima-daily-summary-runbook.md)。
+定时任务每天北京时间 21:30 更新今天和昨天的索引，并打印每批最多25篇的短摘要 Prompt。你复制到 IMA 提问，再把回答交给 Codex 或 Claude Code。排序、下载分别发指令执行，不开发操作页面，不自动下载或提交 Git。完整步骤见 [Runbook](docs/ima-daily-summary-runbook.md)。
 
 手动打印某日全部待补 Prompt：`node scripts/ima-manual-prompts.cjs --date YYYYMMDD`。先用 `node scripts/ima-daily-summary.cjs prepare --date YYYYMMDD` 更新索引。可用 `--batch-size 20` 调小批量；只打印不会标记摘要已完成，也不创建旧自动批次。
 
@@ -52,7 +52,7 @@ open manifests/ai-ranking-analysis.html
 
 ```mermaid
 flowchart LR
-  indexJsonl["index-YYYYMMDD.jsonl"] --> imaSummary["IMA 手动短摘要<br/>每批最多30篇"]
+  indexJsonl["index-YYYYMMDD.jsonl"] --> imaSummary["IMA 手动短摘要<br/>每批最多25篇"]
   imaSummary --> summaryRank["DeepSeek 正文排序"]
   summaryRank --> queue["P0/P1优先 P2补足"]
 ```

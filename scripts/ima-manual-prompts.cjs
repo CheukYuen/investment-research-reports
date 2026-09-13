@@ -57,7 +57,7 @@ function main(argv = process.argv.slice(2)) {
   }
   const paths = pathsForDate(opts.date);
   if (!fs.existsSync(paths.index)) throw new Error('Missing dated index. Run prepare --date YYYYMMDD first.');
-  const result = buildPrompts(readJsonl(paths.index), readJsonl(paths.progress), readJsonl(paths.summaries), Number(opts['batch-size'] ?? loadConfig().manual_batch_size ?? 30), paths.date.sourcePath);
+  const result = buildPrompts(readJsonl(paths.index), readJsonl(paths.progress), readJsonl(paths.summaries), Number(opts['batch-size'] ?? loadConfig().manual_batch_size ?? 25), paths.date.sourcePath);
   console.log(`${paths.date.iso}：索引 ${result.indexed} 篇，待摘要 ${result.pending} 篇，共 ${result.prompts.length} 批。`);
   if (!result.pending) console.log(result.indexed ? '已有有效摘要，无需提问。' : '索引为空，请确认目录与索引状态。');
   result.prompts.forEach((prompt, i) => console.log(`\n### ${paths.date.iso} 第 ${i + 1}/${result.prompts.length} 批\n\n\`\`\`text\n${prompt}\n\`\`\``));
