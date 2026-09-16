@@ -15,6 +15,21 @@
       "internalSlug": "ima-skills",
       "publicSlug": "ima-skills",
       "installDir": "/Users/leon/Stock/investment-research-reports/.agents/skills/@tencent-adm/ima-skills"
+    },
+    "@clawhub_eliauktm/report-search": {
+      "name": "report-search",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=report-search&namespace=clawhub_eliauktm",
+      "source": "clawhub",
+      "version": "1.0.0",
+      "namespace": {
+        "canonicalName": "@clawhub_eliauktm/report-search",
+        "displayName": "eliauktm",
+        "handle": "clawhub_eliauktm",
+        "publicSlug": "report-search"
+      },
+      "internalSlug": "report-search",
+      "publicSlug": "report-search",
+      "installDir": "/Users/leon/Stock/investment-research-reports/.agents/skills/@clawhub_eliauktm/report-search"
     }
   }
 }
