@@ -210,7 +210,7 @@ node scripts/sync-kb-pdfs.cjs sync \
 | 路径 | 说明 |
 | --- | --- |
 | [AGENTS.md](AGENTS.md) | Agent 唯一配置与硬规则 |
-| `.agents/skills/report-search/` | 主题检索 skill 的唯一实体；Claude 和旧路径均通过软链访问 |
+| `.agents/skills/ima-report-search/` | IMA 本地主题检索 skill 的唯一实体；Claude 和用户级 Codex 入口均通过软链访问 |
 | [SEARCH.md](SEARCH.md) | 软链到上面的 `SKILL.md`；跨项目时 `@` 这一个文件即可 |
 | `CLAUDE.md` | 指向 `AGENTS.md` 的 symlink |
 | `.agents/skills/@tencent-adm/ima-skills/` | SkillHub 管理的 ima OpenAPI Skill 唯一实体；`.claude/skills/ima-skill` 为其软链 |

@@ -23,6 +23,33 @@ node scripts/ima-manual-prompts.cjs --date YYYYMMDD
 
 执行硬约束：整个每日流程不得启动、激活或使用 Sublime Text、TextEdit 或其他文本编辑器，包括查看 Prompt、保存回答、检查临时文件和处理失败。不要用 `open`、`open -a`、`subl`、文件双击或“用默认应用打开”等方式打开文本文件。临时文件只通过程序直接读写，不在 GUI 中打开；复制或写入失败也不解除此限制。
 
+### Cursor InAppBrowser 发送要点（2026-09-16 实测）
+
+代理在 Cursor 内置 Browser（`cursor-ide-browser`）代发 IMA 提问时遵守本节；与第 4 节 Codex Browser 全自动路径并存，不替代其登录判定和停止条件。
+
+**先核对再动手，不要展开模型菜单：**
+
+- 面包屑已含目标日期文件夹（如 `8.23`）、输入框已有本批完整 Prompt、界面已显示 `DS 快速` 时，直接发送；不要再点模型下拉确认联网。
+- 编辑器为空或内容不是本批 Prompt 时才填入；用户已填则只发送一次。
+
+**选择器与读状态：** 无障碍快照经常看不到编辑器和发送钮，用 CDP `Runtime.evaluate`，不要靠 `browser_snapshot` 找 ref。
+
+| 控件 | 选择器 |
+| --- | --- |
+| 编辑器 | `.tiptap.ProseMirror` |
+| 发送 | `._sendBtnWrap_nje4s_23` |
+| 新对话 | `.icon-start-new-chat-small` |
+
+发送钮看内部 `span` 的 class，不要只看截图颜色：含 `_disable_nje4s_7` 为编辑器空、不能发；`icon-send-enable` 且无 disable 为可发；`icon-stop-v3` 或 `_stopIcon_nje4s_11` 为正在生成。
+
+**必须用真实鼠标点击发送：** JS `element.click()`、给发送钮加 `aria-label` 后的 `browser_click` 都不会发出。使用 `browser_mouse_click_xy`。
+
+- 该工具的 `x,y` 是**截图坐标**，不是 CSS `getBoundingClientRect`，也不是截图文件像素 / `devicePixelRatio`。本次页面 `dpr=2`、截图文件正好 2×，但点击坐标系的缩放约为 0.85，三者不一致，禁止用文件宽高换算。
+- 校准：先点一次，读返回的 `Screenshot position` 与 `Viewport position`，`scale = viewport / screenshot`，目标截图坐标 = 发送钮 CSS 中心 / `scale`。命中后 Target 常为内部 SVG `<circle>`。
+- 是否发出以编辑器变空、icon 变成 stop 为准；截图可能滞后，不要据此重发。
+
+**等待与导入：** 回答容器是含最多「核心摘要」的最小 `div`。两次相隔数秒 `innerText` 长度不变，且 stop icon 消失，才算稳定。该容器常混有用户 Prompt 和检索过程；导入只取真正的 `文件名 / 核心摘要` 块（标题以 `.pdf` 结尾、摘要以「据该文件」开头），剥掉摘要末尾引用编号。程序写入 `manifests/tmp-manual-answer-*.txt` 再 `record`，用完删除；禁止打开 GUI 编辑器。登录失效、全局限流或「资料获取次数已达上限」立即停止。
+
 ## 1. 定位与边界
 
 本流程每天处理 IMA 知识库「环球研报直通车」中 Asia/Shanghai 当天目录的全部 PDF，并检查前一自然日目录的新增 PDF，一并补齐处理：

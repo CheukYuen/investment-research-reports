@@ -15,7 +15,7 @@ ima-skill
 - 每日摘要、排序、下载和 Git 流程：`docs/ima-daily-summary-runbook.md`
 - 当前运行参数：`config/ima-daily-summary.json`
 - IMA OpenAPI 操作：`.agents/skills/@tencent-adm/ima-skills/SKILL.md`
-- 本地研报检索：`.agents/skills/report-search/SKILL.md`
+- IMA 本地研报检索：`.agents/skills/ima-report-search/SKILL.md`
 
 执行每日任务时必须完整读取 Runbook 和配置，不在本文件重复其 Browser/App 状态机、批次、额度、finalize 或提交细节。
 
