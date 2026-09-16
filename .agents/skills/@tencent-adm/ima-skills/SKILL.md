@@ -33,19 +33,19 @@ metadata:
 
 Unified IMA OpenAPI skill. Currently supports: **notes**, **knowledge-base**.
 
-## ⛔ MANDATORY RULES — read before ANY operation
+## ⛔ 全局规则 — 执行任何操作前阅读
 
-1. **UTF-8 encoding (notes writes only):** Before calling `import_doc` or `append_doc`, ALL string fields (`content`, `title`) MUST be validated as legal UTF-8. Non-UTF-8 content causes irreversible garbled text. See [Detailed Rules](#detailed-utf-8-encoding-rules) for platform-specific methods.
-2. **File upload naming:** `title` MUST equal `file_name` (with extension). Never rename, shorten, translate, or modify the original filename.
-3. **Unsupported file types:** Reject immediately with a clear message. Do NOT ask user "do you still want to try?" Video files, Bilibili/YouTube URLs, and `file://` URLs are not supported — tell user to use IMA desktop client.
-4. **File upload integrity:** Keep file content as-is during upload. No encoding conversion for binary files (PDF, images, Excel, etc.).
-5. **PowerShell 5.1 (all modules):** If running in PowerShell, detect version before first API call. PS 5.1 silently converts request Body to GBK — must use UTF-8 byte array mode. See [Detailed Rules](#powershell-51-environment-detection).
+1. **先读对应模块：** 按模块决策表加载 `notes/GUIDE.md` 或 `knowledge-base/GUIDE.md`；跨模块任务必须按规定顺序读取两个模块。
+2. **凭证与请求边界：** IMA 凭证只发送到官方 IMA API；文件上传使用 API 返回的临时 COS 凭证，禁止记录、复用或发送到其他目的地。
+3. **原始内容完整性：** 二进制文件上传保持原始内容，不转码；各模块的文件类型、大小、MIME、签名和 URL 来源限制以对应子模块为准。
+4. **失败即停：** 任一前置检查、上传或写入接口失败时停止后续依赖步骤，按接口响应中的 `msg` 向用户说明，不用原始 URL 或未校验文件兜底。
+5. **PowerShell 5.1：** 如果运行在 PowerShell，首次 API 调用前检测版本；PS 5.1 请求 Body 必须使用 UTF-8 字节数组。详见 [PowerShell 5.1 环境检测](#powershell-51-environment-detection)。
 
 ## 模块决策表
 
 | 用户意图                                                                                   | 模块           | 读取                      |
 | ------------------------------------------------------------------------------------------ | -------------- | ------------------------- |
-| 搜索笔记、浏览笔记本、获取笔记内容、创建笔记、追加内容                                     | notes          | `notes/GUIDE.md`          |
+| 搜索笔记、浏览笔记本、获取笔记内容、创建笔记、追加内容、插入图片到笔记                 | notes          | `notes/GUIDE.md`          |
 | 上传文件、添加网页链接、搜索知识库、浏览知识库内容、获取知识库信息、获取可添加的知识库列表 | knowledge-base | `knowledge-base/GUIDE.md` |
 | 查看原文、分析原文、导出原文（需要 media_id）                                              | knowledge-base | `knowledge-base/GUIDE.md` |
 
@@ -79,6 +79,7 @@ Unified IMA OpenAPI skill. Currently supports: **notes**, **knowledge-base**.
 - 目标是**知识库的条目**（上传文件、添加链接、关联笔记到知识库）→ knowledge-base 模块
 - 目标是**获取知识库条目的原始内容**（查看原文、分析原文、导出原文）→ knowledge-base 模块（若原文是笔记，会跨模块到 notes `get_doc_content`）
 - 用户提到"知识库"只是在**描述笔记的位置**（如"知识库里的那篇笔记"），真正操作对象仍是笔记 → notes 模块
+- 将本地图片插入笔记时，必须由 notes 模块完成图片换链；不得调用 knowledge-base 的 `create_media`、`add_knowledge` 或 `get_media_info` 代替
 
 ## Credential Check
 
@@ -184,7 +185,7 @@ export IMA_FORCE_UPDATE_CHECK=1
 
 ## Detailed Rules Reference
 
-> The sections below contain full platform-specific examples for the mandatory rules above. Refer to these when you need implementation details.
+> The sections below contain platform-specific implementation details for UTF-8 notes writes and PowerShell requests. Refer to them only when the corresponding module or environment applies.
 
 ### Detailed UTF-8 Encoding Rules
 
