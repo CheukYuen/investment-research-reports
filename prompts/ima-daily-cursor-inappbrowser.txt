@@ -1,0 +1,16 @@
+在 /Users/leon/Stock/investment-research-reports 执行「Cursor InAppBrowser 代发短摘要」流程。先完整读取 AGENTS.md、docs/ima-daily-summary-runbook.md、config/ima-daily-summary.json 和 .agents/skills/@tencent-adm/ima-skills/SKILL.md 并遵循其指令。本 prompt 面向 Cursor（含内置 Browser）；发送 IMA 提问时遵守 Runbook「Cursor InAppBrowser 发送要点」。索引、导入、finalize、下载只用通用能力：读文件、运行 node 脚本、写本地文件。此任务不开发页面、不调用旧 next/ingest 创建自动批次、不提交 Git。
+
+开始前先问清并等待回答，不要先发送提问：
+1. 处理哪些日期（默认 Asia/Shanghai 昨天+今天，先昨天再今天；用户指定则只处理指定日，例如只跑 9.16）
+2. 是否已在 Cursor 内置 Browser 打开目标知识库文件夹（给出 URL）。已打开则复用该标签，不要改到其他知识库或日期目录；未打开则打开 config 的 browser_url 并进入目标日期文件夹
+3. 本次做到哪一步：只发当前最早一批并导入；循环到指定日期摘要全部导入后 finalize；还是再按第 7 节下载
+
+按 Asia/Shanghai 在运行开始时固定日期（正确处理跨月跨年）。所有命令显式传入 --date YYYYMMDD。对每个指定日期运行 node scripts/ima-daily-summary.cjs prepare --date YYYYMMDD 更新索引；成功后运行 node scripts/ima-manual-prompts.cjs --date YYYYMMDD。复用脚本生成的短摘要 Prompt，不自行重写、缩短或省略标题。批量由 manual_batch_size 配置控制，默认 25 篇；脚本会跳过已有有效摘要并列出全部剩余批次。用程序处理日期和本地文件，避免把完整摘要、HTML 或索引反复输出到上下文。单日目录不存在或索引失败则说明该日原因，不用旧索引冒充更新成功；未指定的其他日期不要处理。登录失效、全局限流或资料额度拒绝立即停止。
+
+一次只发一批：取出当前最早未完成的一批（指定多日时先昨天后今天、按批次顺序），在已打开的目标文件夹用 Cursor 内置 Browser 代发，不要把 Prompt 打印给用户粘贴，不能只给文件链接或说已生成。发送前核对面包屑含目标日期文件夹、输入框将填入本批完整 Prompt、界面已显示「DS 快速」；不要展开模型菜单。编辑器为空或内容不是本批 Prompt 时才填入；已是本批则只发送一次。选择器、真实鼠标点击发送、完成判定和回答抽取严格按 Runbook InAppBrowser 节：编辑器 .tiptap.ProseMirror，发送 ._sendBtnWrap_nje4s_23，新对话 .icon-start-new-chat-small；用 CDP 读状态，必须 browser_mouse_click_xy，禁止 JS click 或只靠 snapshot ref。下一批另开新对话。其余待补批次只报「日期＋批次数＋总篇数」概况，不把其 Prompt 内容打进对用户的回复。指定日期都无需提问时只报已完成。
+
+IMA 回答稳定后，用程序从页面抽取真正的「文件名 / 核心摘要」块（标题以 .pdf 结尾、摘要以「据该文件」开头），剥掉摘要末尾引用编号，写入 manifests/tmp-manual-answer-*.txt，按日期索引核对文件名，通过 report-summaries.cjs record 逐篇导入，用完删除临时文件。禁止打开 GUI 编辑器。不要按顺序猜配标题或自行编造摘要；未匹配项和 NO_CONTENT 保持待补。导入后重新运行 ima-manual-prompts，代发当前最早未完成的下一批，循环直到指定日期全部完成。
+
+打印或发送的 Prompt 必须使用脚本当前版本：优先使用该文件已有 AI 摘要，缺失时补读正文；每篇 2～3 句、约 80～150 字并说明实际来源；保留完整文件名，条目不重复。不要改回强制逐篇读取全文的旧 Prompt。
+
+摘要全部导入后，若用户要求做到 finalize / 下载：先对指定日期分别运行 node scripts/ima-daily-summary.cjs finalize --date YYYYMMDD 完成权威快照与 DeepSeek 正文排序；再按 Runbook 第 7 节统一优先级下载：各日队列按 P0（多日时先昨天后今天）→ P1 → P2 调用 sync-kb-pdfs.cjs download-queue，每次带 --daily-budget 30 --quota-probe-extra 1，共用执行日 30+1 额度。任一调用触发第 31 次停止、额度拒绝、登录失效或全局限流即停止全部后续下载。完成后简洁汇报处理量、排序分布、下载数量与额度用量、失败原因和剩余候选。Git 提交仍等待用户明确要求。

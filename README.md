@@ -4,9 +4,9 @@
 
 这是一个 AI Workspace（上游数据源），不是传统应用程序。知识库访问与 PDF 下载通过 `ima-skill` + `scripts/sync-kb-pdfs.cjs` 完成，并保持 ima 中的原始目录结构和文件名。
 
-## 当前日常操作：手动 IMA 摘要
+## 当前日常操作：Cursor InAppBrowser 代发摘要
 
-定时任务每天北京时间 21:30 更新今天和昨天的索引，并打印每批最多25篇的短摘要 Prompt。你复制到 IMA 提问，再把回答交给 Codex 或 Claude Code。排序、下载分别发指令执行，不开发操作页面，不自动下载或提交 Git。完整步骤见 [Runbook](docs/ima-daily-summary-runbook.md)。
+定时任务 Prompt 在 [prompts/ima-daily-cursor-inappbrowser.txt](prompts/ima-daily-cursor-inappbrowser.txt)。代理在 Cursor 内置 Browser 向已打开的 IMA 日期文件夹逐批发送短摘要提问（每批最多25篇），抽取回答并导入；开始前先问日期和是否只用已打开页面。完整步骤见 [Runbook](docs/ima-daily-summary-runbook.md)。不开发操作页面，Git 提交仍需明确要求。
 
 手动打印某日全部待补 Prompt：`node scripts/ima-manual-prompts.cjs --date YYYYMMDD`。先用 `node scripts/ima-daily-summary.cjs prepare --date YYYYMMDD` 更新索引。可用 `--batch-size 20` 调小批量；只打印不会标记摘要已完成，也不创建旧自动批次。
 
