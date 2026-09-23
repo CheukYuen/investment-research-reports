@@ -1,0 +1,35 @@
+{
+  "overview": [
+    {
+      "iso": "2026-09-21",
+      "folder": "2026年国际顶级投行研报/9月/9.21",
+      "indexed": 101,
+      "pending": 70,
+      "batches": 3,
+      "batchCounts": [
+        25,
+        25,
+        20
+      ]
+    },
+    {
+      "iso": "2026-09-22",
+      "folder": "2026年国际顶级投行研报/9月/9.22",
+      "indexed": 64,
+      "pending": 64,
+      "batches": 3,
+      "batchCounts": [
+        25,
+        25,
+        14
+      ]
+    }
+  ],
+  "first": {
+    "iso": "2026-09-21",
+    "folder": "2026年国际顶级投行研报/9月/9.21",
+    "batch": 1,
+    "totalBatches": 3,
+    "articles": 25
+  }
+}
