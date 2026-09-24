@@ -10,7 +10,7 @@
 
 一次只发一批：把当前最早未完成的一批填进已打开的那一页并发送。多日时先昨天后今天。发送前确认面包屑是目标日期文件夹、输入框是本批完整 Prompt、界面已显示「DS 快速」；不要展开模型菜单。编辑器已是本批就只发一次。下一批另开新对话。其余批次只报日期、批次数和篇数，不把 Prompt 打给用户。指定日期都无需提问时只报已完成。
 
-回答稳定后，抽出真正的「文件名 / 核心摘要」（标题以 .pdf 结尾，摘要以「据该文件」开头），去掉摘要末尾引用编号，写入 manifests/tmp-manual-answer-*.txt，按日期索引核对文件名，用 report-summaries.cjs record 逐篇导入，然后删除临时文件。对不上的和 NO_CONTENT 保持待补，不要编造。导入后再运行 ima-manual-prompts，发下一批，直到指定日期全部完成。
+用户已授权代理在 IMA 页面自动新对话、填入 Prompt、点击输入框右下角纸飞机三角形发送，以及回答底部向下箭头展开后复制（若需）。粘贴/发送若遇 Cursor 审批卡需通过。填入：短批（约 2k 字）优先 Node `JSON.stringify(prompt)` + CDP insertText；长批用 UTF-8 base64 分块 + TextDecoder（见 Runbook「可改进经验」）。发送用截图坐标约 (948,891)；等待生成每 30 秒轮询一次。回答稳定后，用本批第一篇 pdf 文件名作锚点从页面 innerText 切片，再抽出真正的「文件名 / 核心摘要」（标题以 .pdf 结尾，摘要以「据该文件」开头），去掉摘要末尾引用编号，写入 manifests/tmp-manual-answer-*.txt（首条若无「文件名」头则补上），用 manifests/tmp-import-manual-answer.cjs 导入，然后删除临时文件。导入后再 ima-manual-prompts 直至 pending=0，再 finalize；用户说暂不下载则跳过 download-queue。对不上的和 NO_CONTENT 保持待补，不要编造。导入后再运行 ima-manual-prompts，发下一批，直到指定日期全部完成。
 
 发给 IMA 的内容必须用脚本当前版本：优先用该文件已有 AI 摘要，缺失时补读正文；每篇 2～3 句、约 80～150 字并说明实际来源；保留完整文件名，条目不重复。不要改回强制逐篇读全文的旧 Prompt。
 

@@ -27,6 +27,8 @@ node scripts/ima-manual-prompts.cjs --date YYYYMMDD
 
 代理在 Cursor 内置 Browser（`cursor-ide-browser`）代发 IMA 提问时遵守本节；与第 4 节 Codex Browser 全自动路径并存，不替代其登录判定和停止条件。
 
+**用户授权（2026-09-24）：** 用户已明确授权代理在 IMA 页面自动新对话、填入仓库生成的批次 Prompt、点击输入框右下角纸飞机发送，以及回答底部向下箭头展开后复制（若 CDP 抽取不足）。无需每批再问。
+
 **先认出已打开的那一页：** 用户已经打开目标 IMA URL。先列出已有标签，按该 URL 选中，之后只操作这一页。不要新开标签，不要自己输入或跳转地址。URL 对不上就停下来问，不要换页面重试。
 
 **先核对再动手，不要展开模型菜单：**
@@ -42,15 +44,41 @@ node scripts/ima-manual-prompts.cjs --date YYYYMMDD
 | 发送 | `._sendBtnWrap_nje4s_23` |
 | 新对话 | `.icon-start-new-chat-small` |
 
+**发送钮长什么样（2026-09-24 实测）：** 在右侧「基于文件夹问答」输入框的**最右下角**，浅灰圆底、深灰**纸飞机/三角形**图标即为发送；DOM 对应 `._sendBtnWrap_nje4s_23`。其**左侧**是「DS 快速」模型下拉，坐标偏左会误点模型菜单，发送失败。以 CDP 读到的发送钮 `getBoundingClientRect` 中心为准做鼠标点击，不要凭截图估左侧区域。
+
 发送钮看内部 `span` 的 class，不要只看截图颜色：含 `_disable_nje4s_7` 为编辑器空、不能发；`icon-send-enable` 且无 disable 为可发；`icon-stop-v3` 或 `_stopIcon_nje4s_11` 为正在生成。
 
 **必须用真实鼠标点击发送：** JS `element.click()`、给发送钮加 `aria-label` 后的 `browser_click` 都不会发出。使用 `browser_mouse_click_xy`。
 
-- 该工具的 `x,y` 是**截图坐标**，不是 CSS `getBoundingClientRect`，也不是截图文件像素 / `devicePixelRatio`。本次页面 `dpr=2`、截图文件正好 2×，但点击坐标系的缩放约为 0.85，三者不一致，禁止用文件宽高换算。
-- 校准：先点一次，读返回的 `Screenshot position` 与 `Viewport position`，`scale = viewport / screenshot`，目标截图坐标 = 发送钮 CSS 中心 / `scale`。命中后 Target 常为内部 SVG `<circle>`。
+- 该工具的 `x,y` 是**截图坐标**，不是 CSS `getBoundingClientRect`，也不是截图文件像素 / `devicePixelRatio`。本次页面 `dpr=2`、截图文件正好 2×，但点击坐标系的缩放约为 0.85～0.87，三者不一致，禁止用文件宽高换算。
+- 校准：先点一次，读返回的 `Screenshot position` 与 `Viewport position`，`scale = viewport / screenshot`，目标截图坐标 = 发送钮 CSS 中心 / `scale`。若 Target 是 `DS 快速` 或模型下拉，说明 x 偏小，应加大截图 x 直至命中发送钮；命中后 Target 常为内部 SVG（纸飞机三角形）。
 - 是否发出以编辑器变空、icon 变成 stop 为准；截图可能滞后，不要据此重发。
 
-**等待与导入：** 回答容器是含最多「核心摘要」的最小 `div`。两次相隔数秒 `innerText` 长度不变，且 stop icon 消失，才算稳定。该容器常混有用户 Prompt 和检索过程；导入只取真正的 `文件名 / 核心摘要` 块（标题以 `.pdf` 结尾、摘要以「据该文件」开头），剥掉摘要末尾引用编号。程序写入 `manifests/tmp-manual-answer-*.txt` 再 `record`，用完删除；禁止打开 GUI 编辑器。登录失效、全局限流或「资料获取次数已达上限」立即停止。
+**等待与导入：** stop icon 消失，且本批锚点切片（见下节「可改进经验」）长度两次相隔数秒不变，才算稳定。不要依赖「含最多核心摘要的最小 div」——多轮会话会污染。导入只取真正的 `文件名 / 核心摘要` 块（标题以 `.pdf` 结尾、摘要以「据该文件」开头），剥掉摘要末尾引用编号。程序写入 `manifests/tmp-manual-answer-*.txt`，用 `manifests/tmp-import-manual-answer.cjs` 调 `report-summaries.cjs record`，用完删除；禁止打开 GUI 编辑器。登录失效、全局限流或「资料获取次数已达上限」立即停止。
+
+**复制回答（2026-09-24 实测）：** 本轮回答底部操作区默认只显示**向下箭头**（深色圆底、白色 chevron）；**点击该箭头**后才会展开露出**复制**（两方块）等按钮。优先用 CDP 从回答容器抽 `innerText`；若需剪贴板或结构变化，再对最新回答底部向下箭头做真实鼠标点击后点复制，不要误点「分享」里的复制链接。
+
+**可改进经验（2026-09-24 Cursor 代发实测，后续代理优先沿用）：**
+
+| 主题 | 做法 | 避免 |
+| --- | --- | --- |
+| 填入 Prompt | 仓库 `ima-manual-prompts` 全文 → UTF-8 → base64 分块写入 `window.__b64` → `TextDecoder('utf-8').decode` 后 `insertText` 进 `.tiptap.ProseMirror` | 直接 `atob` 后 `insertText`（中文乱码）；单次 CDP 塞入超长 expression 易失败 |
+| Cursor 审批 | 大批量粘贴、点击发送等共享页面写入，常需 `requestSmartModeApproval`；用户已口头授权代发时仍可能需点一次审批卡 | 假设「用户说了授权」就无需审批 |
+| 发送坐标 | `browser_take_screenshot` 后 `browser_mouse_click_xy`；`scale ≈ viewport_x / screenshot_x`（本页约 **0.866**）；示例命中发送钮约截图 **(948, 891)**，Target 为 `<circle>` | 用 CSS 中心当截图坐标；偏左点到「DS 快速」 |
+| 发送成功判定 | 编辑器清空 + 发送钮 `icon-stop-v3` / `_stopIcon_nje4s_11` | 只看截图是否刷新 |
+| 抽取回答 | 用**本批清单第一篇**完整文件名构造锚点：`{title}.pdf\n核心摘要\n据该文件`，对 `document.body.innerText` 做 `lastIndexOf`，截到 `内容由AI生成仅供参考` 之前 | 选「含最多核心摘要的最小 div」——多轮对话会把旧批 Prompt/回答混进去 |
+| 导入 | 锚点切片写入 `manifests/tmp-manual-answer-*.txt`，跑 `node manifests/tmp-import-manual-answer.cjs <file> YYYYMMDD`，成功后删临时文件 | 走 `ima-daily-summary ingest`；把 Prompt 模板里的占位 `文件名` 行当正文导入 |
+| 批间节奏 | 每批：新对话 → 填入 → 发送 → 等 stop 消失且正文长度稳定 → 抽取导入 → 再 `ima-manual-prompts` 看下一批 | 同对话追问；未导入就发下一批 |
+| 篇数核对 | 导入后看 `recorded` 是否等于本批篇数；少于 25 时用锚点切片是否含 Prompt 模板、或 IMA 是否漏篇排查，缺的保持待补 | 用旧批索引或整页 `innerText` 冒充本批 |
+| 生成 Prompt 来源 | 用 Node 调 `buildPrompts(...)` 取 `prompts[0]`（或 `node -e` 写 `/tmp/batch-prompt.txt`），**不要**从 `ima-manual-prompts.cjs` 的 stdout 用 `head`/正则截取——stdout 含多批 markdown，易把 3 批拼成一条错误 Prompt | 解析 CLI 打印的「第 1/3 批」整页输出当单批 |
+| 填入（短 Prompt） | 约 2k 字内：CDP `Runtime.evaluate` 内 `const text = ` + `JSON.stringify(prompt)` + `insertText`；填入后 `dispatchEvent(new Event('input',{bubbles:true}))` 去掉发送钮 `_disable` | 仅 base64 分块（长批仍可用）；填入后不触发 input 导致仍显示不可发 |
+| 导入首条格式 | IMA 回答首篇常为 `title.pdf\n核心摘要\n…` 无「文件名」头；写入临时文件前**首条前加一行 `文件名`**，否则 `tmp-import-manual-answer.cjs` 的格式 A 只匹配后续块，会漏 1 篇 | 假设 25/25 `recorded` 即本批齐全（可能 24+1 漏首条） |
+| 等待生成 | **每 30 秒**轮询：`sendBtn` 不含 `stop`、编辑器空、锚点切片内 `据该文件` 次数 ≥ 本批篇数（或连续两次切片 `len` 不变）；用户已授权代理自动点击发送/粘贴时仍按需过 Smart Mode 审批卡 | 固定 sleep 一次就抽；未停就导入 |
+| 收尾 | 全部导入且 `pending=0` 后跑 `finalize --date YYYYMMDD`；用户明确「暂不下载」则**跳过** `download-queue` | 摘要未完成就 finalize；未经用户要求强行下载 |
+
+**用户授权（2026-09-24 续）：** 等待 IMA 生成时每 30 秒检查一次即可；授权代理自动新对话、填入、点击发送（及必要时审批卡通过后继续），无需每批再问。
+
+下一批 Prompt 的第一篇标题：用 `buildPrompts` 的 `prompts[0]` 清单首行 `.pdf` 标题，或 `ima-manual-prompts.cjs` 输出里**当前最早未完成批**的首个文件名，用作抽取锚点（须与本次发送内容一致）。
 
 ## 1. 定位与边界
 
