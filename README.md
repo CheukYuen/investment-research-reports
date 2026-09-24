@@ -6,9 +6,9 @@
 
 ## 当前日常操作：Cursor InAppBrowser 代发摘要
 
-定时任务 Prompt 在 [prompts/ima-daily-cursor-inappbrowser.txt](prompts/ima-daily-cursor-inappbrowser.txt)。代理在 Cursor 内置 Browser 向已打开的 IMA 日期文件夹逐批发送短摘要提问（每批最多25篇），抽取回答并导入；开始前先问日期和是否只用已打开页面。完整步骤见 [Runbook](docs/ima-daily-summary-runbook.md)。不开发操作页面，Git 提交仍需明确要求。
+定时任务 Prompt 在 [prompts/ima-daily-cursor-inappbrowser.txt](prompts/ima-daily-cursor-inappbrowser.txt)。开始前只问两件事：指定日期，以及 Cursor 内置 Browser 里已经打开的 IMA 页面 URL。代理按这个 URL 选中已有标签，只操作这一页，逐批发送短摘要提问（每批最多25篇），抽取回答并导入。完整步骤见 [Runbook](docs/ima-daily-summary-runbook.md)。不开发操作页面，Git 提交仍需明确要求。
 
-手动打印某日全部待补 Prompt：`node scripts/ima-manual-prompts.cjs --date YYYYMMDD`。先用 `node scripts/ima-daily-summary.cjs prepare --date YYYYMMDD` 更新索引。可用 `--batch-size 20` 调小批量；只打印不会标记摘要已完成，也不创建旧自动批次。
+手动粘贴用的 Prompt 在 [prompts/ima-daily-manual-print.txt](prompts/ima-daily-manual-print.txt)。只更新索引并打印待补 Prompt，不控制浏览器。也可直接运行 `node scripts/ima-manual-prompts.cjs --date YYYYMMDD`；先用 `node scripts/ima-daily-summary.cjs prepare --date YYYYMMDD` 更新索引。可用 `--batch-size 20` 调小批量；只打印不会标记摘要已完成，也不创建旧自动批次。
 
 IMA 优先整理每份文件已有 AI 摘要，缺失时再补读正文；每篇2～3句、约80～150字，首句注明实际来源。保留“文件名 / 核心摘要”格式，每篇一次，无法取得内容时保留 `NO_CONTENT` 待补。
 

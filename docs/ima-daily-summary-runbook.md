@@ -2,7 +2,7 @@
 
 ## 当前入口：Cursor InAppBrowser 代发（2026-09-17 起）
 
-可复制的定时任务 Prompt 在 `prompts/ima-daily-cursor-inappbrowser.txt`。代理在 Cursor 内置 Browser 向已打开（或按配置打开）的 IMA 知识库日期文件夹逐批发送短摘要提问，不再把 Prompt 打印给用户粘贴，也不走下文保留的旧 Browser/App `next`/`ingest` 全自动路径。开始前先问清日期、是否只用已打开页面、以及本次是否做到下载。不开发操作页面，不提交 Git。用户指定单日则只处理该日；未指定时默认昨天和今天。指定日期摘要全部导入后直接执行 `finalize` 正文排序并按第 7 节额度规则下载，不再等待单独指令；Git 提交仍需用户明确要求。
+可复制的定时任务 Prompt 在 `prompts/ima-daily-cursor-inappbrowser.txt`。代理只操作 Cursor 内置 Browser 里已经打开的那个 IMA 页面：开始前只问指定日期和该页 URL，用标签列表按 URL 选中它，不新开页面、不自己跳转。没拿到这两项之前不看浏览器、不发送提问。手动粘贴用的 Prompt 在 `prompts/ima-daily-manual-print.txt`，那一条不控制 Browser。不开发操作页面，不提交 Git，也不走下文保留的旧 Browser/App `next`/`ingest` 全自动路径。指定日期摘要全部导入后直接执行 `finalize` 正文排序并按第 7 节额度规则下载，不再等待单独指令；Git 提交仍需用户明确要求。
 
 **一次只发一批**：每次只把当前最早未完成的一批 Prompt 填入已打开的目标文件夹并发送（指定多日时先昨天后今天、按批次顺序），其余待补批次只报"日期＋批次数＋总篇数"的排队概况，不把其 Prompt 内容打进对用户的回复。回答稳定后代理按日期索引核对文件名，通过 `report-summaries.cjs record` 逐篇导入，然后重新运行 `ima-manual-prompts` 代发下一批，如此循环直到指定日期全部完成。不再一次性发送全部批次，也不再等用户从聊天里交回回答。
 
@@ -26,6 +26,8 @@ node scripts/ima-manual-prompts.cjs --date YYYYMMDD
 ### Cursor InAppBrowser 发送要点（2026-09-16 实测）
 
 代理在 Cursor 内置 Browser（`cursor-ide-browser`）代发 IMA 提问时遵守本节；与第 4 节 Codex Browser 全自动路径并存，不替代其登录判定和停止条件。
+
+**先认出已打开的那一页：** 用户已经打开目标 IMA URL。先列出已有标签，按该 URL 选中，之后只操作这一页。不要新开标签，不要自己输入或跳转地址。URL 对不上就停下来问，不要换页面重试。
 
 **先核对再动手，不要展开模型菜单：**
 
