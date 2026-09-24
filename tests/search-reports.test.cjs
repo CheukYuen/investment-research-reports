@@ -7,6 +7,7 @@ const path = require('node:path');
 const {
   buildIndex,
   loadIndex,
+  locallyAvailable,
   matchRecord,
   parseCompanyFromTitle,
   parseQueryArgs,
@@ -208,4 +209,19 @@ test('pdf paths resolve to absolute when called from outside the repo', () => {
   // 跨项目调用必须给出能直接打开的绝对路径，否则调用方读不到文件。
   assert.equal(resolvedPdfPath(record, '/tmp'), path.join(ROOT, record.pdf_path));
   assert.equal(resolvedPdfPath({ pdf_path: '' }, '/tmp'), '');
+});
+
+test('a PDF already on disk counts as downloaded even when the index flag is false', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'search-reports-pdf-'));
+  const relative = 'downloads/2026/9月/9.23/manual.pdf';
+  const absolute = path.join(dir, relative);
+  fs.mkdirSync(path.dirname(absolute), { recursive: true });
+  fs.writeFileSync(absolute, '%PDF-');
+
+  const manual = { downloaded: false, pdf_path: relative, media_id: 'pdf_manual' };
+  assert.equal(locallyAvailable(manual, dir), true);
+  assert.equal(locallyAvailable({ downloaded: false, pdf_path: 'downloads/missing.pdf' }, dir), false);
+  assert.equal(locallyAvailable({ downloaded: true, pdf_path: 'downloads/missing.pdf' }, dir), true);
+
+  fs.rmSync(dir, { recursive: true, force: true });
 });

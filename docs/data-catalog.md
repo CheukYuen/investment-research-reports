@@ -339,7 +339,7 @@ node scripts/search-reports.cjs query '光纤' --facets
 node scripts/search-reports.cjs query '光纤' --priority P0,P1 --downloaded --json
 ```
 
-结果自带 `pdf_path`，未下载的会标 `NOT_DOWNLOADED` 并给出 `media_id`。
+结果自带 `pdf_path`。`query` 的 `--downloaded` 同时认 `downloaded.jsonl` 和磁盘上的 PDF；文件已在就不会标 `NOT_DOWNLOADED`。索引行里的 `downloaded` 仍只表示是否写入过下载清单，手动补件在重建索引前可以是 `false`。直接读索引筛重点候选时，要再检查 `pdf_path` 文件是否存在。
 需要自定义筛选逻辑时才退回下面的 `readJsonl` + `.filter()` 写法。
 
 #### 跨项目调用

@@ -44,8 +44,8 @@ facets 是从数据里长出来的，比猜可靠。
 --sector 信息技术    一级行业（中证/GICS 11 类）
 --month 202609       只查某月
 --date 2026-09-03    只查某天快照
---downloaded         只看本地已有 PDF
---not-downloaded     只看未下载
+--downloaded         本地已有：索引已标记，或 pdf 文件已经在磁盘上
+--not-downloaded     索引未标记且磁盘上也没有
 --limit 30           输出上限，0 表示不限
 --any                多关键词由 AND 改为 OR
 --json               结构化输出，带 abs_path 和 repo_root
@@ -56,9 +56,11 @@ facets 是从数据里长出来的，比猜可靠。
 每条自带 PDF 路径。从本仓库之外调用时自动给绝对路径，可直接打开；`--json` 另外返回
 `abs_path` 和 `repo_root`。
 
-标了 `NOT_DOWNLOADED media_id=...` 的，本地没有 PDF。用户需要的话，回到本仓库按 `media_id`
+标了 `NOT_DOWNLOADED media_id=...` 的，查询时已经核对过磁盘，本地没有这份 PDF。用户需要的话，回到本仓库按 `media_id`
 走 `download-queue`——**不要自己去调 IMA 接口，也不要 curl**。注意每日下载额度有限制，
 无关任务不要擅自触发下载。
+
+直接读 `search-index-*.jsonl` 时，`downloaded: false` 只说明还没写入 `downloaded.jsonl`。手动放进 `downloads/` 的补件在重建索引前仍是 false。筛重点候选时再看 `pdf_path` 文件在不在，文件在就算已经到手。
 
 ## 边界（重要）
 

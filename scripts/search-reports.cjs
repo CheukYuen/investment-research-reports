@@ -359,6 +359,22 @@ function resolvedPdfPath(record, cwd = process.cwd()) {
   return insideRepo ? record.pdf_path : absolute;
 }
 
+function absolutePdfPath(record, root = ROOT) {
+  if (!record.pdf_path) return '';
+  return path.isAbsolute(record.pdf_path) ? record.pdf_path : path.join(root, record.pdf_path);
+}
+
+// downloaded.jsonl 只覆盖正式下载。手动放进 downloads/ 的 PDF 在重建索引前
+// 索引字段仍是 false；筛“已下载”时以文件是否存在为准，避免漏掉补件。
+function pdfOnDisk(record, root = ROOT) {
+  const absolute = absolutePdfPath(record, root);
+  return Boolean(absolute) && fs.existsSync(absolute);
+}
+
+function locallyAvailable(record, root = ROOT) {
+  return Boolean(record.downloaded) || pdfOnDisk(record, root);
+}
+
 function formatHit(hit) {
   const record = hit.record;
   const head = [
@@ -376,7 +392,7 @@ function formatHit(hit) {
   if (meta) lines.push(`  ${meta}`);
   for (const entry of hit.snippets) lines.push(`  ${entry.field}: ${entry.text}`);
   const location = resolvedPdfPath(record) || '(no local path)';
-  lines.push(record.downloaded
+  lines.push(locallyAvailable(record)
     ? `  ${location}`
     : `  ${location}  NOT_DOWNLOADED media_id=${record.media_id}`);
   return lines.join('\n');
@@ -454,8 +470,9 @@ function runQuery(argv) {
     if (types.size && !types.has(record.report_type)) continue;
     if (sectors.length && !sectors.some((sector) => record.sectors_cn.includes(sector))) continue;
     if (typeof opts.date === 'string' && record.snapshot_date !== opts.date) continue;
-    if (opts.downloaded && !record.downloaded) continue;
-    if (opts['not-downloaded'] && record.downloaded) continue;
+    const available = locallyAvailable(record);
+    if (opts.downloaded && !available) continue;
+    if (opts['not-downloaded'] && available) continue;
     const hit = matchRecord(record, lowered, Boolean(opts.any));
     if (hit) hits.push(hit);
   }
@@ -473,7 +490,12 @@ function runQuery(argv) {
     for (const hit of shown) {
       // abs_path 是查询期字段，不落入索引：索引保持机器无关，调用方拿到的是可直接打开的路径。
       const absPath = hit.record.pdf_path ? path.join(ROOT, hit.record.pdf_path) : '';
-      console.log(JSON.stringify({ ...hit.record, abs_path: absPath, repo_root: ROOT }));
+      console.log(JSON.stringify({
+        ...hit.record,
+        downloaded: locallyAvailable(hit.record),
+        abs_path: absPath,
+        repo_root: ROOT,
+      }));
     }
     return;
   }
@@ -518,8 +540,8 @@ query   在索引上做大小写无关子串匹配。多个关键词默认 AND�
   --month 202609       只查某月分片
   --date 2026-09-03    只查某天快照
   --tier ranked        只查某个数据层（ranked/summary_only/index_only）
-  --downloaded         只看已下载
-  --not-downloaded     只看未下载
+  --downloaded         本地已有：downloaded.jsonl 已记录，或 pdf_path 文件已在
+  --not-downloaded     索引未记录且磁盘上没有该 PDF
   --limit 30           输出条数上限（默认 30，0 表示不限）
   --facets             额外打印命中集合的 topics/entities/sectors 词频
   --json               输出结构化索引行
@@ -556,6 +578,7 @@ if (require.main === module) {
 module.exports = {
   buildIndex,
   resolvedPdfPath,
+  locallyAvailable,
   loadIndex,
   matchRecord,
   parseCompanyFromTitle,
