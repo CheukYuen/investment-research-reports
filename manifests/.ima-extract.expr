@@ -1,0 +1,9 @@
+(() => {
+  const anchor = "高盛-华硕（2357.TW）：AI服务器机架随PC产品组合升级而扩张；8月业绩超预期；给予“中性”评级-260927.pdf\n核心摘要\n据该文件";
+  const t = document.body.innerText;
+  const i = t.lastIndexOf(anchor);
+  if (i < 0) return { err: 'no anchor', anchor: anchor.slice(0, 40) };
+  const end = t.indexOf('内容由AI生成仅供参考', i);
+  let slice = t.slice(i, end > i ? end : undefined).replace(/\n+DS 快速\s*$/,'').trim();
+  return slice.slice(0, 0 + 10000);
+})()

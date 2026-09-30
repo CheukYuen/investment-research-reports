@@ -1,0 +1,8 @@
+(() => {
+  const anchor = '德银-美国中小型银行：2026年三季度前瞻：银行股跌入调整区间，下一步走向何方？-260925.pdf\n核心摘要\n据该文件';
+  const t = document.body.innerText;
+  const i = t.lastIndexOf(anchor);
+  const end = t.indexOf('内容由AI生成仅供参考', i);
+  let slice = t.slice(i, end > i ? end : undefined).replace(/\n+DS 快速\s*$/,'').trim();
+  return btoa(unescape(encodeURIComponent(slice)));
+})()
