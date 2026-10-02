@@ -17,7 +17,7 @@ InAppBrowser **批次循环**（`browser_lock` → 新对话 → 填入 → 发�
 | 启动子任务：写明 **YYYYMMDD**、断点（reviewed/pending）、**anchorTitle**、import 约定（format B + `manifests/tmp-import-manual-answer.cjs` 或 `import-b64`）、是否授权 Smart Mode 发送 | 未完成前持续跑至 `next` → `done` → `finalize` → 下载；结束时 **unlock** |
 | 子任务结束后核对 `report-summary-browser-progress-*`、`ai-ranked-queue-summary-*`、下载 manifest，向用户简报 | 不提交 Git（除非用户明确要求） |
 
-辅助脚本：`scripts/ima-browser-batch-utils.cjs`（`next`、`b64-fill-expr`、`poll-expr`、`import-b64` 等）。用户明确要求「主对话直接操作浏览器、不用子任务」时，主对话可按发送要点自行执行，但仍遵守一次一批与 import 不变量。
+辅助脚本：`scripts/ima-browser-batch-utils.cjs`（`next`、`b64-fill-expr`、`poll-expr`、`import-b64` 等）。**临时文件：** InAppBrowser 运行产生的 `manifests/tmp-*`（除保留的 `tmp-import-manual-answer.cjs`）在**每批 import 成功后自动删除**；子任务在 `finalize` 前或日终再执行 `node scripts/ima-browser-batch-utils.cjs cleanup-tmp` 兜底，**不得提交**这些文件。用户明确要求「主对话直接操作浏览器、不用子任务」时，主对话可按发送要点自行执行，但仍遵守一次一批与 import 不变量。
 
 每个日期依次运行：
 

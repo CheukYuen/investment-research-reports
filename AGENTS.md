@@ -21,7 +21,7 @@ ima-skill
 
 **InAppBrowser 编排（固定）：** Cursor 内置浏览器上的 IMA 批次循环、`finalize` 与 `download-queue` 默认由 **Task Subagent** 执行（见 Runbook「编排：Cursor Subagent」）；主对话负责 `prepare`/断点核对、启动/续跑子任务并汇总结果。用户明确要求主对话直操浏览器时除外。
 
-**InAppBrowser 编排（固定）：** Cursor 内置浏览器上的 IMA 批次循环、`finalize` 与 `download-queue` 默认由 **Task Subagent** 执行（见 Runbook「编排：Cursor Subagent」）；主对话负责 `prepare`/断点核对、启动/续跑子任务并汇总结果。用户明确要求主对话直操浏览器时除外。
+**InAppBrowser 临时文件：** `manifests/tmp-*` 为运行期产物（保留 `tmp-import-manual-answer.cjs`）；每批 import 后自动 `cleanup-tmp`，不纳入 Git。
 
 # Workspace
 

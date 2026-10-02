@@ -1,6 +1,21 @@
 #!/usr/bin/env node
 /** Helpers for InAppBrowser manual batch loop (prompt build + answer file prep). */
 const fs = require('node:fs');
+const path = require('node:path');
+
+const BROWSER_TMP_KEEP = new Set(['tmp-import-manual-answer.cjs']);
+
+function cleanupBrowserTmp() {
+  const dir = path.join(__dirname, '..', 'manifests');
+  if (!fs.existsSync(dir)) return { removed: 0, kept: [...BROWSER_TMP_KEEP] };
+  let removed = 0;
+  for (const name of fs.readdirSync(dir)) {
+    if (!name.startsWith('tmp-') || BROWSER_TMP_KEEP.has(name)) continue;
+    fs.rmSync(path.join(dir, name), { recursive: true, force: true });
+    removed += 1;
+  }
+  return { removed, kept: [...BROWSER_TMP_KEEP] };
+}
 const { buildPrompts } = require('./ima-manual-prompts.cjs');
 const { pathsForDate, loadConfig } = require('./ima-daily-summary.cjs');
 const { readJsonl } = require('./report-summaries.cjs');
@@ -42,7 +57,9 @@ function importAnswer(outPath, date) {
     encoding: 'utf8',
   });
   fs.unlinkSync(outPath);
-  return JSON.parse(out);
+  const result = JSON.parse(out);
+  cleanupBrowserTmp();
+  return result;
 }
 
 function makeFillExpression(prompt) {
@@ -190,9 +207,19 @@ if (cmd === 'next') {
   const slice = fs.readFileSync(process.argv[4], 'utf8');
   prepareAnswerFile(slice, process.argv[5]);
   console.log(JSON.stringify(importAnswer(process.argv[5], date)));
+} else if (cmd === 'cleanup-tmp') {
+  console.log(JSON.stringify(cleanupBrowserTmp()));
 } else if (cmd) {
-  console.error('usage: next|fill-expr|poll-expr|extract-expr|prepare-import');
+  console.error('usage: next|fill-expr|poll-expr|extract-expr|prepare-import|cleanup-tmp');
   process.exit(1);
 }
 
-module.exports = { nextBatch, prepareAnswerFile, importAnswer, makeFillExpression, makePollExpression, makeExtractExpression };
+module.exports = {
+  nextBatch,
+  prepareAnswerFile,
+  importAnswer,
+  cleanupBrowserTmp,
+  makeFillExpression,
+  makePollExpression,
+  makeExtractExpression,
+};
