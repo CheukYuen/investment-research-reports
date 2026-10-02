@@ -6,6 +6,19 @@
 
 **一次只发一批**：每次只把当前最早未完成的一批 Prompt 填入已打开的目标文件夹并发送（指定多日时先昨天后今天、按批次顺序），其余待补批次只报"日期＋批次数＋总篇数"的排队概况，不把其 Prompt 内容打进对用户的回复。回答稳定后代理按日期索引核对文件名，通过 `report-summaries.cjs record` 逐篇导入，然后重新运行 `ima-manual-prompts` 代发下一批，如此循环直到指定日期全部完成。不再一次性发送全部批次，也不再等用户从聊天里交回回答。
 
+### 编排：Cursor Subagent（2026-10-02 起，仓库固定）
+
+InAppBrowser **批次循环**（`browser_lock` → 新对话 → 填入 → 发送 → poll → import → 直至 `node scripts/ima-browser-batch-utils.cjs next YYYYMMDD` 返回 `done: true`），以及同日的 **`finalize`** 与 **第 7 节 `download-queue`（P0→P1→P2，30+1）**，**默认由 Cursor Task Subagent**（`generalPurpose`，必要时 `resume` 续跑）**在单独会话中执行**；主对话不在同一会话里长时间串行 CDP、`browser_mouse_click_xy` 与多批 import。
+
+| 主对话 | Subagent |
+| --- | --- |
+| 读 Runbook、配置、`prompts/ima-daily-cursor-inappbrowser.txt` | 遵守下文「Cursor InAppBrowser 发送要点」与「可改进经验」表 |
+| `prepare` / `status`；列出标签，确认 `browser_url` 与 **viewId** | 锁定该标签，只操作这一页 |
+| 启动子任务：写明 **YYYYMMDD**、断点（reviewed/pending）、**anchorTitle**、import 约定（format B + `manifests/tmp-import-manual-answer.cjs` 或 `import-b64`）、是否授权 Smart Mode 发送 | 未完成前持续跑至 `next` → `done` → `finalize` → 下载；结束时 **unlock** |
+| 子任务结束后核对 `report-summary-browser-progress-*`、`ai-ranked-queue-summary-*`、下载 manifest，向用户简报 | 不提交 Git（除非用户明确要求） |
+
+辅助脚本：`scripts/ima-browser-batch-utils.cjs`（`next`、`b64-fill-expr`、`poll-expr`、`import-b64` 等）。用户明确要求「主对话直接操作浏览器、不用子任务」时，主对话可按发送要点自行执行，但仍遵守一次一批与 import 不变量。
+
 每个日期依次运行：
 
 ```bash

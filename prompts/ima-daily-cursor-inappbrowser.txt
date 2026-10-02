@@ -1,5 +1,7 @@
 在 /Users/leon/Stock/investment-research-reports 执行「Cursor 内置浏览器代发短摘要」。先完整读取 AGENTS.md、docs/ima-daily-summary-runbook.md、config/ima-daily-summary.json 和 .agents/skills/@tencent-adm/ima-skills/SKILL.md 并遵循其指令。真正点击发送和抽取回答时，再按 Runbook「Cursor InAppBrowser 发送要点」做。不开发页面，不调用旧 next/ingest，不提交 Git。
 
+编排（固定）：主对话完成 prepare、确认 IMA 标签 URL/viewId 后，**启动 Cursor Task Subagent** 执行剩余批次（`scripts/ima-browser-batch-utils.cjs` 循环至 `next` → `done`）、`finalize` 与第 7 节下载；主对话汇总 manifest，不在同一会话长时间串行浏览器操作。详见 Runbook「编排：Cursor Subagent」。仅当用户明确要求主对话直操浏览器时例外。
+
 开始前只问两件事，等回答后再看浏览器、再发提问：
 1. 指定日期（一天或多天）。没指定就停，不要默认昨天和今天。
 2. Cursor 内置浏览器里已经打开的 IMA 页面 URL。

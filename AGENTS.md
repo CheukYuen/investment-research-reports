@@ -19,6 +19,10 @@ ima-skill
 
 执行每日任务时必须完整读取 Runbook 和配置，不在本文件重复其 Browser/App 状态机、批次、额度、finalize 或提交细节。
 
+**InAppBrowser 编排（固定）：** Cursor 内置浏览器上的 IMA 批次循环、`finalize` 与 `download-queue` 默认由 **Task Subagent** 执行（见 Runbook「编排：Cursor Subagent」）；主对话负责 `prepare`/断点核对、启动/续跑子任务并汇总结果。用户明确要求主对话直操浏览器时除外。
+
+**InAppBrowser 编排（固定）：** Cursor 内置浏览器上的 IMA 批次循环、`finalize` 与 `download-queue` 默认由 **Task Subagent** 执行（见 Runbook「编排：Cursor Subagent」）；主对话负责 `prepare`/断点核对、启动/续跑子任务并汇总结果。用户明确要求主对话直操浏览器时除外。
+
 # Workspace
 
 - `downloads/`：PDF，保持 IMA 原始目录结构和文件名。
