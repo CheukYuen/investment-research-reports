@@ -31,6 +31,14 @@ const reA = /文件名\s*\n([^\n]+)\n核心摘要\s*\n([\s\S]*?)(?=\n文件名\s
 let m;
 while ((m = reA.exec(text)) !== null) blocks.push({ title: m[1].trim(), summary: m[2].trim() });
 
+// 格式 A 只匹配到 1 块且摘要内仍含其它 .pdf/核心摘要 时，改用格式 B
+if (
+  blocks.length === 1
+  && /\.pdf\s*\n核心摘要/.test(blocks[0].summary)
+) {
+  blocks.length = 0;
+}
+
 // 格式 B：标题行直接跟「核心摘要」（仅当格式 A 没有覆盖时补充）
 if (blocks.length === 0) {
   const lines = text.split('\n');

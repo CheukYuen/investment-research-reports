@@ -45,7 +45,8 @@ function nextBatch(date) {
 function prepareAnswerFile(slice, outPath) {
   let raw = String(slice || '').replace(/\n+DS 快速[\s\S]*$/, '').trim();
   raw = raw.replace(/\[\d+\]/g, '');
-  if (!raw.startsWith('文件名\n')) raw = `文件名\n${raw}`;
+  const formatB = /^[^\n]+\.pdf\n核心摘要/m.test(raw);
+  if (!formatB && !raw.startsWith('文件名\n')) raw = `文件名\n${raw}`;
   fs.writeFileSync(outPath, `${raw}\n`);
 }
 
