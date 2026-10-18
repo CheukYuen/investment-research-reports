@@ -42,11 +42,65 @@ function nextBatch(date) {
   return { pending: r.pending, done: false, prompt, anchorTitle, batchPdfCount: prompt.split('\n').filter((l) => l.endsWith('.pdf')).length };
 }
 
-function prepareAnswerFile(slice, outPath) {
-  let raw = String(slice || '').replace(/\n+DS 快速[\s\S]*$/, '').trim();
+function isImportableTitle(title) {
+  const t = String(title || '').trim();
+  if (!t.endsWith('.pdf')) return false;
+  if (/[<>]|原样复制|清单中的完整|\.pdf，不缩写/.test(t)) return false;
+  return true;
+}
+
+function isImportableSummary(summary) {
+  const s = String(summary || '').trim();
+  if (!s) return false;
+  if (/每篇2|严格按清单|输出前核对|带来源说明的简短摘要|首句用“据该文件/.test(s)) return false;
+  if (/^NO_CONTENT$/i.test(s)) return true;
+  return /^据该文件(已有AI摘要|正文|已有AI摘要及正文)，/.test(s);
+}
+
+/** Strip CoT / prompt echo; keep only Format A/B blocks safe for tmp-import-manual-answer.cjs */
+function extractImportableSlice(text) {
+  let raw = String(text || '').replace(/\n+DS 快速[\s\S]*$/, '').trim();
   raw = raw.replace(/\[\d+\]/g, '');
-  const formatB = /^[^\n]+\.pdf\n核心摘要/m.test(raw);
-  if (!formatB && !raw.startsWith('文件名\n')) raw = `文件名\n${raw}`;
+  const blocks = [];
+  const reA = /文件名\s*\n([^\n]+)\n核心摘要\s*\n([\s\S]*?)(?=\n文件名\s*\n|$)/g;
+  let m;
+  while ((m = reA.exec(raw)) !== null) {
+    const title = m[1].trim();
+    const summary = m[2].trim();
+    if (isImportableTitle(title) && isImportableSummary(summary)) blocks.push({ title, summary });
+  }
+  if (blocks.length === 0) {
+    const lines = raw.split('\n');
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i].trim();
+      if (!isImportableTitle(line)) continue;
+      if ((lines[i + 1] || '').trim() !== '核心摘要') continue;
+      const summaryLines = [];
+      let j = i + 2;
+      while (j < lines.length) {
+        const next = lines[j].trim();
+        const isNextTitle = isImportableTitle(next) && (lines[j + 1] || '').trim() === '核心摘要';
+        if (isNextTitle) break;
+        summaryLines.push(lines[j]);
+        j += 1;
+      }
+      const summary = summaryLines.join('\n').trim();
+      if (isImportableSummary(summary)) blocks.push({ title: line, summary });
+      i = j - 1;
+    }
+  }
+  return blocks.map((b) => `${b.title}\n核心摘要\n${b.summary}`).join('\n\n');
+}
+
+function prepareAnswerFile(slice, outPath) {
+  let raw = extractImportableSlice(slice);
+  if (!raw) raw = String(slice || '').replace(/\n+DS 快速[\s\S]*$/, '').trim();
+  raw = raw.replace(/\[\d+\]/g, '');
+  const lines = raw.split('\n');
+  const first = (lines[0] || '').trim();
+  const second = (lines[1] || '').trim();
+  const isFormatB = first.endsWith('.pdf') && second === '核心摘要';
+  if (!isFormatB && !raw.startsWith('文件名\n')) raw = `文件名\n${raw}`;
   fs.writeFileSync(outPath, `${raw}\n`);
 }
 
@@ -77,24 +131,30 @@ function makeFillExpression(prompt) {
 })()`;
 }
 
-function makePollExpression(anchorTitle) {
-  const t = anchorTitle.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+const BROWSER_EXTRACT_IMPORTABLE = `function __isImportableTitle(t){t=String(t||'').trim();if(!t.endsWith('.pdf'))return false;if(/[<>]|原样复制|清单中的完整/.test(t))return false;return true;}
+function __isImportableSummary(s){s=String(s||'').trim();if(!s)return false;if(/每篇2|严格按清单|输出前核对|带来源说明的简短摘要|首句用“据该文件/.test(s))return false;if(/^NO_CONTENT$/i.test(s))return true;return/^据该文件(已有AI摘要|正文|已有AI摘要及正文)，/.test(s);}
+function __extractImportableSlice(body){const raw=String(body||'').replace(/\\n+DS 快速[\\s\\S]*$/,'').trim();const blocks=[];const lines=raw.split('\\n');for(let i=0;i<lines.length;i++){const line=lines[i].trim();if(line==='文件名'){const title=(lines[i+1]||'').trim();if((lines[i+2]||'').trim()!=='核心摘要')continue;if(!__isImportableTitle(title))continue;const summaryLines=[];let j=i+3;while(j<lines.length){const next=lines[j].trim();if(__isImportableTitle(next)&&(lines[j+1]||'').trim()==='核心摘要')break;summaryLines.push(lines[j]);j++;}const summary=summaryLines.join('\\n').trim();if(__isImportableSummary(summary))blocks.push({title,summary});i=j-1;continue;}if(!__isImportableTitle(line))continue;if((lines[i+1]||'').trim()!=='核心摘要')continue;const summaryLines=[];let j=i+2;while(j<lines.length){const next=lines[j].trim();if(__isImportableTitle(next)&&(lines[j+1]||'').trim()==='核心摘要')break;summaryLines.push(lines[j]);j++;}const summary=summaryLines.join('\\n').trim();if(__isImportableSummary(summary))blocks.push({title:line,summary});i=j-1;}return blocks.map(b=>b.title+'\\n核心摘要\\n'+b.summary).join('\\n\\n');}`;
+
+function makePollExpression(_anchorTitle) {
   return `(() => {
-  const title = '${t}';
+  ${BROWSER_EXTRACT_IMPORTABLE}
   const body = document.body.innerText;
-  const idx = body.lastIndexOf(title);
-  let slice = '';
-  if (idx >= 0) {
-    const end = body.indexOf('内容由AI生成仅供参考', idx);
-    slice = body.slice(idx, end > idx ? end : undefined);
-  }
+  const slice = __extractImportableSlice(body);
   const span = document.querySelector('._sendBtnWrap_nje4s_23 span');
-  const ju = (slice.match(/据该文件/g) || []).length;
+  const blockCount = slice ? slice.split(/\\n核心摘要\\n/).length : 0;
+  const ju = slice ? (slice.match(/据该文件(已有AI摘要|正文|已有AI摘要及正文)，/g) || []).length : 0;
+  const b64 = slice ? btoa(unescape(encodeURIComponent(slice))) : '';
+  if (b64.length > 24000) {
+    window.__sliceParts = [];
+    const chunk = 4000;
+    for (let i = 0; i < b64.length; i += chunk) window.__sliceParts.push(b64.slice(i, i + chunk));
+  }
   return JSON.stringify({
     generating: /stop/.test(span?.className || ''),
     juCount: ju,
+    blockCount,
     sliceLen: slice.length,
-    sliceB64: slice ? btoa(unescape(encodeURIComponent(slice))) : ''
+    sliceB64: b64.length <= 24000 ? b64 : ''
   });
 })()`;
 }
@@ -112,16 +172,16 @@ function makeSendCoordsExpression() {
 })()`;
 }
 
-function makeExtractExpression(anchorTitle) {
-  const t = anchorTitle.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+function makeExtractExpression(_anchorTitle) {
   return `(() => {
-  const title = '${t}';
-  const body = document.body.innerText;
-  const idx = body.lastIndexOf(title);
-  if (idx < 0) return '';
-  const end = body.indexOf('内容由AI生成仅供参考', idx);
-  const slice = body.slice(idx, end > idx ? end : body.length);
-  return btoa(unescape(encodeURIComponent(slice)));
+  ${BROWSER_EXTRACT_IMPORTABLE}
+  const slice = __extractImportableSlice(document.body.innerText);
+  if (!slice) return '';
+  const b64 = btoa(unescape(encodeURIComponent(slice)));
+  window.__sliceParts = [];
+  const chunk = 4000;
+  for (let i = 0; i < b64.length; i += chunk) window.__sliceParts.push(b64.slice(i, i + chunk));
+  return b64.length <= 24000 ? b64 : window.__sliceParts.join('');
 })()`;
 }
 
@@ -180,10 +240,15 @@ if (cmd === 'next') {
 } else if (cmd === 'import-b64') {
   const b64 = fs.readFileSync(process.argv[4], 'utf8').trim();
   let slice = Buffer.from(b64, 'base64').toString('utf8');
+  slice = extractImportableSlice(slice) || slice;
   slice = slice.replace(/\.pdf\n\n核心摘要/g, '.pdf\n核心摘要');
   const out = process.argv[5];
   prepareAnswerFile(slice, out);
   console.log(JSON.stringify(importAnswer(out, date)));
+} else if (cmd === 'scavenge-page') {
+  const expr = makeExtractExpression('');
+  fs.writeFileSync(process.argv[4] || 'manifests/tmp-scavenge-expr.js', expr);
+  console.log(JSON.stringify({ wrote: process.argv[4] || 'manifests/tmp-scavenge-expr.js' }));
 } else if (cmd === 'write-load-fe') {
   const b = nextBatch(date);
   if (b.done) process.exit(2);
@@ -220,6 +285,7 @@ module.exports = {
   prepareAnswerFile,
   importAnswer,
   cleanupBrowserTmp,
+  extractImportableSlice,
   makeFillExpression,
   makePollExpression,
   makeExtractExpression,

@@ -23,6 +23,25 @@ const byTitle = new Map(index.map((r) => [r.title, r]));
 const norm = (s) => s.replace(/\s+/g, ' ').replace(/[“”]/g, '"').replace(/[‘’]/g, "'").trim();
 const byNorm = new Map(index.map((r) => [norm(r.title), r]));
 
+/** Map IMA-shortened filenames to exact index titles when content clearly matches. */
+function resolveIndexTitle(blockTitle) {
+  const direct = byTitle.get(blockTitle) || byNorm.get(norm(blockTitle));
+  if (direct) return direct.title;
+  if (
+    /高盛-比亚迪（002594\.SZ）2026年三季度业绩前瞻/.test(blockTitle)
+    && blockTitle.endsWith('-261014.pdf')
+  ) {
+    const hit = index.find(
+      (r) =>
+        r.title.includes('002594.SZ')
+        && r.title.includes('三季度业绩前瞻')
+        && r.title.endsWith('-261014.pdf'),
+    );
+    if (hit) return hit.title;
+  }
+  return blockTitle;
+}
+
 const text = fs.readFileSync(answerFile, 'utf8');
 const blocks = [];
 
@@ -65,6 +84,7 @@ const results = { recorded: 0, skipped_no_content: [], unmatched: [], duplicate:
 const tmpJson = path.join(ROOT, 'manifests', `tmp-record-${date}.json`);
 
 for (const block of blocks) {
+  block.title = resolveIndexTitle(block.title);
   const key = norm(block.title);
   if (seen.has(key)) { results.duplicate.push(block.title); continue; }
   seen.add(key);
