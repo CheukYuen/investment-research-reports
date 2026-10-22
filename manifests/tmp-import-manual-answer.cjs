@@ -23,10 +23,26 @@ const byTitle = new Map(index.map((r) => [r.title, r]));
 const norm = (s) => s.replace(/\s+/g, ' ').replace(/[“”]/g, '"').replace(/[‘’]/g, "'").trim();
 const byNorm = new Map(index.map((r) => [norm(r.title), r]));
 
+function normalizeExecutiveSummary(summary) {
+  const s = String(summary || '').trim();
+  if (/^NO_CONTENT$/i.test(s)) return s;
+  const idx = s.search(/据该文件(已有AI摘要|正文|已有AI摘要及正文)，/);
+  if (idx >= 0) return s.slice(idx).trim();
+  return s;
+}
+
 /** Map IMA-shortened filenames to exact index titles when content clearly matches. */
 function resolveIndexTitle(blockTitle) {
   const direct = byTitle.get(blockTitle) || byNorm.get(norm(blockTitle));
   if (direct) return direct.title;
+  if (/Viatris Inc.*VTRS\.US/i.test(blockTitle) || /^摩根大通-Viatris/.test(blockTitle)) {
+    const hit = index.find((r) => r.title.includes('Viatris Inc（VTRS.US）'));
+    if (hit) return hit.title;
+  }
+  if (/高盛-中国光伏/.test(blockTitle) && /261021\.pdf/.test(blockTitle)) {
+    const hits = index.filter((r) => r.title.includes('高盛-中国光伏') && r.title.endsWith('-261021.pdf'));
+    if (hits.length === 1) return hits[0].title;
+  }
   if (
     /高盛-比亚迪（002594\.SZ）2026年三季度业绩前瞻/.test(blockTitle)
     && blockTitle.endsWith('-261014.pdf')
@@ -91,6 +107,7 @@ for (const block of blocks) {
 
   const idx = byTitle.get(block.title) || byNorm.get(key);
   if (!idx) { results.unmatched.push(block.title); continue; }
+  block.summary = normalizeExecutiveSummary(block.summary);
   if (!block.summary || block.summary === 'NO_CONTENT') { results.skipped_no_content.push(block.title); continue; }
 
   const record = {

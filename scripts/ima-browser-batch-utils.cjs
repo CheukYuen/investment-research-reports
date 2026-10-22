@@ -49,12 +49,21 @@ function isImportableTitle(title) {
   return true;
 }
 
+function normalizeExecutiveSummary(summary) {
+  const s = String(summary || '').trim();
+  if (/^NO_CONTENT$/i.test(s)) return s;
+  const idx = s.search(/据该文件(已有AI摘要|正文|已有AI摘要及正文)，/);
+  if (idx >= 0) return s.slice(idx).trim();
+  return s;
+}
+
 function isImportableSummary(summary) {
   const s = String(summary || '').trim();
   if (!s) return false;
   if (/每篇2|严格按清单|输出前核对|带来源说明的简短摘要|首句用“据该文件/.test(s)) return false;
   if (/^NO_CONTENT$/i.test(s)) return true;
-  return /^据该文件(已有AI摘要|正文|已有AI摘要及正文)，/.test(s);
+  const core = normalizeExecutiveSummary(s);
+  return /^据该文件(已有AI摘要|正文|已有AI摘要及正文)，/.test(core);
 }
 
 /** Strip CoT / prompt echo; keep only Format A/B blocks safe for tmp-import-manual-answer.cjs */
@@ -67,7 +76,15 @@ function extractImportableSlice(text) {
   while ((m = reA.exec(raw)) !== null) {
     const title = m[1].trim();
     const summary = m[2].trim();
-    if (isImportableTitle(title) && isImportableSummary(summary)) blocks.push({ title, summary });
+    if (isImportableTitle(title) && isImportableSummary(summary)) {
+      blocks.push({ title, summary: normalizeExecutiveSummary(summary) });
+    }
+  }
+  if (
+    blocks.length === 1
+    && /\.pdf\s*\n核心摘要/.test(blocks[0].summary)
+  ) {
+    blocks.length = 0;
   }
   if (blocks.length === 0) {
     const lines = raw.split('\n');
@@ -85,7 +102,9 @@ function extractImportableSlice(text) {
         j += 1;
       }
       const summary = summaryLines.join('\n').trim();
-      if (isImportableSummary(summary)) blocks.push({ title: line, summary });
+      if (isImportableSummary(summary)) {
+        blocks.push({ title: line, summary: normalizeExecutiveSummary(summary) });
+      }
       i = j - 1;
     }
   }
@@ -100,7 +119,9 @@ function prepareAnswerFile(slice, outPath) {
   const first = (lines[0] || '').trim();
   const second = (lines[1] || '').trim();
   const isFormatB = first.endsWith('.pdf') && second === '核心摘要';
-  if (!isFormatB && !raw.startsWith('文件名\n')) raw = `文件名\n${raw}`;
+  // Runbook：首条格式 B 也补「文件名」头，避免 tmp-import 格式 A 只吃到后续块而漏首篇
+  if (isFormatB && !raw.startsWith('文件名\n')) raw = `文件名\n${raw}`;
+  else if (!isFormatB && !raw.startsWith('文件名\n')) raw = `文件名\n${raw}`;
   fs.writeFileSync(outPath, `${raw}\n`);
 }
 
@@ -131,9 +152,10 @@ function makeFillExpression(prompt) {
 })()`;
 }
 
-const BROWSER_EXTRACT_IMPORTABLE = `function __isImportableTitle(t){t=String(t||'').trim();if(!t.endsWith('.pdf'))return false;if(/[<>]|原样复制|清单中的完整/.test(t))return false;return true;}
-function __isImportableSummary(s){s=String(s||'').trim();if(!s)return false;if(/每篇2|严格按清单|输出前核对|带来源说明的简短摘要|首句用“据该文件/.test(s))return false;if(/^NO_CONTENT$/i.test(s))return true;return/^据该文件(已有AI摘要|正文|已有AI摘要及正文)，/.test(s);}
-function __extractImportableSlice(body){const raw=String(body||'').replace(/\\n+DS 快速[\\s\\S]*$/,'').trim();const blocks=[];const lines=raw.split('\\n');for(let i=0;i<lines.length;i++){const line=lines[i].trim();if(line==='文件名'){const title=(lines[i+1]||'').trim();if((lines[i+2]||'').trim()!=='核心摘要')continue;if(!__isImportableTitle(title))continue;const summaryLines=[];let j=i+3;while(j<lines.length){const next=lines[j].trim();if(__isImportableTitle(next)&&(lines[j+1]||'').trim()==='核心摘要')break;summaryLines.push(lines[j]);j++;}const summary=summaryLines.join('\\n').trim();if(__isImportableSummary(summary))blocks.push({title,summary});i=j-1;continue;}if(!__isImportableTitle(line))continue;if((lines[i+1]||'').trim()!=='核心摘要')continue;const summaryLines=[];let j=i+2;while(j<lines.length){const next=lines[j].trim();if(__isImportableTitle(next)&&(lines[j+1]||'').trim()==='核心摘要')break;summaryLines.push(lines[j]);j++;}const summary=summaryLines.join('\\n').trim();if(__isImportableSummary(summary))blocks.push({title:line,summary});i=j-1;}return blocks.map(b=>b.title+'\\n核心摘要\\n'+b.summary).join('\\n\\n');}`;
+const BROWSER_EXTRACT_IMPORTABLE = `function __normSum(s){s=String(s||'').trim();if(/^NO_CONTENT$/i.test(s))return s;var i=s.search(/据该文件(已有AI摘要|正文|已有AI摘要及正文)，/);return i>=0?s.slice(i).trim():s;}
+function __isImportableTitle(t){t=String(t||'').trim();if(!t.endsWith('.pdf'))return false;if(/[<>]|原样复制|清单中的完整/.test(t))return false;return true;}
+function __isImportableSummary(s){s=String(s||'').trim();if(!s)return false;if(/每篇2|严格按清单|输出前核对|带来源说明的简短摘要|首句用“据该文件/.test(s))return false;if(/^NO_CONTENT$/i.test(s))return true;return/^据该文件(已有AI摘要|正文|已有AI摘要及正文)，/.test(__normSum(s));}
+function __extractImportableSlice(body){const raw=String(body||'').replace(/\\n+DS 快速[\\s\\S]*$/,'').trim();const blocks=[];const lines=raw.split('\\n');for(let i=0;i<lines.length;i++){const line=lines[i].trim();if(line==='文件名'){const title=(lines[i+1]||'').trim();if((lines[i+2]||'').trim()!=='核心摘要')continue;if(!__isImportableTitle(title))continue;const summaryLines=[];let j=i+3;while(j<lines.length){const next=lines[j].trim();if(__isImportableTitle(next)&&(lines[j+1]||'').trim()==='核心摘要')break;summaryLines.push(lines[j]);j++;}const summary=summaryLines.join('\\n').trim();if(__isImportableSummary(summary))blocks.push({title,summary:__normSum(summary)});i=j-1;continue;}if(!__isImportableTitle(line))continue;if((lines[i+1]||'').trim()!=='核心摘要')continue;const summaryLines=[];let j=i+2;while(j<lines.length){const next=lines[j].trim();if(__isImportableTitle(next)&&(lines[j+1]||'').trim()==='核心摘要')break;summaryLines.push(lines[j]);j++;}const summary=summaryLines.join('\\n').trim();if(__isImportableSummary(summary))blocks.push({title:line,summary:__normSum(summary)});i=j-1;}return blocks.map(b=>b.title+'\\n核心摘要\\n'+b.summary).join('\\n\\n');}`;
 
 function makePollExpression(_anchorTitle) {
   return `(() => {
