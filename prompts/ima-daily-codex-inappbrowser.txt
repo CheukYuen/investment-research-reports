@@ -2,7 +2,9 @@
 
 先完整读取 AGENTS.md、docs/ima-daily-summary-runbook.md、config/ima-daily-summary.json 和 .agents/skills/@tencent-adm/ima-skills/SKILL.md，按任务读取 knowledge-base/GUIDE.md。遵守 Runbook 的索引、批次、证据、停止条件、下载和临时文件规则。Cursor 专属的子任务、CDP、锁和坐标操作不适用于 Codex；使用当前可用的 Codex 浏览器工具及其操作说明。不开发页面，不使用旧的 ima-daily-summary next/ingest，不提交 Git，不启动文本编辑器。
 
-开始前取得两项：指定日期（一天或多天）及 Codex 内置浏览器已打开的 IMA 页面 URL。已由用户明确提供的不要重复询问；日期未指定时停止，不默认昨天和今天。仅凭环境中的当前 URL 不视为用户明确指定。拿到两项后列出已有标签，按 URL 选中同一页；不新开标签、不输入或跳转地址、不换知识库。URL 对不上就停止询问。
+开始前取得用户指定的日期（一天或多天）和 Codex 内置浏览器已打开的 IMA 页面 URL。若缺少任一项，在聊天里用一个可复制的 text 代码块给出完整的两行回复，提示用户直接复制回传或修改后回传。第一行写“1. ”加运行当天在 Asia/Shanghai 的实际八位日期（YYYYMMDD），第二行写“2. ”加 config/ima-daily-summary.json 中 browser_url 的完整纯文本地址。用户已给出的项按原值填入，只为缺项使用默认值。代码块只含这两行，展示后等待用户回复。
+
+用户已明确提供两项（包括直接回传上述两行）时，列出已有标签，按 URL 选中同一页；不新开标签、不输入或跳转地址、不换知识库。URL 对不上就停止询问。
 
 按 Asia/Shanghai 固定指定日期，每日依次运行 node scripts/ima-daily-summary.cjs prepare --date YYYYMMDD，成功后运行 node scripts/ima-manual-prompts.cjs --date YYYYMMDD。目录不存在或索引失败如实报告，不用旧索引冒充成功。已有有效摘要跳过，manual_batch_size 依配置（默认 25）。用 node scripts/ima-browser-batch-utils.cjs next YYYYMMDD 取得当前最早待处理批次的完整 prompt、anchorTitle 和篇数；不要从多批 stdout 截取 Prompt。不要向用户输出批次全文，仅报告日期、批次数和篇数。
 
